@@ -11,7 +11,7 @@ install: $(FILES) vim_vundle
 
 .PHONY: $(FILES)
 $(FILES):
-	@if [[ -f $(HOME)/.$@ ]] || [[ -d $(HOME)/.$@ ]];\
+	@if [[ -e $(HOME)/.$@ ]] || [[ -L $(HOME)/.$@ ]];\
 		then\
 		n=;\
 		f=$(HOME)/.$@.orig;\

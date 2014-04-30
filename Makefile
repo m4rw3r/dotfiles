@@ -1,8 +1,8 @@
 HOME ?= ~
 
-FILES=$(filter-out Makefile patches projects.vim keys.sh oh-my-zsh-plugins, $(wildcard *))
-GIT_REPOS=$(addsuffix /.git, oh-my-zsh $(wildcard oh-my-zsh-plugins/*))
-PATCHES=$(wildcard patches/**.patch)
+FILES     = $(filter-out Makefile patches projects.vim keys.sh oh-my-zsh-plugins, $(wildcard *))
+GIT_REPOS = $(addsuffix /.git, oh-my-zsh $(wildcard oh-my-zsh-plugins/*))
+PATCHES   = $(wildcard patches/**.patch)
 
 help:
 	@echo "Dotfiles installer, usage:\n\tmake install\n\nWill set the following links:\n"
@@ -10,7 +10,7 @@ help:
 	@echo "\nThe following variables can configure the command:\n\tHOME: Directory where the dot-prefixed links will be placed"
 	@echo "\nOther commands:\n\tmake update\tWill update all git repositories and re-apply patches\n\tmake patch\tWill apply patches\n\tmake reset\tWill reset patched git repositories to upstream"
 
-install: $(FILES) vim_vundle patch
+install: $(FILES) patches vim_vundle
 
 .PHONY: $(FILES)
 $(FILES):

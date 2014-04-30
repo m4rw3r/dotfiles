@@ -8,6 +8,7 @@ help:
 	@echo "Dotfiles installer, usage:\n\tmake install\n\nWill set the following links:\n"
 	@for f in $(FILES); do printf "%-30s -> %s\n" "$(HOME)/.$$f" "$(CURDIR)/$$f"; done
 	@echo "\nThe following variables can configure the command:\n\tHOME: Directory where the dot-prefixed links will be placed"
+	@echo "\nOther commands:\n\tmake update\tWill update all git repositories and re-apply patches\n\tmake patch\tWill apply patches\n\tmake reset\tWill reset patched git repositories to upstream"
 
 install: $(FILES) vim_vundle patch
 

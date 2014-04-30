@@ -57,5 +57,5 @@ patches: $(PATCHES)
 .PHONY: $(PATCHES)
 $(PATCHES):
 	@echo Patching $(patsubst patches/%.patch,%,$@)
-	@(cd $(patsubst patches/%.patch,%,$@); git apply $(CURDIR)/$@)
+	@(cd $(patsubst patches/%.patch,%,$@); git reset --hard @{u}; git apply $(CURDIR)/$@)
 	@echo Patched $(patsubst patches/%.patch,%,$@)

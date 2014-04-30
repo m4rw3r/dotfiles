@@ -1,4 +1,5 @@
-HOME ?= ~
+HOME    ?= ~
+REPLACE ?=
 
 FILES     = $(filter-out Makefile patches projects.vim keys.sh oh-my-zsh-plugins, $(wildcard *))
 GIT_REPOS = $(addsuffix /.git, oh-my-zsh $(wildcard oh-my-zsh-plugins/*))
@@ -14,7 +15,7 @@ install: $(FILES) patches vim_vundle
 
 .PHONY: $(FILES)
 $(FILES):
-	@if [[ -e $(HOME)/.$@ ]] || [[ -L $(HOME)/.$@ ]];\
+	@if [[ -z "$(REPLACE)" ]] && ([[ -e $(HOME)/.$@ ]] || [[ -L $(HOME)/.$@ ]]);\
 		then\
 		n=;\
 		f=$(HOME)/.$@.orig;\

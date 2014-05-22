@@ -2,7 +2,7 @@ HOME    ?= ~
 REPLACE ?=
 
 FILES     = $(filter-out Makefile patches projects.vim keys.sh oh-my-zsh-plugins, $(wildcard *))
-GIT_REPOS = $(addsuffix /.git, oh-my-zsh $(wildcard oh-my-zsh-plugins/*))
+GIT_REPOS = $(addsuffix /.git, oh-my-zsh $(wildcard oh-my-zsh-plugins/plugins/*))
 PATCHES   = $(wildcard patches/**.patch)
 
 help:

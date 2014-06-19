@@ -34,7 +34,6 @@
 	Bundle 'beyondwords/vim-twig'
 	Bundle 'ekalinin/Dockerfile.vim'
 	Bundle 'groenewege/vim-less'
-	Bundle 'guns/vim-clojure-static'
 	Bundle 'jnwhiteh/vim-golang'
 	Bundle 'kchmck/vim-coffee-script'
 	Bundle 'othree/html5.vim'
@@ -42,12 +41,18 @@
 	Bundle 'vim-scripts/nginx.vim'
 	Bundle 'wting/rust.vim'
 
+	" Clojure
+	Bundle 'guns/vim-clojure-highlight'
+	Bundle 'guns/vim-clojure-static'
+	Bundle 'tpope/vim-fireplace.git'
+
 	" Tools
 	Bundle 'airblade/vim-rooter'
 	Bundle 'christoomey/vim-tmux-navigator'
 	Bundle 'FuzzyFinder'
 	Bundle 'godlygeek/tabular'
 	Bundle 'kien/ctrlp.vim'
+	Bundle 'kikijump/tslime.vim'
 	Bundle 'L9'
 	Bundle 'Lokaltog/vim-powerline'
 	Bundle 'mileszs/ack.vim'

@@ -70,6 +70,10 @@ alias klist='/usr/bin/klist'
 # Go's idiocy of requiring a path
 export GOPATH=~/Projects/go
 
+# Clojurescript
+export CLOJURESCRIPT_HOME=$HOME/Projects/Clones/clojurescript
+export LEIN_ROOT=/opt/local/bin/lein
+
 # Postgresql
 PATH="/Applications/Postgres.app/Contents/Versions/9.3/bin:$PATH"
 # Use this command in psql to enable less pager: \pset pager always

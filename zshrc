@@ -71,7 +71,10 @@ alias klist='/usr/bin/klist'
 export GOPATH=~/Projects/go
 
 # Postgresql
-PATH="/Applications/Postgres93.app/Contents/MacOS/bin:$PATH"
+PATH="/Applications/Postgres.app/Contents/Versions/9.3/bin:$PATH"
+# Use this command in psql to enable less pager: \pset pager always
+export PAGER=less
+export LESS="-r"
 
 # From http://justinlilly.com/dotfiles/zsh.html
 extract () {

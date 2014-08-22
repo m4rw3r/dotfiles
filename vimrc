@@ -36,8 +36,10 @@
 	Bundle 'groenewege/vim-less'
 	Bundle 'jnwhiteh/vim-golang'
 	Bundle 'kchmck/vim-coffee-script'
+	Bundle 'lukerandall/haskellmode-vim'
 	Bundle 'othree/html5.vim'
 	Bundle 'tpope/vim-markdown'
+	Bundle 'vim-scripts/haskell.vim'
 	Bundle 'vim-scripts/nginx.vim'
 	Bundle 'wting/rust.vim'
 
@@ -97,6 +99,11 @@
 " Ack.vim {
 	" Use The Silver Searcher
 	let g:ackprg = 'ag --nogroup --nocolor --column'
+" }
+
+" lukerandall/haskellmode-vim {
+	let g:haddock_browser = "open"
+	let g:haddock_browser_callformat = "%s %s"
 " }
 
 " Backup, Swap and View Files {

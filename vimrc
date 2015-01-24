@@ -156,6 +156,8 @@
 		set transparency=4
 	else
 		set t_Co=256
+		" Do not use terminal background color when clearing screen
+		set t_ut=
 	endif
 	
 	syntax on
@@ -187,9 +189,9 @@
 		hi SignColumn ctermfg=238 guifg=#444444 ctermbg=238 guibg=#444444
 	endfunction
 	
-	autocmd ColorScheme * call CorrectColorScheme()
+	" autocmd ColorScheme * call CorrectColorScheme()
 
-	colorscheme railscasts
+	colorscheme tomorrow-night
 " }
 
 " UI {

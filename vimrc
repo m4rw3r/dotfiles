@@ -81,6 +81,8 @@
 
 	let g:syntastic_error_symbol='✗'
 	let g:syntastic_warning_symbol='⚠'
+
+	let g:syntastic_hdevtools_options='-g -W -g -Wall -g -fwarn-tabs -g -fwarn-incomplete-record-updates'
 " }
 
 " vim-powerline {
@@ -134,6 +136,9 @@
 	autocmd FileType coffee setlocal expandtab shiftwidth=2 tabstop=2
 	" Python should be indented with spaces preferrably
 	autocmd FileType python setlocal expandtab shiftwidth=4 tabstop=4
+	" Haskell should be indented with spaces preferrably
+	autocmd FileType haskell setlocal expandtab shiftwidth=4 tabstop=4
+	autocmd FileType cabal setlocal expandtab shiftwidth=4 tabstop=4
 " }
 
 " Font and Color {

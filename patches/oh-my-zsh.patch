@@ -1,8 +1,8 @@
 diff --git a/lib/termsupport.zsh b/lib/termsupport.zsh
-index 9c0a430..6460a41 100644
+index d9f2b64..1ed51d4 100644
 --- a/lib/termsupport.zsh
 +++ b/lib/termsupport.zsh
-@@ -6,12 +6,12 @@ function title {
+@@ -5,12 +5,12 @@ function title {
    if [[ "$DISABLE_AUTO_TITLE" == "true" ]] || [[ "$EMACS" == *term* ]]; then
      return
    fi
@@ -11,11 +11,11 @@ index 9c0a430..6460a41 100644
      print -Pn "\ek$1:q\e\\" #set screen hardstatus, usually truncated at 20 chars
 -  elif [[ "$TERM" == xterm* ]] || [[ $TERM == rxvt* ]] || [[ $TERM == ansi ]] || [[ "$TERM_PROGRAM" == "iTerm.app" ]]; then
 -    print -Pn "\e]2;$2:q\a" #set window name
--    print -Pn "\e]1;$1:q\a" #set icon (=tab) name (will override window name on broken terminal)
+-    print -Pn "\e]1;$1:q\a" #set icon (=tab) name
 -  fi
 +  #elif [[ "$TERM" == xterm* ]] || [[ $TERM == rxvt* ]] || [[ $TERM == ansi ]] || [[ "$TERM_PROGRAM" == "iTerm.app" ]]; then
 +  #  print -Pn "\e]2;$2:q\a" #set window name
-+  #  print -Pn "\e]1;$1:q\a" #set icon (=tab) name (will override window name on broken terminal)
++  #  print -Pn "\e]1;$1:q\a" #set icon (=tab) name
 +  #fi
  }
  

@@ -57,6 +57,7 @@ setopt   hist_ignore_space
 export   EDITOR=vim
 
 alias bower='noglob bower'
+alias genuuid="uuidgen | tr '[:upper:]' '[:lower:]' | tr -d \"\\n\""
 
 # GitDoge
 alias such=git

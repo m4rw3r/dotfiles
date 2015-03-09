@@ -78,6 +78,7 @@
 	" It uses PHP Mess Detector and PHP_CodeSniffer, I do not like how those behaves
 	let g:syntastic_php_checkers=['php']
 	let g:syntastic_css_checkers=['csslint', 'prettycss']
+	let g:synastic_java_checkers=[]
 
 	let g:syntastic_error_symbol='✗'
 	let g:syntastic_warning_symbol='⚠'

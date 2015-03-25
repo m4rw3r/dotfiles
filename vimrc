@@ -140,6 +140,8 @@
 	" Haskell should be indented with spaces preferrably
 	autocmd FileType haskell setlocal expandtab shiftwidth=4 tabstop=4
 	autocmd FileType cabal setlocal expandtab shiftwidth=4 tabstop=4
+	" Javascript 2 spaces
+	autocmd FileType javascript setlocal expandtab shiftwidth=2 tabstop=2
 " }
 
 " Font and Color {

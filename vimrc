@@ -250,6 +250,8 @@
 	" same column
 	nmap j gj
 	nmap k gk
+	vmap j gj
+	vmap k gk
 	
 	" easier cursor navigation between split windows using CTRL and h,j,k, or l
 	noremap <C-h> <C-w>h

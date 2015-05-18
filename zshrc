@@ -70,16 +70,36 @@ alias klist='/usr/bin/klist'
 
 # Go's idiocy of requiring a path
 export GOPATH=~/Projects/go
+export GOROOT="/opt/local/go"
+
+# Java Maven
+export JAVA_HOME=$(/usr/libexec/java_home)
+MAVEN_OPTS=-Dfile.encoding=UTF-8
+
+# Rust
+export DYLD_LIBRARY_PATH=/usr/local/lib
 
 # Clojurescript
 export CLOJURESCRIPT_HOME=$HOME/Projects/Clones/clojurescript
 export LEIN_ROOT=/opt/local/bin/lein
 
 # Postgresql
-PATH="/Applications/Postgres.app/Contents/Versions/9.3/bin:$PATH"
+PATH="/Applications/Postgres.app/Contents/Versions/9.4/bin:$PATH"
 # Use this command in psql to enable less pager: \pset pager always
 export PAGER=less
 export LESS="-r"
+# PgTap
+alias pg_prove=/opt/local/libexec/perl5.16/sitebin/pg_prove
+
+# Haskell
+export PATH="$HOME/Library/Haskell/bin:$PATH"
+
+# Python
+export PYTHONPATH=$PYTHONPATH:/opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages
+
+# Google Cloud
+alias goapp=~/Projects/Likipe/google-cloud-sdk/platform/google_appengine/goapp
+export PATH="$HOME/Projects/Likipe/google-cloud-sdk/bin:$PATH"
 
 # From http://justinlilly.com/dotfiles/zsh.html
 extract () {

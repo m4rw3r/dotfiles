@@ -69,6 +69,7 @@
 	" Colorschemes
 	Bundle 'junegunn/seoul256.vim'
 	Bundle 'Lokaltog/vim-distinguished'
+	Bundle 'whatyouhide/vim-gotham'
 
 	" Required!
 	filetype plugin indent on
@@ -196,7 +197,7 @@
 	
 	" autocmd ColorScheme * call CorrectColorScheme()
 
-	colorscheme tomorrow-night
+	colorscheme gotham
 " }
 
 " UI {
@@ -267,8 +268,8 @@
 	" NOTE: Does not work in gvim
 	cmap w!! w !sudo tee > /dev/null %
 
-	map <C-Tab> :bnext<CR>
-	map <C-S-Tab> :bprevious<CR>
+	map <Leader>j :bnext<CR>
+	map <Leader>k :bprevious<CR>
 
 	map <Leader>w :bp\|bd #<CR>
 

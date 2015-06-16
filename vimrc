@@ -42,6 +42,8 @@
 	Bundle 'vim-scripts/haskell.vim'
 	Bundle 'vim-scripts/nginx.vim'
 	Bundle 'wting/rust.vim'
+	Bundle 'pangloss/vim-javascript'
+	Bundle 'mxw/vim-jsx'
 
 	" Clojure
 	Bundle 'guns/vim-clojure-highlight'

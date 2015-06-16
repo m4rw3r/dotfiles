@@ -1,13 +1,16 @@
-xft.dpi: 96
-xft.antialias: 1
-xft.hinting: 1
-xft.rgba: rgb
+xft.dpi:                              96
+xft.antialias:                        1
+xft.hinting:                          1
+xft.rgba:                             rgb
+Xft.hinstyle:                         hintslight
+Xft.autohint:                         0
+Xft.lcdfilter:                        lcddefault
 
-urxvt.keysym.C-Left: \033[1;3D
-urxvt.keysym.C-Right: \033[1;3C 
+;urxvt.keysym.C-Left:                  \033[1;3D
+;urxvt.keysym.C-Right:                 \033[1;3C 
 
 urxvt*termName:                       rxvt-unicode-256color
-!urxvt*geometry:                       geometry
+urxvt*geometry:                       150x45
 !urxvt*chdir:                          string
 !urxvt*reverseVideo:                   boolean
 urxvt*loginShell:                     true
@@ -23,7 +26,7 @@ urxvt*scrollBar:                      false
 urxvt*scrollTtyOutput:                true
 urxvt*scrollTtyKeypress:              true
 urxvt*scrollWithBuffer:               true
-!urxvt*inheritPixmap:                  boolean
+urxvt*inheritPixmap:                  false
 urxvt*transparent:                    true
 !urxvt*tintColor:                      color
 urxvt*shading:                        10
@@ -39,7 +42,7 @@ urxvt*mouseWheelScrollPage:           false
 urxvt*tripleclickwords:               false
 urxvt*insecure:                       false
 urxvt*cursorUnderline:                false
-urxvt*cursorBlink:                    false
+urxvt*cursorBlink:                    true
 urxvt*pointerBlank:                   false
 !urxvt*background:                     color
 !urxvt*foreground:                     color
@@ -74,6 +77,7 @@ urxvt*pointerBlank:                   false
 !urxvt*pointerColor2:                  color
 !urxvt*borderColor:                    color
 !urxvt*iconFile:                       file
+urxvt*allow_bold:                     true
 urxvt*font:                           xft:dejavu sans mono:pixelsize=16
 urxvt*boldFont:                       xft:DejaVu Sans Mono:pixelsize=16
 urxvt*italicFont:                     xft:DejaVu Sans Mono:pixelsize=16

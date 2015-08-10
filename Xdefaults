@@ -141,6 +141,7 @@ urxvt*skipBuiltinGlyphs:              false
 !urxvt*tabbar-fg:                      colour
 !urxvt*url-launcher:                   string
 
-!#include "/Users/m4rw3r/dotfiles/rxvt-colors/tomorrow-night"
-#include "/Users/m4rw3r/dotfiles/rxvt-colors/gotham"
 !#include "/Users/m4rw3r/dotfiles/rxvt-colors/base16-bright.light"
+#include "/Users/m4rw3r/dotfiles/rxvt-colors/gotham"
+!#include "/Users/m4rw3r/dotfiles/rxvt-colors/tomorrow"
+!#include "/Users/m4rw3r/dotfiles/rxvt-colors/tomorrow-night"

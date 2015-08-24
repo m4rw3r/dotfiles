@@ -145,3 +145,4 @@ urxvt*skipBuiltinGlyphs:              false
 #include "/Users/m4rw3r/dotfiles/rxvt-colors/gotham"
 !#include "/Users/m4rw3r/dotfiles/rxvt-colors/tomorrow"
 !#include "/Users/m4rw3r/dotfiles/rxvt-colors/tomorrow-night"
+

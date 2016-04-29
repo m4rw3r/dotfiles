@@ -32,6 +32,7 @@
 	
 	" Syntax
 	Bundle 'beyondwords/vim-twig'
+	Bundle 'cespare/vim-toml'
 	Bundle 'ekalinin/Dockerfile.vim'
 	Bundle 'groenewege/vim-less'
 	Bundle 'kchmck/vim-coffee-script'
@@ -41,7 +42,7 @@
 	Bundle 'google/vim-ft-go'
 	Bundle 'vim-scripts/haskell.vim'
 	Bundle 'vim-scripts/nginx.vim'
-	Bundle 'wting/rust.vim'
+	Bundle 'rust-lang/rust.vim'
 	Bundle 'pangloss/vim-javascript'
 	Bundle 'mxw/vim-jsx'
 
@@ -56,7 +57,7 @@
 	Bundle 'FuzzyFinder'
 	Bundle 'godlygeek/tabular'
 	Bundle 'kien/ctrlp.vim'
-	Bundle 'kikijump/tslime.vim'
+	Bundle 'jgdavey/tslime.vim'
 	Bundle 'L9'
 	Bundle 'Lokaltog/vim-powerline'
 	Bundle 'mileszs/ack.vim'
@@ -65,6 +66,7 @@
 	Bundle 'tpope/vim-fugitive'
 	Bundle 'vim-scripts/Smart-Tabs'
 	Bundle 'vim-scripts/bufkill.vim'
+	Bundle 'luochen1990/rainbow'
 
 	" Colorschemes
 	Bundle 'junegunn/seoul256.vim'
@@ -110,6 +112,10 @@
 " lukerandall/haskellmode-vim {
 	let g:haddock_browser = "open"
 	let g:haddock_browser_callformat = "%s %s"
+" }
+
+" luochen1990/rainbow {
+	let g:rainbow_active = 1
 " }
 
 " Backup, Swap and View Files {

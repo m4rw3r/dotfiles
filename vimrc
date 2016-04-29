@@ -139,6 +139,13 @@
 	
 	set tabstop=4
 	set shiftwidth=4
+
+	fun! <SID>StripTrailingWhitespaces()
+		let l = line(".")
+		let c = col(".")
+		%s/\s\+$//e
+		call cursor(l, c)
+	endfun
 	
 	" Different tab-width on YAML and Ruby files
 	autocmd FileType yaml setlocal expandtab shiftwidth=2 tabstop=2
@@ -151,6 +158,8 @@
 	autocmd FileType cabal setlocal expandtab shiftwidth=4 tabstop=4
 	" Javascript 2 spaces
 	autocmd FileType javascript setlocal expandtab shiftwidth=2 tabstop=2
+	" Rust automatically remove trailing spaces
+	autocmd FileType rust autocmd BufWritePre <buffer> :call <SID>StripTrailingWhitespaces()
 " }
 
 " Font and Color {

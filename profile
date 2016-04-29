@@ -6,7 +6,7 @@ export PATH=/opt/local/bin:/opt/local/sbin:/opt/X11/bin:$PATH
 # Google cloud
 export PATH="$HOME/Projects/Likipe/google-cloud-sdk/bin:$PATH"
 # Go installation
-export GOROOT="/opt/local/go"
+export GOROOT="/opt/local/lib/go"
 # Rust
 export DYLD_LIBRARY_PATH=/usr/local/lib
 

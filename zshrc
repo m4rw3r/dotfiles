@@ -46,7 +46,7 @@ ZSH_TMUX_FIXTERM="false"
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
-plugins=(git github nyan textmate osx macports node npm encode64 vi-mode colored-man tmux zsh-syntax-highlighting)
+plugins=(git github nyan osx macports node npm vi-mode colored-man tmux zsh-syntax-highlighting)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -70,7 +70,7 @@ alias klist='/usr/bin/klist'
 
 # Go's idiocy of requiring a path
 export GOPATH=~/Projects/go
-export GOROOT="/opt/local/go"
+export GOROOT="/opt/local/lib/go"
 
 # Java Maven
 export JAVA_HOME=$(/usr/libexec/java_home)
@@ -97,9 +97,11 @@ export PATH="$HOME/Library/Haskell/bin:$PATH"
 # Python
 export PYTHONPATH=$PYTHONPATH:/opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages
 
-# Google Cloud
-alias goapp=~/Projects/Likipe/google-cloud-sdk/platform/google_appengine/goapp
-export PATH="$HOME/Projects/Likipe/google-cloud-sdk/bin:$PATH"
+# Rust cargo install
+export PATH="$PATH:$HOME/.multirust/toolchains/nightly/cargo/bin"
+
+# Mactex
+export PATH="$PATH:/usr/local/texlive/2015/bin/x86_64-darwin"
 
 # From http://justinlilly.com/dotfiles/zsh.html
 extract () {
@@ -125,3 +127,6 @@ extract () {
 if [[ -f $HOME/dotfiles/keys.sh ]]; then
 	source $HOME/dotfiles/keys.sh
 fi
+
+# added by travis gem
+[ -f /Users/m4rw3r/.travis/travis.sh ] && source /Users/m4rw3r/.travis/travis.sh

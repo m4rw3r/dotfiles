@@ -1,9 +1,9 @@
-xft.dpi:                              96
-xft.antialias:                        1
+xft.dpi:                              226
+xft.antialias:                        0
 xft.hinting:                          1
+Xft.autohint:                         1
 xft.rgba:                             rgb
 Xft.hinstyle:                         hintslight
-Xft.autohint:                         0
 Xft.lcdfilter:                        lcddefault
 
 ;urxvt.keysym.C-Left:                  \033[1;3D
@@ -78,10 +78,10 @@ urxvt*pointerBlank:                   false
 !urxvt*borderColor:                    color
 !urxvt*iconFile:                       file
 urxvt*allow_bold:                     true
-urxvt*font:                           xft:dejavu sans mono:pixelsize=16
-urxvt*boldFont:                       xft:DejaVu Sans Mono:pixelsize=16
-urxvt*italicFont:                     xft:DejaVu Sans Mono:pixelsize=16
-urxvt*boldItalicFont:                 xft:DejaVu Sans Mono:pixelsize=16
+urxvt*font:                           xft:Dejavu Sans Mono:pixelsize=16:style=Regular
+urxvt*boldFont:                       xft:DejaVu Sans Mono:pixelsize=16:style=Bold
+urxvt*italicFont:                     xft:DejaVu Sans Mono:pixelsize=16:style=Oblique
+urxvt*boldItalicFont:                 xft:DejaVu Sans Mono:pixelsize=16:style=Bold Oblique
 urxvt*intensityStyles:                true
 !urxvt*inputMethod:                    name
 !urxvt*preeditType:                    style
@@ -142,7 +142,8 @@ urxvt*skipBuiltinGlyphs:              false
 !urxvt*url-launcher:                   string
 
 !#include "/Users/m4rw3r/dotfiles/rxvt-colors/base16-bright.light"
-#include "/Users/m4rw3r/dotfiles/rxvt-colors/gotham"
+!#include "/Users/m4rw3r/dotfiles/rxvt-colors/gotham"
 !#include "/Users/m4rw3r/dotfiles/rxvt-colors/tomorrow"
-!#include "/Users/m4rw3r/dotfiles/rxvt-colors/tomorrow-night"
+!#include "/Users/m4rw3r/dotfiles/rxvt-colors/base16-atelierlakeside"
+#include "/Users/m4rw3r/dotfiles/rxvt-colors/tomorrow-night"
 

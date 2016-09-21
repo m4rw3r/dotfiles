@@ -32,7 +32,7 @@ $(FILES):
 		echo "Moving old $(HOME)/.$@ to $$f";\
 		mv $(HOME)/.$@ $$f;\
 	fi
-	@ln -sf $(CURDIR)/$@ $(HOME)/.$@
+	@if ! [ $(HOME)/.$@ -ef $(CURDIR)/$@ ]; then ln -sf $(CURDIR)/$@ $(HOME)/.$@; fi
 
 .PHONY: vim_vundle
 vim_vundle:

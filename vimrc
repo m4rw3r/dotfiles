@@ -22,14 +22,14 @@
 	"
 	" see :h vundle for more details or wiki for FAQ
 	" NOTE: comments after Bundle command are not allowed..
-	
+
 	set rtp+=~/.vim/bundle/vundle/
 	call vundle#rc()
 	
 	" Let Vundle manage Vundle
 	" Required!
 	Bundle 'gmarik/vundle'
-	
+
 	" Syntax
 	Bundle 'beyondwords/vim-twig'
 	Bundle 'cespare/vim-toml'
@@ -59,7 +59,8 @@
 	Bundle 'kien/ctrlp.vim'
 	Bundle 'jgdavey/tslime.vim'
 	Bundle 'L9'
-	Bundle 'Lokaltog/vim-powerline'
+	Bundle 'vim-airline/vim-airline'
+	Bundle 'vim-airline/vim-airline-themes'
 	Bundle 'mileszs/ack.vim'
 	Bundle 'scrooloose/nerdtree'
 	Bundle 'scrooloose/syntastic'
@@ -89,11 +90,25 @@
 	let g:syntastic_warning_symbol='⚠'
 
 	let g:syntastic_hdevtools_options='-g -W -g -Wall -g -fwarn-tabs -g -fwarn-incomplete-record-updates'
+
+	" Turn off signs in syntastic, syntastic garbles the editor window with
+	" these
+	let g:syntastic_enable_signs=0
+	let g:syntastic_full_redraws=1
+
+	" Ignore angularjs stupidity
+	let g:syntastic_html_tidy_ignore_errors=['proprietary attribute "ng-']
 " }
 
-" vim-powerline {
+" airline {
 	set laststatus=2
-	let g:Powerline_symbols = 'fancy'
+	let g:airline_powerline_fonts=1
+	let g:airline_theme='distinguished'
+	let g:airline#extensions#whitespace#enabled = 1
+	let g:airline#extensions#whitespace#mixed_indent_algo = 2
+	" Skip trailing checks:
+	let g:airline#extensions#whitespace#checks = [ 'indent', 'long', 'mixed-indent-file']
+
 " }
 
 " Rooter {
@@ -116,6 +131,7 @@
 
 " luochen1990/rainbow {
 	let g:rainbow_active = 1
+	let g:rainbow_conf = {'separately': { 'html': 0 }}
 " }
 
 " Backup, Swap and View Files {
@@ -127,10 +143,10 @@
 	" Store backups in $HOME to keep the directory trees clean
 	set backup
 	set undofile
-	set backupdir=$HOME/.vim/.backup/
-	set directory=$HOME/.vim/.swap/
-	set viewdir=$HOME/.vim/.views/
-	set undodir=$HOME/.vim/.undo/
+	set backupdir=$HOME/.vim/.backup//
+	set directory=$HOME/.vim/.swap//
+	set viewdir=$HOME/.vim/.views//
+	set undodir=$HOME/.vim/.undo//
 " }
 
 " Tabs and Indentation {
@@ -212,10 +228,13 @@
 	
 	" autocmd ColorScheme * call CorrectColorScheme()
 
-	colorscheme gotham
+	colorscheme Tomorrow-Night
 " }
 
 " UI {
+	" Shorter timeouts after keypresses before updating UI
+	set timeoutlen=500 ttimeoutlen=500
+
 	set list
 	set listchars=eol:¬,tab:▸\ ,trail:·
 	" Display hidden unicode characters as hex

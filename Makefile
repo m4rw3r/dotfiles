@@ -8,14 +8,19 @@ PATCHES   = $(wildcard patches/**.patch)
 help:
 	@echo "Dotfiles installer, usage:\n\tmake install\n\nWill set the following links:\n"
 	@for f in $(FILES); do printf "%-30s -> %s\n" "$(HOME)/.$$f" "$(CURDIR)/$$f"; done
-	@echo "\nThe following variables can configure the command:\n\tHOME: Directory where the dot-prefixed links will be placed"
-	@echo "\nOther commands:\n\tmake update\tWill update all git repositories and re-apply patches\n\tmake patch\tWill apply patches\n\tmake reset\tWill reset patched git repositories to upstream"
+	@echo "\nThe following variables can configure the command:"
+	@echo "\tHOME:    Directory where the dot-prefixed links will be placed"
+	@echo "\tREPLACE: Set to truthy value to replace the files instead of moving"
+	@echo "\nOther commands:"
+	@echo "\tmake update\tWill update all git repositories and re-apply patches"
+	@echo "\tmake patch\tWill apply patches"
+	@echo "\tmake reset\tWill reset patched git repositories to upstream"
 
 install: $(FILES) patches vim_vundle
 
 .PHONY: $(FILES)
 $(FILES):
-	@if [[ -z "$(REPLACE)" ]] && ([[ -e $(HOME)/.$@ ]] || [[ -L $(HOME)/.$@ ]]);\
+	@if [[ -z "$(REPLACE)" ]] && ([[ -e $(HOME)/.$@ ]] || [[ -L $(HOME)/.$@ ]]) && ! [ $(HOME)/.$@ -ef $(CURDIR)/$@ ];\
 		then\
 		n=;\
 		f=$(HOME)/.$@.orig;\

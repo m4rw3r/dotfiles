@@ -14,7 +14,7 @@ urxvt*geometry:                       150x45
 !urxvt*chdir:                          string
 !urxvt*reverseVideo:                   boolean
 urxvt*loginShell:                     true
-urxvt*jumpScroll:                     false
+urxvt*jumpScroll:                     true
 urxvt*skipScroll:                     true
 urxvt*pastableTabs:                   true
 urxvt*scrollstyle:                    plain
@@ -23,11 +23,11 @@ urxvt*scrollBar:                      false
 !urxvt*scrollBar_floating:             boolean
 !urxvt*scrollBar_align:                mode
 !urxvt*thickness:                      number
-urxvt*scrollTtyOutput:                true
+urxvt*scrollTtyOutput:                false
 urxvt*scrollTtyKeypress:              true
-urxvt*scrollWithBuffer:               true
+urxvt*scrollWithBuffer:               false
 urxvt*inheritPixmap:                  false
-urxvt*transparent:                    true
+urxvt*transparent:                    false
 !urxvt*tintColor:                      color
 urxvt*shading:                        10
 urxvt*blurRadius:                     10
@@ -143,7 +143,7 @@ urxvt*skipBuiltinGlyphs:              false
 
 !#include "/Users/m4rw3r/dotfiles/rxvt-colors/base16-bright.light"
 !#include "/Users/m4rw3r/dotfiles/rxvt-colors/gotham"
-!#include "/Users/m4rw3r/dotfiles/rxvt-colors/tomorrow"
 !#include "/Users/m4rw3r/dotfiles/rxvt-colors/base16-atelierlakeside"
+!#include "/Users/m4rw3r/dotfiles/rxvt-colors/tomorrow"
 #include "/Users/m4rw3r/dotfiles/rxvt-colors/tomorrow-night"
 

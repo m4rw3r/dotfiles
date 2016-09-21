@@ -15,7 +15,7 @@ ZSH_CUSTOM=$HOME/dotfiles/oh-my-zsh-plugins
 ZSH_THEME="robbyrussell"
 
 # Uncomment this to disable bi-weekly auto-update checks
-# DISABLE_AUTO_UPDATE="true"
+DISABLE_AUTO_UPDATE="true"
 
 # Uncomment to change how often before auto-updates occur? (in days)
 # export UPDATE_ZSH_DAYS=13
@@ -46,7 +46,7 @@ ZSH_TMUX_FIXTERM="false"
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
-plugins=(git github nyan osx macports node npm vi-mode colored-man tmux zsh-syntax-highlighting)
+plugins=(git nyan osx macports node npm vi-mode colored-man tmux zsh-syntax-highlighting)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -84,7 +84,7 @@ export CLOJURESCRIPT_HOME=$HOME/Projects/Clones/clojurescript
 export LEIN_ROOT=/opt/local/bin/lein
 
 # Postgresql
-PATH="/Applications/Postgres.app/Contents/Versions/9.4/bin:$PATH"
+PATH="/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH"
 # Use this command in psql to enable less pager: \pset pager always
 export PAGER=less
 export LESS="-r"

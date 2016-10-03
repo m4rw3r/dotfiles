@@ -1,13 +1,13 @@
 HOME    ?= ~
 REPLACE ?=
 
-FILES     = $(filter-out Makefile patches projects.vim keys.sh oh-my-zsh-plugins, $(wildcard *))
+FILES     = $(filter-out Makefile mac_resources patches projects.vim keys.sh oh-my-zsh-plugins, $(wildcard *))
 GIT_REPOS = $(addsuffix /.git, oh-my-zsh $(wildcard oh-my-zsh-plugins/plugins/*))
 PATCHES   = $(wildcard patches/**.patch)
 
 help:
 	@echo "Dotfiles installer, usage:\n\tmake install\n\nWill set the following links:\n"
-	@for f in $(FILES); do printf "%-30s -> %s\n" "$(HOME)/.$$f" "$(CURDIR)/$$f"; done
+	@for f in $(FILES); do printf "%-40s -> %s\n" "$(HOME)/.$$f" "$(CURDIR)/$$f"; done
 	@echo "\nThe following variables can configure the command:"
 	@echo "\tHOME:    Directory where the dot-prefixed links will be placed"
 	@echo "\tREPLACE: Set to truthy value to replace the files instead of moving"

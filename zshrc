@@ -4,6 +4,9 @@ export   LC_ALL=en_US.UTF-8
 # MacPorts
 export PATH=/opt/local/bin:/opt/local/sbin:$PATH
 
+# Rustup
+[[ -f $HOME/.cargo/env ]] && source $HOME/.cargo/env
+
 # Path to your oh-my-zsh configuration.
 ZSH=$HOME/dotfiles/oh-my-zsh
 ZSH_CUSTOM=$HOME/dotfiles/oh-my-zsh-plugins
@@ -96,9 +99,6 @@ export PATH="$HOME/Library/Haskell/bin:$PATH"
 
 # Python
 export PYTHONPATH=$PYTHONPATH:/opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages
-
-# Rust cargo install
-export PATH="$PATH:$HOME/.multirust/toolchains/nightly/cargo/bin"
 
 # Mactex
 export PATH="$PATH:/usr/local/texlive/2015/bin/x86_64-darwin"

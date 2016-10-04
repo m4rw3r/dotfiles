@@ -8,6 +8,9 @@ export GOROOT="/opt/local/lib/go"
 # Rust
 export DYLD_LIBRARY_PATH=/usr/local/lib
 
+# Rustup
+[[ -f $HOME/.cargo/env ]] && source $HOME/.cargo/env
+
 # X and rxvt-unicode
 export   LANG=en_US.UTF-8
 export   LC_ALL=en_US.UTF-8

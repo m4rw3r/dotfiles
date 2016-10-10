@@ -141,9 +141,9 @@ urxvt*skipBuiltinGlyphs:              false
 !urxvt*tabbar-fg:                      colour
 !urxvt*url-launcher:                   string
 
-!#include "/Users/m4rw3r/dotfiles/rxvt-colors/base16-bright.light"
-!#include "/Users/m4rw3r/dotfiles/rxvt-colors/gotham"
-!#include "/Users/m4rw3r/dotfiles/rxvt-colors/base16-atelierlakeside"
-!#include "/Users/m4rw3r/dotfiles/rxvt-colors/tomorrow"
-#include "/Users/m4rw3r/dotfiles/rxvt-colors/tomorrow-night"
+!#include "dotfiles/rxvt-colors/base16-bright.light"
+!#include "dotfiles/rxvt-colors/gotham"
+!#include "dotfiles/rxvt-colors/base16-atelierlakeside"
+!#include "dotfiles/rxvt-colors/tomorrow"
+#include "dotfiles/rxvt-colors/tomorrow-night"
 

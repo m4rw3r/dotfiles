@@ -1,11 +1,7 @@
 export   LANG=en_US.UTF-8
 export   LC_ALL=en_US.UTF-8
 
-# MacPorts
-export PATH=/opt/local/bin:/opt/local/sbin:$PATH
-
-# Rustup
-[[ -f $HOME/.cargo/env ]] && source $HOME/.cargo/env
+source $HOME/.paths.sh
 
 # Path to your oh-my-zsh configuration.
 ZSH=$HOME/dotfiles/oh-my-zsh
@@ -71,37 +67,15 @@ alias wow='git status'
 alias kinit='/usr/bin/kinit'
 alias klist='/usr/bin/klist'
 
-# Go's idiocy of requiring a path
-export GOPATH=~/Projects/go
-export GOROOT="/opt/local/lib/go"
-
-# Java Maven
-export JAVA_HOME=$(/usr/libexec/java_home)
-MAVEN_OPTS=-Dfile.encoding=UTF-8
-
-# Rust
-export DYLD_LIBRARY_PATH=/usr/local/lib
-
-# Clojurescript
-export CLOJURESCRIPT_HOME=$HOME/Projects/Clones/clojurescript
-export LEIN_ROOT=/opt/local/bin/lein
-
-# Postgresql
-PATH="/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH"
 # Use this command in psql to enable less pager: \pset pager always
 export PAGER=less
 export LESS="-r"
+
 # PgTap
 alias pg_prove=/opt/local/libexec/perl5.16/sitebin/pg_prove
 
-# Haskell
-export PATH="$HOME/Library/Haskell/bin:$PATH"
-
 # Python
 export PYTHONPATH=$PYTHONPATH:/opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages
-
-# Mactex
-export PATH="$PATH:/usr/local/texlive/2015/bin/x86_64-darwin"
 
 # From http://justinlilly.com/dotfiles/zsh.html
 extract () {

@@ -118,6 +118,9 @@
 " Bufkill {
 	let g:BufKillCreateMappings = 0
 " }
+" Nerdtree {
+	let NERDTreeShowHidden=1
+" }
 
 " Ack.vim {
 	" Use The Silver Searcher

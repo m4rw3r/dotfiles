@@ -10,7 +10,7 @@
 	" Don't add invisible linebreak at EOF
 	set binary noeol
 
-	let mapleader = "§"
+	let mapleader="§"
 " }
 
 " Vundle {
@@ -104,11 +104,10 @@
 	set laststatus=2
 	let g:airline_powerline_fonts=1
 	let g:airline_theme='distinguished'
-	let g:airline#extensions#whitespace#enabled = 1
-	let g:airline#extensions#whitespace#mixed_indent_algo = 2
+	let g:airline#extensions#whitespace#enabled=1
+	let g:airline#extensions#whitespace#mixed_indent_algo=2
 	" Skip trailing checks:
-	let g:airline#extensions#whitespace#checks = [ 'indent', 'long', 'mixed-indent-file']
-
+	let g:airline#extensions#whitespace#checks=['indent', 'long', 'mixed-indent-file']
 " }
 
 " Rooter {
@@ -116,25 +115,26 @@
 " }
 
 " Bufkill {
-	let g:BufKillCreateMappings = 0
+	let g:BufKillCreateMappings=0
 " }
+
 " Nerdtree {
 	let NERDTreeShowHidden=1
 " }
 
 " Ack.vim {
 	" Use The Silver Searcher
-	let g:ackprg = 'ag --nogroup --nocolor --column'
+	let g:ackprg='ag --nogroup --nocolor --column'
 " }
 
 " lukerandall/haskellmode-vim {
-	let g:haddock_browser = "open"
-	let g:haddock_browser_callformat = "%s %s"
+	let g:haddock_browser="open"
+	let g:haddock_browser_callformat="%s %s"
 " }
 
 " luochen1990/rainbow {
-	let g:rainbow_active = 1
-	let g:rainbow_conf = {'separately': { 'html': 0 }}
+	let g:rainbow_active=1
+	let g:rainbow_conf={'separately': { 'html': 0 }}
 " }
 
 " Backup, Swap and View Files {
@@ -160,8 +160,8 @@
 	set shiftwidth=4
 
 	fun! <SID>StripTrailingWhitespaces()
-		let l = line(".")
-		let c = col(".")
+		let l=line(".")
+		let c=col(".")
 		%s/\s\+$//e
 		call cursor(l, c)
 	endfun

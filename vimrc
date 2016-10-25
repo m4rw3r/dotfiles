@@ -177,8 +177,9 @@
 	" Haskell should be indented with spaces preferrably
 	autocmd FileType haskell setlocal expandtab shiftwidth=4 tabstop=4
 	autocmd FileType cabal setlocal expandtab shiftwidth=4 tabstop=4
-	" Javascript 2 spaces
+	" Javascript 2 spaces and automatically remove trailing spaces
 	autocmd FileType javascript setlocal expandtab shiftwidth=2 tabstop=2
+	autocmd FileType javascript autocmd BufWritePre <buffer> :call <SID>StripTrailingWhitespaces()
 	" Rust automatically remove trailing spaces
 	autocmd FileType rust autocmd BufWritePre <buffer> :call <SID>StripTrailingWhitespaces()
 " }

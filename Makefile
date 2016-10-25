@@ -2,7 +2,7 @@ HOME    ?= ~
 REPLACE ?=
 
 FILES     = $(filter-out Makefile mac_resources patches projects.vim keys.sh oh-my-zsh-plugins, $(wildcard *))
-GIT_REPOS = $(addsuffix /.git, oh-my-zsh $(wildcard oh-my-zsh-plugins/plugins/*))
+GIT_REPOS = $(addsuffix /.git, oh-my-zsh $(wildcard oh-my-zsh-plugins/plugins/*) tmux-resurrect vim/bundle/vundle)
 PATCHES   = $(wildcard patches/**.patch)
 
 help:
@@ -53,7 +53,7 @@ git-pull: $(GIT_REPOS)
 .PHONY: $(GIT_REPOS)
 $(GIT_REPOS):
 	@echo Updating $(patsubst %/.git,%,$@)
-	@(cd $@/..; git reset --hard @{u} && git pull --rebase)
+	@(cd $(patsubst %/.git,%,$@); git checkout master && git reset --hard @{u} && git pull --rebase)
 	@echo Updated $(patsubst %/.git,%,$@)
 
 .PHONY: patches

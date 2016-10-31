@@ -302,8 +302,7 @@
 	noremap <C-k> <C-w>k
 	noremap <C-l> <C-w>l
 
-	" Stop highlighting on escape
-	nnoremap <ESC> :noh<CR><ESC>
+	nnoremap <F3> :noh<CR>
 
 	" Allow saving of files as sudo when vim is not running under sudo
 	" NOTE: Does not work in gvim

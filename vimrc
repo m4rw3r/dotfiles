@@ -31,7 +31,6 @@
 	Bundle 'gmarik/vundle'
 
 	" Syntax
-	Bundle 'beyondwords/vim-twig'
 	Bundle 'cespare/vim-toml'
 	Bundle 'ekalinin/Dockerfile.vim'
 	Bundle 'groenewege/vim-less'
@@ -172,6 +171,9 @@
 	autocmd FileType yaml setlocal expandtab shiftwidth=2 tabstop=2
 	autocmd FileType ruby setlocal expandtab shiftwidth=2 tabstop=2
 	autocmd FileType coffee setlocal expandtab shiftwidth=2 tabstop=2
+	" PHP indent is 4 spaces and remove trailing spaces
+	autocmd FileType php setlocal expandtab
+	autocmd FileType php autocmd BufWritePre <buffer> :call <SID>StripTrailingWhitespaces()
 	" Python should be indented with spaces preferrably
 	autocmd FileType python setlocal expandtab shiftwidth=4 tabstop=4
 	" Haskell should be indented with spaces preferrably

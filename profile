@@ -13,6 +13,6 @@ export   LC_ALL=en_US.UTF-8
 xsetroot -solid black
 xsetroot -cursor_name left_ptr
  
-xset fp+ /opt/local/share/fonts/
+[[ -f /opt/local/share/fonts/fonts.dir ]] && xset fp+ /opt/local/share/fonts/
 xset fp+ $HOME/Library/Fonts/
 xset fp rehash 

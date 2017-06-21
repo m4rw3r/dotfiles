@@ -312,6 +312,8 @@
 
 	map <Leader>j :bnext<CR>
 	map <Leader>k :bprevious<CR>
+	map <Tab>   :bnext<CR>
+	map <C-Tab> :bprevious<CR>
 
 	map <Leader>w :bp\|bd #<CR>
 

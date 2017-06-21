@@ -9,6 +9,8 @@ Xft.lcdfilter:                        lcddefault
 ;urxvt.keysym.C-Left:                  \033[1;3D
 ;urxvt.keysym.C-Right:                 \033[1;3C 
 
+urxvt.keysym.C-Tab                    \033[27;5;9~
+
 urxvt*termName:                       rxvt-unicode-256color
 urxvt*geometry:                       150x45
 !urxvt*chdir:                          string

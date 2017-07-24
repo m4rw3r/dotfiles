@@ -28,7 +28,7 @@ export DYLD_LIBRARY_PATH=/usr/local/lib
 [[ -d /usr/local/texlive/2015/bin/x86_64-darwin ]] && export PATH="$PATH:/usr/local/texlive/2015/bin/x86_64-darwin"
 
 # Java Maven
-export JAVA_HOME=$(/usr/libexec/java_home)
+[[ -f /usr/libexec/java_home ]] && export JAVA_HOME=$(/usr/libexec/java_home)
 MAVEN_OPTS=-Dfile.encoding=UTF-8
 
 # Clojurescript

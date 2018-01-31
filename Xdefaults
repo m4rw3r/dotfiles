@@ -37,7 +37,7 @@ urxvt*blurRadius:                     10
 !urxvt*fadeColor:                      color
 !urxvt*utmpInhibit:                    boolean
 !urxvt*urgentOnBell:                   boolean
-urxvt*visualBell:                     true
+urxvt*visualBell:                     false
 urxvt*mapAlert:                       true
 urxvt*meta8:                          false
 urxvt*mouseWheelScrollPage:           false

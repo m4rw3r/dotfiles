@@ -44,6 +44,7 @@
 	Bundle 'rust-lang/rust.vim'
 	Bundle 'pangloss/vim-javascript'
 	Bundle 'mxw/vim-jsx'
+	Bundle 'StanAngeloff/php.vim'
 
 	" Clojure
 	Bundle 'guns/vim-clojure-highlight'
@@ -138,6 +139,16 @@
 	let g:rainbow_conf={'separately': { 'html': 0 }}
 " }
 
+" PHP {
+	" Slow syntax highlighting
+	let php_html_load=0
+	let php_html_in_heredoc=0
+	let php_html_in_nowdoc=0
+	let php_sql_query=0
+	let php_sql_heredoc=0
+	let php_sql_nowdoc=0
+" }
+
 " Backup, Swap and View Files {
 	" Create dirs
 	silent execute '!mkdir -p $HOME/.vim/.backup'
@@ -159,6 +170,11 @@
 	
 	set tabstop=4
 	set shiftwidth=4
+
+	" Disable code folding
+	set nofoldenable
+	" disable PIV's folding
+	let g:DisableAutoPHPFolding = 1
 
 	fun! <SID>StripTrailingWhitespaces()
 		let l=line(".")

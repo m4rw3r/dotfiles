@@ -97,6 +97,10 @@ extract () {
 	fi
 }
 
+if [ -x "$(command -v prettyping)" ]; then
+	alias ping='prettyping --nolegend'
+fi
+
 if [[ -f $HOME/dotfiles/keys.sh ]]; then
 	source $HOME/dotfiles/keys.sh
 fi

@@ -36,7 +36,6 @@
 	Bundle 'groenewege/vim-less'
 	Bundle 'kchmck/vim-coffee-script'
 	Bundle 'lukerandall/haskellmode-vim'
-	Bundle 'othree/html5.vim'
 	Bundle 'tpope/vim-markdown'
 	Bundle 'google/vim-ft-go'
 	Bundle 'vim-scripts/haskell.vim'
@@ -200,6 +199,8 @@
 	autocmd FileType javascript autocmd BufWritePre <buffer> :call <SID>StripTrailingWhitespaces()
 	" Rust automatically remove trailing spaces
 	autocmd FileType rust autocmd BufWritePre <buffer> :call <SID>StripTrailingWhitespaces()
+	" XML should be indented with spaces preferrably
+	autocmd FileType xml setlocal expandtab shiftwidth=2 tabstop=2
 " }
 
 " Font and Color {
@@ -260,7 +261,7 @@
 	set timeoutlen=500 ttimeoutlen=500
 
 	set list
-	set listchars=eol:¬,tab:▸\ ,trail:·
+	set listchars=eol:¬,nbsp:¬tab:▸\ ,trail:·,precedes:«,extends:»
 	" Display hidden unicode characters as hex
 	set display+=uhex
 	

@@ -261,7 +261,7 @@
 	set timeoutlen=500 ttimeoutlen=500
 
 	set list
-	set listchars=eol:¬,nbsp:¬tab:▸\ ,trail:·,precedes:«,extends:»
+	set listchars=eol:¬,nbsp:¬,tab:▸\ ,trail:·,precedes:«,extends:»
 	" Display hidden unicode characters as hex
 	set display+=uhex
 	

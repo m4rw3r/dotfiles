@@ -308,6 +308,15 @@
 	
 	" No audio bell
 	set vb
+
+	if has("gui_running")
+		" No visual bell in GUI
+		set t_vb=
+		" Remove toolbar, menubar, scrollbar
+		:set guioptions-=T
+		:set guioptions-=m
+		:set guioptions-=s
+	endif
 " }
 
 " Key Mappings {
@@ -355,7 +364,6 @@
 
 	" Remap CMD + F to fullscreen mode
 	if has("gui_running")
-		set fuopt+=maxhorz
 		macmenu &Edit.Find.Find\.\.\. key=<nop>
 		map <D-f> :set invfu<CR>
 	endif

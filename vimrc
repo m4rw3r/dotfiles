@@ -101,6 +101,11 @@
 	let g:syntastic_html_tidy_ignore_errors=['proprietary attribute "ng-']
 " }
 
+" ALE {
+	" Gutter off
+	let g:ale_set_signs=0
+" }
+
 " airline {
 	set laststatus=2
 	let g:airline_powerline_fonts=1

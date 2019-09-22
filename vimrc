@@ -145,6 +145,14 @@
 	let g:rainbow_conf={'separately': { 'html': 0 }}
 " }
 
+" Javascript {
+	" I use Flow
+	let g:javascript_plugin_flow = 1
+
+	" mxw/vim-jsx: Fixes issue with closing parenthesis in "React-like components"
+	let g:jsx_ext_required = 0
+" }
+
 " PHP {
 	" Slow syntax highlighting
 	let php_html_load=0

@@ -233,17 +233,17 @@
 
 " Font and Color {
 	if has("gui_running")
-		set guifont=DejaVu\ Sans\ Mono\ for\ Powerline:h13
+		if has("win32")
+			set guifont=Consolas:h12
+		else
+			set guifont=DejaVu\ Sans\ Mono\ for\ Powerline:h13
+		endif
+
 		set antialias
 		set linespace=3
 		" Prevent mouse usage, trackpad makes it way too easy to resort to
 		" clicking to move the cursor
 		set mouse=c
-
-		" Force MacVim to skip colors
-		let macvim_skip_colorscheme=1
-
-		set transparency=4
 	else
 		set t_Co=256
 		" Do not use terminal background color when clearing screen

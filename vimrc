@@ -13,6 +13,11 @@
 	filetype plugin indent on
 
 	let mapleader="§"
+	
+	if has('win32')
+		" Ensure .vim is in path, gvim in Windows does not use this by default
+		set rtp+=~/.vim
+	endif
 " }
 
 " Vim Plug {
@@ -165,10 +170,18 @@
 
 " Backup, Swap and View Files {
 	" Create dirs
-	silent execute '!mkdir -p $HOME/.vim/.backup'
-	silent execute '!mkdir -p $HOME/.vim/.swap'
-	silent execute '!mkdir -p $HOME/.vim/.views'
-	silent execute '!mkdir -p $HOME/.vim/.undo'
+	if has('win32')
+		silent ! powershell (md "$env:HOMEPATH\.vim\.backup")
+		silent ! powershell (md "$env:HOMEPATH\.vim\.swap")
+		silent ! powershell (md "$env:HOMEPATH\.vim\.views")
+		silent ! powershell (md "$env:HOMEPATH\.vim\.undo")
+	else
+		silent execute '!mkdir -p $HOME/.vim/.backup'
+		silent execute '!mkdir -p $HOME/.vim/.swap'
+		silent execute '!mkdir -p $HOME/.vim/.views'
+		silent execute '!mkdir -p $HOME/.vim/.undo'
+	endif
+
 	" Store backups in $HOME to keep the directory trees clean
 	set backup
 	set undofile

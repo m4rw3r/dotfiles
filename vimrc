@@ -381,8 +381,10 @@
 
 	" Remap CMD + F to fullscreen mode
 	if has("gui_running")
-		macmenu &Edit.Find.Find\.\.\. key=<nop>
-		map <D-f> :set invfu<CR>
+		if !has("win32")
+			macmenu &Edit.Find.Find\.\.\. key=<nop>
+			map <D-f> :set invfu<CR>
+		endif
 	endif
 " }
 

@@ -34,7 +34,7 @@
 		autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
 	endif
 	
-	call plug#begin('~/.vim/plugged')
+	silent call plug#begin($HOME . "/.vim/plugged")
 	
 	" Vim Plug itself
 	Plug 'junegunn/vim-plug'

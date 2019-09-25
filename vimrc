@@ -114,6 +114,9 @@
 	" Gutter off
 	let g:ale_set_signs=0
 
+	" Enable Airline integration
+	let g:airline#extensions#ale#enabled = 1
+
 	let g:ale_linters={'javascript':['flow-language-server','xo']}
 " }
 
@@ -260,7 +263,7 @@
 	endif
 	
 	syntax on
-	
+
 	" Function for fixing many problems with colorschemes
 	function! CorrectColorScheme()
 		" Fix the listchars style
@@ -291,6 +294,10 @@
 	" autocmd ColorScheme * call CorrectColorScheme()
 
 	colorscheme Tomorrow-Night
+
+	" Use underline on language server errors
+	highlight ALEError cterm=underline
+	highlight ALEWarning cterm=underline
 " }
 
 " UI {

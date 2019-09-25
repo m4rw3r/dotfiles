@@ -241,7 +241,11 @@
 	autocmd FileType rust autocmd BufWritePre <buffer> :call <SID>StripTrailingWhitespaces()
 	" XML should be indented with spaces preferrably
 	autocmd FileType xml setlocal expandtab shiftwidth=2 tabstop=2
+	autocmd FileType json setlocal expandtab shiftwidth=4 tabstop=4
+
+	au FileType html,htmldjango,sql,javascript setlocal indentexpr=
 " }
+" 
 
 " Font and Color {
 	if has("gui_running")

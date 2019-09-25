@@ -329,10 +329,11 @@
 	if has("gui_running")
 		" No visual bell in GUI
 		set t_vb=
-		" Remove toolbar, menubar, scrollbar
-		:set guioptions-=T
-		:set guioptions-=m
-		:set guioptions-=s
+		" Remove toolbar, menubar, scrollbar, dialogs
+		set guioptions-=T
+		set guioptions-=m
+		set guioptions-=s
+		set guioptions+=c
 	endif
 " }
 

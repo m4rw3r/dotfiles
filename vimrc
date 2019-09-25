@@ -10,71 +10,79 @@
 	" Don't add invisible linebreak at EOF
 	set binary noeol
 
+	filetype plugin indent on
+
 	let mapleader="§"
+	
+	if has("win32")
+		" Ensure .vim is in path, gvim in Windows does not use this by default
+		set rtp+=~/.vim
+	endif
 " }
 
-" Vundle {
-	" Brief help
-	" :BundleList          - list configured bundles
-	" :BundleInstall(!)    - install(update) bundles
-	" :BundleSearch(!) foo - search(or refresh cache first) for foo
-	" :BundleClean(!)      - confirm(or auto-approve) removal of unused bundles
-	"
-	" see :h vundle for more details or wiki for FAQ
-	" NOTE: comments after Bundle command are not allowed..
-
-	set rtp+=~/.vim/bundle/vundle/
-	call vundle#rc()
+" Vim Plug {
+	" Automatic installation of Vim Plug
+	" Use $HOME to account for windows
+	if empty(glob($HOME . "/.vim/autoload/plug.vim"))
+		if has("win32")
+			silent ! powershell (md "$env:HOMEPATH\.vim\autoload")
+			silent ! powershell (New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim', $env:HOMEPATH + '\.vim\autoload\plug.vim')
+		else
+			silent !curl -fLo $HOME/.vim/autoload/plug.vim --create-dirs
+				\ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+		endif
+		autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+	endif
 	
-	" Let Vundle manage Vundle
-	" Required!
-	Bundle 'gmarik/vundle'
-
+	silent call plug#begin($HOME . "/.vim/plugged")
+	
+	" Vim Plug itself
+	Plug 'junegunn/vim-plug'
+	
 	" Syntax
-	Bundle 'cespare/vim-toml'
-	Bundle 'ekalinin/Dockerfile.vim'
-	Bundle 'groenewege/vim-less'
-	Bundle 'kchmck/vim-coffee-script'
-	Bundle 'lukerandall/haskellmode-vim'
-	Bundle 'tpope/vim-markdown'
-	Bundle 'google/vim-ft-go'
-	Bundle 'vim-scripts/haskell.vim'
-	Bundle 'vim-scripts/nginx.vim'
-	Bundle 'rust-lang/rust.vim'
-	Bundle 'pangloss/vim-javascript'
-	Bundle 'mxw/vim-jsx'
-	Bundle 'StanAngeloff/php.vim'
+	Plug 'cespare/vim-toml'
+	Plug 'ekalinin/Dockerfile.vim'
+	Plug 'groenewege/vim-less'
+	Plug 'kchmck/vim-coffee-script'
+	Plug 'lukerandall/haskellmode-vim'
+	Plug 'tpope/vim-markdown'
+	Plug 'google/vim-ft-go'
+	Plug 'vim-scripts/haskell.vim'
+	Plug 'vim-scripts/nginx.vim'
+	Plug 'rust-lang/rust.vim'
+	Plug 'pangloss/vim-javascript'
+	Plug 'mxw/vim-jsx'
+	Plug 'StanAngeloff/php.vim'
 
 	" Clojure
-	Bundle 'guns/vim-clojure-highlight'
-	Bundle 'guns/vim-clojure-static'
-	Bundle 'tpope/vim-fireplace.git'
+	Plug 'guns/vim-clojure-highlight'
+	Plug 'guns/vim-clojure-static'
+	Plug 'tpope/vim-fireplace'
 
 	" Tools
-	Bundle 'airblade/vim-rooter'
-	Bundle 'christoomey/vim-tmux-navigator'
-	Bundle 'FuzzyFinder'
-	Bundle 'godlygeek/tabular'
-	Bundle 'kien/ctrlp.vim'
-	Bundle 'jgdavey/tslime.vim'
-	Bundle 'L9'
-	Bundle 'vim-airline/vim-airline'
-	Bundle 'vim-airline/vim-airline-themes'
-	Bundle 'mileszs/ack.vim'
-	Bundle 'scrooloose/nerdtree'
-	Bundle 'scrooloose/syntastic'
-	Bundle 'tpope/vim-fugitive'
-	Bundle 'vim-scripts/Smart-Tabs'
-	Bundle 'vim-scripts/bufkill.vim'
-	Bundle 'luochen1990/rainbow'
+	Plug 'airblade/vim-rooter'
+	Plug 'christoomey/vim-tmux-navigator'
+	Plug 'dense-analysis/ale'
+	Plug 'godlygeek/tabular'
+	Plug 'kien/ctrlp.vim'
+	Plug 'jgdavey/tslime.vim'
+	Plug 'vim-scripts/L9'
+	Plug 'vim-airline/vim-airline'
+	Plug 'vim-airline/vim-airline-themes'
+	Plug 'mileszs/ack.vim'
+	Plug 'scrooloose/nerdtree'
+	Plug 'scrooloose/syntastic'
+	Plug 'tpope/vim-fugitive'
+	Plug 'vim-scripts/Smart-Tabs'
+	Plug 'vim-scripts/bufkill.vim'
+	Plug 'luochen1990/rainbow'
 
 	" Colorschemes
-	Bundle 'junegunn/seoul256.vim'
-	Bundle 'Lokaltog/vim-distinguished'
-	Bundle 'whatyouhide/vim-gotham'
-
-	" Required!
-	filetype plugin indent on
+	Plug 'junegunn/seoul256.vim'
+	Plug 'Lokaltog/vim-distinguished'
+	Plug 'whatyouhide/vim-gotham'
+	
+	call plug#end()
 " }
 
 " Syntastic {
@@ -97,6 +105,13 @@
 
 	" Ignore angularjs stupidity
 	let g:syntastic_html_tidy_ignore_errors=['proprietary attribute "ng-']
+" }
+
+" ALE {
+	" Gutter off
+	let g:ale_set_signs=0
+
+	let g:ale_linters={'javascript':['flow-language-server','xo']}
 " }
 
 " airline {
@@ -138,6 +153,14 @@
 	let g:rainbow_conf={'separately': { 'html': 0 }}
 " }
 
+" Javascript {
+	" I use Flow
+	let g:javascript_plugin_flow = 1
+
+	" mxw/vim-jsx: Fixes issue with closing parenthesis in "React-like components"
+	let g:jsx_ext_required = 0
+" }
+
 " PHP {
 	" Slow syntax highlighting
 	let php_html_load=0
@@ -149,11 +172,22 @@
 " }
 
 " Backup, Swap and View Files {
-	" Create dirs
-	silent execute '!mkdir -p $HOME/.vim/.backup'
-	silent execute '!mkdir -p $HOME/.vim/.swap'
-	silent execute '!mkdir -p $HOME/.vim/.views'
-	silent execute '!mkdir -p $HOME/.vim/.undo'
+	" Create dirs, $HOME to ensure it works on windos, need to check to avoid
+	" lots of command windows in Windows when running gvim
+	if !isdirectory($HOME . "/.vim/.backup")
+		if has("win32")
+			silent ! powershell (md "$env:HOMEPATH\.vim\.backup")
+			silent ! powershell (md "$env:HOMEPATH\.vim\.swap")
+			silent ! powershell (md "$env:HOMEPATH\.vim\.views")
+			silent ! powershell (md "$env:HOMEPATH\.vim\.undo")
+		else
+			silent execute '!mkdir -p $HOME/.vim/.backup'
+			silent execute '!mkdir -p $HOME/.vim/.swap'
+			silent execute '!mkdir -p $HOME/.vim/.views'
+			silent execute '!mkdir -p $HOME/.vim/.undo'
+		endif
+	endif
+
 	" Store backups in $HOME to keep the directory trees clean
 	set backup
 	set undofile
@@ -205,17 +239,17 @@
 
 " Font and Color {
 	if has("gui_running")
-		set guifont=DejaVu\ Sans\ Mono\ for\ Powerline:h13
+		if has("win32")
+			set guifont=Consolas:h12
+		else
+			set guifont=DejaVu\ Sans\ Mono\ for\ Powerline:h13
+		endif
+
 		set antialias
 		set linespace=3
 		" Prevent mouse usage, trackpad makes it way too easy to resort to
 		" clicking to move the cursor
 		set mouse=c
-
-		" Force MacVim to skip colors
-		let macvim_skip_colorscheme=1
-
-		set transparency=4
 	else
 		set t_Co=256
 		" Do not use terminal background color when clearing screen
@@ -293,6 +327,19 @@
 	
 	" No audio bell
 	set vb
+	" No visual bell either
+	set t_vb=
+
+	if has("gui_running")
+		" Remove toolbar, menubar, scrollbar, dialogs
+		set guioptions-=T
+		set guioptions-=m
+		set guioptions-=s
+		set guioptions+=c
+
+		" Ensure we always re-run t_vb when gui is loaded since it resets it
+		autocmd! GUIEnter * set vb t_vb=
+	endif
 " }
 
 " Key Mappings {
@@ -340,14 +387,15 @@
 
 	" Remap CMD + F to fullscreen mode
 	if has("gui_running")
-		set fuopt+=maxhorz
-		macmenu &Edit.Find.Find\.\.\. key=<nop>
-		map <D-f> :set invfu<CR>
+		if !has("win32")
+			macmenu &Edit.Find.Find\.\.\. key=<nop>
+			map <D-f> :set invfu<CR>
+		endif
 	endif
 " }
 
 " Include local settings {
-	if filereadable(glob("~/dotfiles/projects.vim"))
-		source ~/dotfiles/projects.vim
+	if filereadable(glob($HOME . "/dotfiles/projects.vim"))
+		source $HOME/dotfiles/projects.vim
 	endif
 " }

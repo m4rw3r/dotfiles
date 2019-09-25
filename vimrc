@@ -14,20 +14,21 @@
 
 	let mapleader="§"
 	
-	if has('win32')
+	if has("win32")
 		" Ensure .vim is in path, gvim in Windows does not use this by default
 		set rtp+=~/.vim
 	endif
 " }
 
 " Vim Plug {
-	" Automatic installation
-	if empty(glob('~/.vim/autoload/plug.vim'))
+	" Automatic installation of Vim Plug
+	" Use $HOME to account for windows
+	if empty(glob($HOME . "/.vim/autoload/plug.vim"))
 		if has("win32")
 			silent ! powershell (md "$env:HOMEPATH\.vim\autoload")
 			silent ! powershell (New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim', $env:HOMEPATH + '\.vim\autoload\plug.vim')
 		else
-			silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
+			silent !curl -fLo $HOME/.vim/autoload/plug.vim --create-dirs
 				\ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
 		endif
 		autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
@@ -169,17 +170,20 @@
 " }
 
 " Backup, Swap and View Files {
-	" Create dirs
-	if has('win32')
-		silent ! powershell (md "$env:HOMEPATH\.vim\.backup")
-		silent ! powershell (md "$env:HOMEPATH\.vim\.swap")
-		silent ! powershell (md "$env:HOMEPATH\.vim\.views")
-		silent ! powershell (md "$env:HOMEPATH\.vim\.undo")
-	else
-		silent execute '!mkdir -p $HOME/.vim/.backup'
-		silent execute '!mkdir -p $HOME/.vim/.swap'
-		silent execute '!mkdir -p $HOME/.vim/.views'
-		silent execute '!mkdir -p $HOME/.vim/.undo'
+	" Create dirs, $HOME to ensure it works on windos, need to check to avoid
+	" lots of command windows in Windows when running gvim
+	if !isdirectory($HOME . "/.vim/.backup")
+		if has("win32")
+			silent ! powershell (md "$env:HOMEPATH\.vim\.backup")
+			silent ! powershell (md "$env:HOMEPATH\.vim\.swap")
+			silent ! powershell (md "$env:HOMEPATH\.vim\.views")
+			silent ! powershell (md "$env:HOMEPATH\.vim\.undo")
+		else
+			silent execute '!mkdir -p $HOME/.vim/.backup'
+			silent execute '!mkdir -p $HOME/.vim/.swap'
+			silent execute '!mkdir -p $HOME/.vim/.views'
+			silent execute '!mkdir -p $HOME/.vim/.undo'
+		endif
 	endif
 
 	" Store backups in $HOME to keep the directory trees clean
@@ -383,7 +387,7 @@
 " }
 
 " Include local settings {
-	if filereadable(glob("~/dotfiles/projects.vim"))
-		source ~/dotfiles/projects.vim
+	if filereadable(glob($HOME . "/dotfiles/projects.vim"))
+		source $HOME/dotfiles/projects.vim
 	endif
 " }

@@ -16,3 +16,5 @@ xsetroot -cursor_name left_ptr
 [[ -f /opt/local/share/fonts/fonts.dir ]] && xset fp+ /opt/local/share/fonts/
 xset fp+ $HOME/Library/Fonts/
 xset fp rehash 
+
+export PATH="$HOME/.cargo/bin:$PATH"

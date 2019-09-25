@@ -1,6 +1,6 @@
 # MacPorts
 # this includes (tmux and rxvt-unicode)
-export PATH="/opt/local/bin:/opt/local/sbin:$PATH"
+export PATH="/opt/local/bin:/opt/local/sbin:/usr/local/sbin:$PATH"
 
 # X11
 [[ -d /opt/X11/bin ]] && export PATH="/opt/X11/bin:$PATH"
@@ -17,9 +17,6 @@ export PATH="/opt/local/bin:/opt/local/sbin:$PATH"
 # Go's idiocy of requiring a path
 [[ -d $HOME/Projects/go ]] && export GOPATH="$HOME/Projects/go"
 [[ -d /opt/local/lib/go ]] && export GOROOT="/opt/local/lib/go"
-
-# Rust and MacPorts
-export DYLD_LIBRARY_PATH=/usr/local/lib
 
 # Postgresql
 [[ -d /Applications/Postgres.app/Contents/Versions/latest/bin ]] && export PATH="/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH"

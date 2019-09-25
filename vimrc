@@ -110,6 +110,8 @@
 " ALE {
 	" Gutter off
 	let g:ale_set_signs=0
+
+	let g:ale_linters={'javascript':['flow-language-server','xo']}
 " }
 
 " airline {

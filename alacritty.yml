@@ -1,0 +1,11 @@
+window:
+  dynamic_padding: true
+
+scrolling:
+  history: 0
+  
+font:
+  family: DejaVu Sans Mono
+  use_thin_strokes: false
+  size: 18.0
+  

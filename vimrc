@@ -12,7 +12,7 @@
 
 	filetype plugin indent on
 
-	let mapleader="§"
+	let mapleader=" "
 	
 	if has("win32")
 		" Ensure .vim is in path, gvim in Windows does not use this by default
@@ -390,8 +390,6 @@
 
 	map <Leader>j :bnext<CR>
 	map <Leader>k :bprevious<CR>
-	map <Tab>   :bnext<CR>
-	map <C-Tab> :bprevious<CR>
 
 	map <Leader>w :bp\|bd #<CR>
 

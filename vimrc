@@ -325,15 +325,18 @@
 	
 	" No audio bell
 	set vb
+	" No visual bell either
+	set t_vb=
 
 	if has("gui_running")
-		" No visual bell in GUI
-		set t_vb=
 		" Remove toolbar, menubar, scrollbar, dialogs
 		set guioptions-=T
 		set guioptions-=m
 		set guioptions-=s
 		set guioptions+=c
+
+		" Ensure we always re-run t_vb when gui is loaded since it resets it
+		autocmd! GUIEnter * set vb t_vb=
 	endif
 " }
 

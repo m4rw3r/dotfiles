@@ -75,7 +75,6 @@
 	Plug 'vim-airline/vim-airline'
 	Plug 'vim-airline/vim-airline-themes'
 	Plug 'vim-scripts/L9'
-	Plug 'vim-scripts/Smart-Tabs'
 	Plug 'vim-scripts/bufkill.vim'
 	Plug 'xolox/vim-misc'
 

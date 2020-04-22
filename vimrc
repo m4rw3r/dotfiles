@@ -62,6 +62,7 @@
 
 	" Tools
 	Plug 'airblade/vim-rooter'
+	Plug 'ap/vim-css-color'
 	Plug 'christoomey/vim-tmux-navigator'
 	Plug 'dense-analysis/ale'
 	Plug 'godlygeek/tabular'

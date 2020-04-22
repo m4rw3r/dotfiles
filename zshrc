@@ -38,16 +38,15 @@ DISABLE_UNTRACKED_FILES_DIRTY="true"
 
 ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets)
 
-# Tmux
-ZSH_TMUX_AUTOSTART="true"
-ZSH_TMUX_FIXTERM="false"
-
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
-plugins=(git osx macports node npm vi-mode tmux zsh-syntax-highlighting)
+plugins=(git osx macports node npm vi-mode zsh-syntax-highlighting)
 
 source $ZSH/oh-my-zsh.sh
+
+# Tmux
+source ~/dotfiles/tmux.sh
 
 # Customize to your needs...
 unsetopt share_history

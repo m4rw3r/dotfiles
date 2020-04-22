@@ -122,7 +122,7 @@
 
 " airline {
 	set laststatus=2
-	let g:airline_powerline_fonts=1
+	let g:airline_powerline_fonts=0
 	let g:airline_theme='distinguished'
 	let g:airline#extensions#whitespace#enabled=1
 	let g:airline#extensions#whitespace#mixed_indent_algo=2
@@ -396,6 +396,7 @@
 	map <Leader>= <C-w>=
 
 	map <Leader><Tab> :NERDTreeToggle<CR>
+	map <leader>r :NERDTreeFind<cr>
 
 	" Remap CMD + F to fullscreen mode
 	if has("gui_running")

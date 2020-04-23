@@ -9,13 +9,13 @@ _tmux_found_free=""
 
 # Attempts to find the first non-attached tmux session and attach to it
 function _attach_to_free() {
-  local sess=$(tmux list-sessions 2>/dev/null | grep -v "(attached)" | cut -d ":" -f 1 | head)
+  local sess=$(tmux list-sessions 2>/dev/null | grep -v "(attached)" | cut -d ":" -f 1 | head -n 1)
 
   if [[ -z "$sess" ]]; then
     _tmux_found_free="false"
   else
     _tmux_found_free="true"
-    tmux attach -t $sess
+    tmux attach -t "${sess:q}"
   fi
 }
 

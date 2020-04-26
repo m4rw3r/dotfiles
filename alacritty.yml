@@ -11,7 +11,7 @@ scrolling:
 
 font:
   family: mononoki Nerd Font
-  use_thin_strokes: true
+  use_thin_strokes: false
   #size: 18.0
   size: 12.0
 

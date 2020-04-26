@@ -6,15 +6,15 @@ GIT_REPOS = $(addsuffix /.git, oh-my-zsh $(wildcard oh-my-zsh-plugins/plugins/*)
 PATCHES   = $(wildcard patches/**.patch)
 
 help:
-	@echo "Dotfiles installer, usage:\n\tmake install\n\nWill set the following links:\n"
+	@echo -e "Dotfiles installer, usage:\n\tmake install\n\nWill set the following links:\n"
 	@for f in $(FILES); do printf "%-40s -> %s\n" "$(HOME)/.$$f" "$(CURDIR)/$$f"; done
-	@echo "\nThe following variables can configure the command:"
-	@echo "\tHOME:    Directory where the dot-prefixed links will be placed"
-	@echo "\tREPLACE: Set to truthy value to replace the files instead of moving"
-	@echo "\nOther commands:"
-	@echo "\tmake update\tWill update all git repositories and re-apply patches"
-	@echo "\tmake patch\tWill apply patches"
-	@echo "\tmake reset\tWill reset patched git repositories to upstream"
+	@echo -e "\nThe following variables can configure the command:"
+	@echo -e "\tHOME:    Directory where the dot-prefixed links will be placed"
+	@echo -e "\tREPLACE: Set to truthy value to replace the files instead of moving"
+	@echo -e "\nOther commands:"
+	@echo -e "\tmake update\tWill update all git repositories and re-apply patches"
+	@echo -e "\tmake patch\tWill apply patches"
+	@echo -e "\tmake reset\tWill reset patched git repositories to upstream"
 
 install: $(FILES) patches vim_vundle
 

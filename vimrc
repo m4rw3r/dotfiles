@@ -237,10 +237,6 @@
 		" Prevent mouse usage, trackpad makes it way too easy to resort to
 		" clicking to move the cursor
 		set mouse=c
-	else
-		set t_Co=256
-		" Do not use terminal background color when clearing screen
-		set t_ut=
 	endif
 	
 	syntax on
@@ -271,8 +267,13 @@
 		" Fix sign column where syntastic errors are displayed
 		hi SignColumn ctermfg=238 guifg=#444444 ctermbg=238 guibg=#444444
 	endfunction
+
+	function EnableBackgroundTransparency()
+		hi Normal guibg=NONE ctermbg=NONE
+	endfunction
 	
 	" autocmd ColorScheme * call CorrectColorScheme()
+	autocmd ColorScheme * call EnableBackgroundTransparency()
 
 	colorscheme Tomorrow-Night
 

@@ -71,7 +71,6 @@
 	Plug 'luochen1990/rainbow'
 	Plug 'mileszs/ack.vim'
 	Plug 'scrooloose/nerdtree'
-	Plug 'scrooloose/syntastic'
 	Plug 'tpope/vim-fugitive'
 	Plug 'vim-airline/vim-airline'
 	Plug 'vim-airline/vim-airline-themes'
@@ -86,28 +85,6 @@
 	Plug 'whatyouhide/vim-gotham'
 	
 	call plug#end()
-" }
-
-" Syntastic {
-	let g:syntastic_check_on_open=1
-	
-	" It uses PHP Mess Detector and PHP_CodeSniffer, I do not like how those behaves
-	let g:syntastic_php_checkers=['php']
-	let g:syntastic_css_checkers=['csslint', 'prettycss']
-	let g:synastic_java_checkers=[]
-
-	let g:syntastic_error_symbol='✗'
-	let g:syntastic_warning_symbol='⚠'
-
-	let g:syntastic_hdevtools_options='-g -W -g -Wall -g -fwarn-tabs -g -fwarn-incomplete-record-updates'
-
-	" Turn off signs in syntastic, syntastic garbles the editor window with
-	" these
-	let g:syntastic_enable_signs=0
-	let g:syntastic_full_redraws=1
-
-	" Ignore angularjs stupidity
-	let g:syntastic_html_tidy_ignore_errors=['proprietary attribute "ng-']
 " }
 
 " ALE {

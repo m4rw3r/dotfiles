@@ -1,3 +1,5 @@
+#!/bin/bash
+
 if ! (( $+commands[tmux] )); then
   print "tmux.sh: tmux not found." >&2
 

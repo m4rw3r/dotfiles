@@ -294,6 +294,7 @@
 	" Relative line numbers on, with current line showing current line number
 	set relativenumber
 	set number
+	set cursorline
 	
 	" Highlight all search matches
 	set showmatch

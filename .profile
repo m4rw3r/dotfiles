@@ -1,6 +1,6 @@
 export GIT_EDITOR="vim"
 
-source $HOME/.paths.sh
+source $HOME/.dotfiles/paths.sh
 
 # X and rxvt-unicode
 export   LANG=en_US.UTF-8

@@ -4,8 +4,8 @@ export   LC_ALL=en_US.UTF-8
 source $HOME/.paths.sh
 
 # Path to your oh-my-zsh configuration.
-ZSH=$HOME/dotfiles/oh-my-zsh
-ZSH_CUSTOM=$HOME/dotfiles/oh-my-zsh-plugins
+ZSH=$HOME/.dotfiles/oh-my-zsh
+ZSH_CUSTOM=$HOME/.dotfiles/oh-my-zsh-plugins
 
 # Set name of the theme to load.
 # Look in ~/.oh-my-zsh/themes/
@@ -46,7 +46,7 @@ plugins=(git osx macports node npm vi-mode zsh-syntax-highlighting)
 source $ZSH/oh-my-zsh.sh
 
 # Tmux
-source ~/dotfiles/tmux.sh
+source ~/.dotfiles/tmux.sh
 
 # Customize to your needs...
 unsetopt share_history
@@ -100,8 +100,8 @@ if [ -x "$(command -v prettyping)" ]; then
 	alias ping='prettyping --nolegend'
 fi
 
-if [[ -f $HOME/dotfiles/keys.sh ]]; then
-	source $HOME/dotfiles/keys.sh
+if [[ -f $HOME/.dotfiles/keys.sh ]]; then
+	source $HOME/.dotfiles/keys.sh
 fi
 
 # added by travis gem

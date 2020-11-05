@@ -387,7 +387,7 @@
 " }
 
 " Include local settings {
-	if filereadable(glob($HOME . "/dotfiles/projects.vim"))
-		source $HOME/dotfiles/projects.vim
+	if filereadable(glob($HOME . "/.dotfiles/projects.vim"))
+		source $HOME/.dotfiles/projects.vim
 	endif
 " }

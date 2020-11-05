@@ -1,15 +1,15 @@
 [submodule "oh-my-zsh"]
-	path = oh-my-zsh
+	path = .dotfiles/oh-my-zsh
 	url = https://github.com/robbyrussell/oh-my-zsh.git
 [submodule "oh-my-zsh-plugins/plugins/zsh-syntax-highlighting"]
-	path = oh-my-zsh-plugins/plugins/zsh-syntax-highlighting
+	path = .dotfiles/oh-my-zsh-plugins/plugins/zsh-syntax-highlighting
 	url = https://github.com/zsh-users/zsh-syntax-highlighting.git
 [submodule "tmux-resurrect"]
-	path = tmux-resurrect
+	path = .dotfiles/tmux-resurrect
 	url = https://github.com/tmux-plugins/tmux-resurrect
 [submodule "tmux-yank"]
-	path = tmux-yank
+	path = .dotfiles/tmux-yank
 	url = https://github.com/tmux-plugins/tmux-yank
 [submodule "tmux-sensible"]
-	path = tmux-sensible
+	path = .dotfiles/tmux-sensible
 	url = https://github.com/tmux-plugins/tmux-sensible

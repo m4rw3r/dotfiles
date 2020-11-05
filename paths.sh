@@ -31,3 +31,6 @@ MAVEN_OPTS=-Dfile.encoding=UTF-8
 # Clojurescript
 export CLOJURESCRIPT_HOME=$HOME/Projects/Clones/clojurescript
 export LEIN_ROOT=/opt/local/bin/lein
+
+# Python PIP and other user stuff
+[[ -d $HOME/.local/bin ]] && export PATH="$HOME/.local/bin:$PATH"

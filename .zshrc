@@ -1,7 +1,7 @@
 export   LANG=en_US.UTF-8
 export   LC_ALL=en_US.UTF-8
 
-source $HOME/.paths.sh
+source $HOME/.dotfiles/paths.sh
 
 # Path to your oh-my-zsh configuration.
 ZSH=$HOME/.dotfiles/oh-my-zsh

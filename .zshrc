@@ -65,6 +65,8 @@ alias wow='git status'
 export PAGER=less
 export LESS="-r"
 
+alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
+
 # From http://justinlilly.com/dotfiles/zsh.html
 extract () {
 	if [ -f $1 ] ; then

@@ -93,6 +93,3 @@ fi
 if [[ -f $HOME/.dotfiles/keys.sh ]]; then
 	source $HOME/.dotfiles/keys.sh
 fi
-
-# added by travis gem
-[ -f /Users/m4rw3r/.travis/travis.sh ] && source /Users/m4rw3r/.travis/travis.sh

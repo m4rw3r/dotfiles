@@ -31,3 +31,6 @@ MAVEN_OPTS=-Dfile.encoding=UTF-8
 
 # Python PIP and other user stuff
 [[ -d $HOME/.local/bin ]] && export PATH="$HOME/.local/bin:$PATH"
+
+# Travis CI
+[[ -f $HOME/.travis/travis.sh ]] && source $HOME/.travis/travis.sh

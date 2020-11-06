@@ -10,6 +10,7 @@ export PATH="/opt/local/bin:/opt/local/sbin:/usr/local/sbin:$PATH"
 
 # Rustup
 [[ -f $HOME/.cargo/env ]] && source $HOME/.cargo/env
+export PATH="$HOME/.cargo/bin:$PATH"
 
 # Haskell binaries from cabal
 [[ -d $HOME/Library/Haskell/bin ]] && export PATH="$HOME/Library/Haskell/bin:$PATH"
@@ -27,10 +28,6 @@ export PATH="/opt/local/bin:/opt/local/sbin:/usr/local/sbin:$PATH"
 # Java Maven
 [[ -f /usr/libexec/java_home ]] && export JAVA_HOME=$(/usr/libexec/java_home)
 MAVEN_OPTS=-Dfile.encoding=UTF-8
-
-# Clojurescript
-export CLOJURESCRIPT_HOME=$HOME/Projects/Clones/clojurescript
-export LEIN_ROOT=/opt/local/bin/lein
 
 # Python PIP and other user stuff
 [[ -d $HOME/.local/bin ]] && export PATH="$HOME/.local/bin:$PATH"

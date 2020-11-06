@@ -61,19 +61,9 @@ alias such=git
 alias very=git
 alias wow='git status'
 
-# Kerberos problems caused by wrong version used by SSH due to MacPorts overriding it
-alias kinit='/usr/bin/kinit'
-alias klist='/usr/bin/klist'
-
 # Use this command in psql to enable less pager: \pset pager always
 export PAGER=less
 export LESS="-r"
-
-# PgTap
-alias pg_prove=/opt/local/libexec/perl5.16/sitebin/pg_prove
-
-# Python
-export PYTHONPATH=$PYTHONPATH:/opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages
 
 # From http://justinlilly.com/dotfiles/zsh.html
 extract () {

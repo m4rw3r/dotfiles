@@ -65,6 +65,7 @@
 	Plug 'ap/vim-css-color'
 	Plug 'christoomey/vim-tmux-navigator'
 	Plug 'dense-analysis/ale'
+	Plug 'embear/vim-localvimrc'
 	Plug 'godlygeek/tabular'
 	Plug 'jgdavey/tslime.vim'
 	Plug 'kien/ctrlp.vim'

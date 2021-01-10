@@ -41,7 +41,7 @@ ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets)
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
-plugins=(vi-mode zsh-syntax-highlighting)
+plugins=(docker gitfast safe-paste vi-mode zsh-syntax-highlighting)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -75,3 +75,8 @@ fi
 if [[ -f $HOME/.dotfiles/keys.sh ]]; then
 	source $HOME/.dotfiles/keys.sh
 fi
+
+# We want autocompletion to work on 'docker run -it <tab>'
+# note that the space is required in this case
+zstyle ':completion:*:*:docker:*' option-stacking yes
+zstyle ':completion:*:*:docker-*:*' option-stacking yes

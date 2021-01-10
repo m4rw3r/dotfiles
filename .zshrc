@@ -65,6 +65,7 @@ alias wow='git status'
 export PAGER=less
 export LESS="-r"
 
+# Dotfiles management alias: https://github.com/m4rw3r/dotfiles/
 alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 
 # From http://justinlilly.com/dotfiles/zsh.html

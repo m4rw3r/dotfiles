@@ -21,9 +21,6 @@
 # Postgresql
 [[ -d /Applications/Postgres.app/Contents/Versions/latest/bin ]] && export PATH="/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH"
 
-# Mactex
-[[ -d /usr/local/texlive/2015/bin/x86_64-darwin ]] && export PATH="$PATH:/usr/local/texlive/2015/bin/x86_64-darwin"
-
 # Java Maven
 [[ -f /usr/libexec/java_home ]] && export JAVA_HOME=$(/usr/libexec/java_home)
 MAVEN_OPTS=-Dfile.encoding=UTF-8

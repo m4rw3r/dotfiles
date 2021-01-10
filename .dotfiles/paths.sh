@@ -1,6 +1,6 @@
 # MacPorts
 # this includes (tmux and rxvt-unicode)
-export PATH="/opt/local/bin:/opt/local/sbin:/usr/local/sbin:$PATH"
+[[ -d /opt/local ]] && export PATH="/opt/local/bin:/opt/local/sbin:/usr/local/sbin:$PATH"
 
 # X11
 [[ -d /opt/X11/bin ]] && export PATH="/opt/X11/bin:$PATH"

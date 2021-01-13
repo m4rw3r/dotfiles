@@ -1,0 +1,41 @@
+* {
+	border: none;
+	border-radius: 0;
+	font-family: "Ubuntu Nerd Font";
+	font-size: 13px;
+	min-height: 0;
+}
+
+window#waybar {
+	background: rgba(0, 0, 0, 0.5);
+	color: white;
+}
+
+#window {
+	font-weight: bold;
+	font-family: "Ubuntu";
+}
+
+#workspaces button {
+	padding: 0 10px;
+	color: white;
+	border-top: 2px solid transparent;
+}
+
+#workspaces button.focused {
+	border-top: 2px solid #c95;
+}
+
+#custom-kernel,
+#custom-network,
+#custom-cpu,
+#tray,
+#clock {
+	padding: 0 5px;
+	margin: 0 2px;
+}
+
+#clock {
+	font-weight: bold;
+	padding: 5px 10px;
+}

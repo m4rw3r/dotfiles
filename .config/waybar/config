@@ -1,0 +1,44 @@
+{
+	"height": 30,
+	"modules-left": [
+		"sway/workspaces",
+		"sway/mode"
+	],
+	"modules-center": [
+		"sway/window"
+	],
+	"modules-right": [
+		"custom/kernel",
+		"custom/network",
+		"custom/cpu",
+		"tray",
+		"clock"
+	],
+	"sway/mode": {
+		"format": "<span style=\"italic\">{}</span>"
+	},
+	"tray": {
+		"spacing": 10
+	},
+	"clock": {
+		"format": "{:%Y-%m-%d %H:%M}"
+	},
+	"custom/kernel": {
+		"interval": "once",
+		"exec": "uname -r",
+		"format": "{}"
+	},
+	"custom/network": {
+		"exec": "~/.config/waybar/network_status",
+		"return-type": "json",
+		"format": "{icon} {}",
+		"format-icons": {
+			"connected": "⇆",
+			"disconnected": "✗"
+		}
+	},
+	"custom/cpu": {
+		"exec": "~/.config/waybar/cpu_status",
+		"tooltip": false
+	}
+}

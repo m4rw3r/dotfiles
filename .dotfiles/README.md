@@ -1,4 +1,6 @@
 
+Using the Bare Repo solution from https://www.atlassian.com/git/tutorials/dotfiles
+
 ## Install
 
 ```bash

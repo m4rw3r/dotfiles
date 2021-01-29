@@ -183,6 +183,9 @@ gaps outer 0
 for_window [class="^.*"] border pixel 2
 default_border pixel 2
 
+# Show which apps use XWayland
+for_window [shell="xwayland"] title_format "%title [XWayland]"
+
 # Only really care abou the borders since we hide the title bar
 # Property Name         Border  BG      Text    Indicator Child Border
 client.focused          $base0D $base02 $base0D $base0D $base0D

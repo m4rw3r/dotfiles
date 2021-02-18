@@ -72,12 +72,24 @@ if [ -x "$(command -v prettyping)" ]; then
 	alias ping='prettyping --nolegend'
 fi
 
+# Use NeoVIM instead of VIM
 if [ -x "$(command -v nvim)" ]; then
 	alias vim=nvim
 fi
 
 if [[ -f $HOME/.dotfiles/keys.sh ]]; then
 	source $HOME/.dotfiles/keys.sh
+fi
+
+# Create an open command if one does not exist (linux)
+if [ -z "$(command -v open)" ]; then
+	function open() {
+		if [ "$#" -ne 1 ]; then
+			nohup xdg-open . >/dev/null 2>&1
+		else
+			nohup xdg-open "$@" >/dev/null 2>&1
+		fi
+	}
 fi
 
 # We want autocompletion to work on 'docker run -it <tab>'

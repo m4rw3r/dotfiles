@@ -17,19 +17,3 @@
 # MySQL
 [[ -d /usr/local/mysql/bin ]] && export PATH="/usr/local/mysql/bin:$PATH"
 
-# Haskell binaries from cabal
-[[ -d $HOME/Library/Haskell/bin ]] && export PATH="$HOME/Library/Haskell/bin:$PATH"
-
-# Go's idiocy of requiring a path
-[[ -d $HOME/Projects/go ]] && export GOPATH="$HOME/Projects/go"
-[[ -d /opt/local/lib/go ]] && export GOROOT="/opt/local/lib/go"
-
-# Postgresql
-[[ -d /Applications/Postgres.app/Contents/Versions/latest/bin ]] && export PATH="/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH"
-
-# Java Maven
-[[ -f /usr/libexec/java_home ]] && export JAVA_HOME=$(/usr/libexec/java_home)
-MAVEN_OPTS=-Dfile.encoding=UTF-8
-
-# Travis CI
-[[ -f $HOME/.travis/travis.sh ]] && source $HOME/.travis/travis.sh

@@ -7,7 +7,7 @@ set $up k
 set $right l
 
 # Default terminal emulator
-set $term alacritty
+set $term kitty
 
 # Wallpaper
 set $wallpaper ~/Dropbox/Backgrounds/01DG3th.png

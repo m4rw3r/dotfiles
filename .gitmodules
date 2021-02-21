@@ -10,6 +10,3 @@
 [submodule "tmux-yank"]
 	path = .dotfiles/tmux-yank
 	url = https://github.com/tmux-plugins/tmux-yank
-[submodule "tmux-sensible"]
-	path = .dotfiles/tmux-sensible
-	url = https://github.com/tmux-plugins/tmux-sensible

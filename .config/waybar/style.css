@@ -1,8 +1,9 @@
 * {
 	border: none;
 	border-radius: 0;
-	font-family: "Ubuntu Nerd Font";
-	font-size: 13px;
+	font-weight: 500;
+	font-family: "SF Pro Display";
+	font-size: 14px;
 	min-height: 0;
 }
 
@@ -12,8 +13,7 @@ window#waybar {
 }
 
 #window {
-	font-weight: bold;
-	font-family: "Ubuntu";
+	font-weight: 600;
 }
 
 #workspaces button {
@@ -36,6 +36,5 @@ window#waybar {
 }
 
 #clock {
-	font-weight: bold;
 	padding: 5px 10px;
 }

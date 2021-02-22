@@ -1,3 +1,15 @@
+zcompile_or_recompile() {
+	local file
+
+	for file in "$@"; do
+		if [[ -f "$file" ]] && [[ ! -f "$file.zwc" ]] || [[ "$file" -nt "$file.zwc" ]]; then
+			zcompile "$file"
+		fi
+	done
+}
+
+zcompile_or_recompile "$HOME/.zshrc"
+
 export   LANG=en_US.UTF-8
 export   LC_ALL=en_US.UTF-8
 

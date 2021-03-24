@@ -9,3 +9,5 @@
 	lg = !"git lg1"
 [core]
 	ignorecase = false
+[includeIf "gitdir:~/Projects/Awardit/"]
+	path = ~/Projects/Awardit/.gitconfig

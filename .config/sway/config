@@ -199,3 +199,6 @@ input type:pointer pointer_accel 0
 
 # Fix for slow start of GTK applications
 exec systemctl --user import-environment
+
+# Notifications
+exec mako

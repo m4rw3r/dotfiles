@@ -24,7 +24,6 @@
 		"format": "{:%Y-%m-%d %H:%M}"
 	},
 	"custom/kernel": {
-		"interval": "once",
 		"exec": "uname -r",
 		"format": "{}"
 	},

@@ -11,3 +11,5 @@
 	ignorecase = false
 [includeIf "gitdir:~/Projects/Awardit/"]
 	path = ~/Projects/Awardit/.gitconfig
+[pull]
+	rebase = false

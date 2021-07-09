@@ -68,7 +68,7 @@
 	Plug 'embear/vim-localvimrc'
 	Plug 'godlygeek/tabular'
 	Plug 'jgdavey/tslime.vim'
-	Plug 'kien/ctrlp.vim'
+	Plug 'junegunn/fzf'
 	Plug 'luochen1990/rainbow'
 	Plug 'mileszs/ack.vim'
 	Plug 'scrooloose/nerdtree'
@@ -363,6 +363,8 @@
 	noremap <C-l> <C-w>l
 
 	nnoremap <F3> :noh<CR>
+
+	noremap <C-p> :FZF<CR>
 
 	" Allow saving of files as sudo when vim is not running under sudo
 	" NOTE: Does not work in gvim

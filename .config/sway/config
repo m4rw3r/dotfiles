@@ -202,3 +202,10 @@ exec systemctl --user import-environment
 
 # Notifications
 exec mako
+
+output DP-1 scale 1
+output DP-1 pos 0 0 res 3440x1440
+#output DP-1 pos 0 0 res 1920x1200
+#output HDMI-1 scale 1
+#output HDMI-1 pos 1920 0 res 1920x1200
+

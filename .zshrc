@@ -80,6 +80,8 @@ export LESS="-r"
 # Dotfiles management alias: https://github.com/m4rw3r/dotfiles/
 alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 
+alias mysql='mysql --auto-vertical-output --show-warnings --pager=less --sigint-ignore --line-numbers --column-type-info --compress'
+
 if [ -x "$(command -v prettyping)" ]; then
 	alias ping='prettyping --nolegend'
 fi

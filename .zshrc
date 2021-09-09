@@ -120,3 +120,7 @@ fi
 # note that the space is required in this case
 zstyle ':completion:*:*:docker:*' option-stacking yes
 zstyle ':completion:*:*:docker-*:*' option-stacking yes
+
+if [ -f "/usr/share/fzf/key-bindings.zsh" ]; then
+	source "/usr/share/fzf/key-bindings.zsh"
+fi

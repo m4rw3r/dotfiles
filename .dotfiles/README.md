@@ -4,6 +4,7 @@ Using the Bare Repo solution from https://www.atlassian.com/git/tutorials/dotfil
 ## Requirements
 
  * Bash
+ * Fzf
  * Git
  * Kitty
  * Tmux

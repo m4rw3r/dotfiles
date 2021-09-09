@@ -44,6 +44,7 @@
 	Plug 'ekalinin/Dockerfile.vim'
 	Plug 'google/vim-ft-go'
 	Plug 'groenewege/vim-less'
+	Plug 'jparise/vim-graphql'
 	Plug 'kchmck/vim-coffee-script'
 	Plug 'lukerandall/haskellmode-vim'
 	Plug 'mxw/vim-jsx'

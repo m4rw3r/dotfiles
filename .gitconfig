@@ -1,6 +1,8 @@
 [user]
 	name = Martin Wernstål
 	email = m4rw3r@gmail.com
+[init]
+	defaultBranch = main
 [push]
 	default = simple
 [pull]

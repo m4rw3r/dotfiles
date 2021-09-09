@@ -10,3 +10,6 @@
 [submodule "tmux-yank"]
 	path = .dotfiles/tmux-yank
 	url = https://github.com/tmux-plugins/tmux-yank
+[submodule ".dotfiles/zsh-typewritten"]
+	path = .dotfiles/zsh-typewritten
+	url = https://github.com/reobin/typewritten.git

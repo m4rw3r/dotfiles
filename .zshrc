@@ -23,7 +23,9 @@ ZSH_CUSTOM=$HOME/.dotfiles/oh-my-zsh-plugins
 # Look in ~/.oh-my-zsh/themes/
 # Optionally, if you set this to "random", it'll load a random theme each
 # time that oh-my-zsh is loaded.
-ZSH_THEME="robbyrussell"
+
+# Use an empty name since we override the prompt with Typewritten
+ZSH_THEME=""
 
 # Uncomment this to disable bi-weekly auto-update checks
 DISABLE_AUTO_UPDATE="true"
@@ -56,6 +58,13 @@ ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets)
 plugins=(docker gitfast safe-paste vi-mode zsh-syntax-highlighting)
 
 source $ZSH/oh-my-zsh.sh
+
+# Typewritten prompt (https://github.com/reobin/typewritten)
+TYPEWRITTEN_RELATIVE_PATH="adaptive"
+
+fpath+=$HOME/.dotfiles/zsh-typewritten
+autoload -U promptinit; promptinit
+prompt typewritten
 
 # Tmux
 source ~/.dotfiles/tmux.sh

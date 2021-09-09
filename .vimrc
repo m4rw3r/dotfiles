@@ -42,18 +42,18 @@
 	" Syntax
 	Plug 'cespare/vim-toml'
 	Plug 'ekalinin/Dockerfile.vim'
+	Plug 'google/vim-ft-go'
 	Plug 'groenewege/vim-less'
 	Plug 'kchmck/vim-coffee-script'
 	Plug 'lukerandall/haskellmode-vim'
-	Plug 'tpope/vim-markdown'
-	Plug 'google/vim-ft-go'
-	Plug 'vim-scripts/haskell.vim'
-	Plug 'vim-scripts/nginx.vim'
-	Plug 'rust-lang/rust.vim'
-	Plug 'pangloss/vim-javascript'
 	Plug 'mxw/vim-jsx'
+	Plug 'pangloss/vim-javascript'
+	Plug 'rust-lang/rust.vim'
 	Plug 'StanAngeloff/php.vim'
+	Plug 'tpope/vim-markdown'
+	Plug 'vim-scripts/haskell.vim'
 	Plug 'vim-scripts/HTML-AutoCloseTag'
+	Plug 'vim-scripts/nginx.vim'
 
 	" Clojure
 	Plug 'guns/vim-clojure-highlight'
@@ -80,10 +80,10 @@
 	Plug 'xolox/vim-misc'
 
 	" Colorschemes
-	Plug 'xolox/vim-colorscheme-switcher'
 	Plug 'junegunn/seoul256.vim'
 	Plug 'Lokaltog/vim-distinguished'
 	Plug 'whatyouhide/vim-gotham'
+	Plug 'xolox/vim-colorscheme-switcher'
 	
 	call plug#end()
 " }

@@ -91,6 +91,9 @@ alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 
 alias mysql='mysql --auto-vertical-output --show-warnings --sigint-ignore --line-numbers --column-type-info --compress'
 alias mysqlp='mysql --auto-vertical-output --show-warnings --sigint-ignore --pager=less --line-numbers --column-type-info --compress'
+# TODO: Inform all NeoVIM instances to also swap on this
+alias light='kitty +kitten themes --cache-age=-1 Base16-tomorrow' # not sure why this is uppercase
+alias dark='kitty +kitten themes --cache-age=-1 Base16-tomorrow-night'
 
 if [ -x "$(command -v prettyping)" ]; then
 	alias ping='prettyping --nolegend'

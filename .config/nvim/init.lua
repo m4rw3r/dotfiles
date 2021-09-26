@@ -1,11 +1,22 @@
 local cmd = vim.cmd
-local opt = vim.opt
-local o = vim.o
-local g = vim.g
-local api = vim.api
+local env = vim.env
 local fn = vim.fn
-local indent = 4
+local g = vim.g
 local key = vim.api.nvim_set_keymap
+local opt = vim.opt
+
+-- Configuration
+local indent = 4
+local XDG_DATA_HOME = env.XDG_DATA_HOME or env.HOME .. "/.local/share"
+local backupdir = XDG_DATA_HOME .. "/nvim/backup//"
+local swapdir = XDG_DATA_HOME .. "/nvim/swap//"
+local undodir = XDG_DATA_HOME .. "/nvim/swap/"
+local viewdir = XDG_DATA_HOME .. "/nvim/view//"
+
+-- Create required folders
+for _, d in pairs({ backupdir, swapdir, undodir, viewdir }) do
+	fn.system("mkdir -p '" .. d .. "'")
+end
 
 -- Skip built-in plugins
 g.loaded_gzip = false
@@ -75,13 +86,16 @@ opt.binary = true -- Allow binary file ediding without mangling to UTF-8
 opt.eol = false -- Do not append linebreak at EOF
 opt.backup = true -- Backup files
 opt.undofile = true -- Save undo in files
+-- We have to replace the list to avoid having backups in the current folder
+opt.backupdir = { backupdir }
+opt.directory = { swapdir }
+opt.undodir = undodir
+opt.viewdir = viewdir
 
 -- Tabs and indent
 opt.tabstop = indent
 opt.shiftwidth = indent
 opt.foldenable = false
--- PHP disable PIV (if we use PIV)
--- TODO: File-type specific indents
 
 -- UI
 opt.showcmd = true -- Show incomplete commands
@@ -110,9 +124,14 @@ opt.smartcase = true -- Ignore case by default, but swap to case-sensitive
 -- Font and Color
 opt.termguicolors = true -- Enable 24-bit RGB in the terminal UI
 cmd "colorscheme base16-tomorrow-night"
+-- Shortcuts to swap the theme
+-- TODO: When https://github.com/neovim/neovim/pull/11613 is merged, use the Lua API
+cmd "command Dark colorscheme base16-tomorrow-night"
+cmd "command Light colorscheme base16-tomorrow"
 
 -- Keybindings
 g.mapleader = " "
+opt.omnifunc = "v:lua.vim.lsp.omnifunc"
 
 key("i", "jj", "<Esc>", { noremap = true, silent = true }) -- Quick exit of insert-mode
 key("i", "<Left>", "<NOP>", { noremap = true, silent = true }) -- Do not allow arrows while editing
@@ -133,16 +152,15 @@ key("", "<Leader>k", "<cmd>bprevious<CR>", {})
 key("", "<Leader>w", "<cmd>bp|bd #<CR>", {}) -- Close the current buffer with leader w
 key("", "<C-p>", "<cmd>lua require('telescope.builtin').find_files()<CR>", { noremap = true, silent = true }) -- Fuzzy find file in project
 key("", "<Leader>f", "<cmd>lua require('telescope.builtin').live_grep()<CR>", { noremap = true, silent = true }) -- Fuzzy find file in project
+-- NeoVIM LSP
+key("n", "<leader>d", "<cmd>lua vim.lsp.buf.definition()<CR>", { noremap = true, silent = true })
+key("n", "K", "<cmd>lua vim.lsp.buf.hover()<CR>", { noremap = true, silent = true })
+key("n", "<leader>k", "<cmd>lua vim.lsp.buf.signature_help()<CR>", { noremap = true, silent = true })
+key("n", "<leader>D", "<cmd>lua vim.lsp.buf.type_definition()<CR>", { noremap = true, silent = true })
 
 -- TODO: Keymaps
 --key("", "<Leader><Tab>", "<cmd>NERDTreeToggle<CR>", {})
 --key("", "<Leader>r", "<cmd>NERDTreeFind<CR>", {})
-
--- NeoVIM LSP
-key("n", "<leader>d", "<cmd>lua vim.lsp.buf.definition()<CR>", { silent = true })
-key("n", "K", "<cmd>lua vim.lsp.buf.hover()<CR>", { silent = true })
-key("n", "<leader>k", "<cmd>lua vim.lsp.buf.signature_help()<CR>", { silent = true })
-key("n", "<leader>D", "<cmd>lua vim.lsp.buf.type_definition()<CR>", { silent = true })
 
 -- PLUGINS
 

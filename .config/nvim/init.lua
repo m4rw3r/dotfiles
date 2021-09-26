@@ -1,8 +1,9 @@
+local api = vim.api
 local cmd = vim.cmd
 local env = vim.env
 local fn = vim.fn
 local g = vim.g
-local key = vim.api.nvim_set_keymap
+local key = api.nvim_set_keymap
 local opt = vim.opt
 
 -- Configuration
@@ -96,6 +97,55 @@ opt.viewdir = viewdir
 opt.tabstop = indent
 opt.shiftwidth = indent
 opt.foldenable = false
+
+local indents = {
+	cabal = { expandtab = true },
+	haskell = { expandtab = true },
+	html = { autoindent = false },
+	javascript = { expandtab = true, indent = 2, trim = true, autoindent = false },
+	json = { expandtab = true, indent = 2, trim = true },
+	php = { expandtab = true, trim = true },
+	python = { expandtab = true },
+	ruby = { indent = 2 },
+	rust = { expandtab = true, trim = true },
+	sql = { autoindent = false },
+	xml = { expandtab = true, indent = 2, trim = true },
+	yaml = { indent = 2 },
+}
+
+-- Global function for stripping whitespace from files
+function _G.StripTrailingWhitespace()
+	local c = api.nvim_win_get_cursor(0)
+
+	cmd("%s/\\s\\+$//e")
+
+	api.nvim_win_set_cursor(0, c)
+end
+
+for k, v in pairs(indents) do
+	setmetatable(v, { __index = {
+		indent = nil,
+		expandtab = false,
+		trim = false,
+		autoindent = true,
+	} } )
+
+	if v.indent then
+		cmd("autocmd FileType " .. k .. " setlocal shiftwidth=" .. v.indent .. " tabstop=" .. v.indent)
+	end
+
+	if v.expandtab then
+		cmd("autocmd FileType " .. k .. " setlocal expandtab")
+	end
+
+	if v.trim then
+		cmd("autocmd FileType " .. k .. " autocmd BufWritePre <buffer> lua StripTrailingWhitespace()")
+	end
+
+	if not v.autoindent then
+		cmd("autocmd FileType " .. k .. " setlocal indentexpr=")
+	end
+end
 
 -- UI
 opt.showcmd = true -- Show incomplete commands

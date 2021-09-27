@@ -198,8 +198,8 @@ opt.termguicolors = true -- Enable 24-bit RGB in the terminal UI
 cmd "colorscheme base16-tomorrow-night"
 -- Shortcuts to swap the theme
 -- TODO: When https://github.com/neovim/neovim/pull/11613 is merged, use the Lua API
-cmd "command Dark colorscheme base16-tomorrow-night"
-cmd "command Light colorscheme base16-tomorrow"
+cmd "command! Dark colorscheme base16-tomorrow-night"
+cmd "command! Light colorscheme base16-tomorrow"
 
 -- Keybindings
 g.mapleader = " "

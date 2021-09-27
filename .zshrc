@@ -71,9 +71,9 @@ source ~/.dotfiles/tmux.sh
 
 # Customize to your needs...
 unsetopt share_history
-setopt   hist_ignore_dups
-setopt   hist_ignore_space
-export   EDITOR=vim
+setopt hist_ignore_dups
+setopt hist_ignore_space
+export EDITOR=vim
 
 alias genuuid="uuidgen | tr '[:upper:]' '[:lower:]' | tr -d \"\\n\""
 
@@ -101,6 +101,7 @@ fi
 
 # Use NeoVIM instead of VIM
 if [ -x "$(command -v nvim)" ]; then
+	export EDITOR=nvim
 	alias vim=nvim
 fi
 

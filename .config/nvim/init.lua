@@ -228,8 +228,8 @@ key("n", "<leader>k", "<cmd>lua vim.lsp.buf.signature_help()<CR>", { noremap = t
 key("n", "<leader>D", "<cmd>lua vim.lsp.buf.type_definition()<CR>", { noremap = true, silent = true })
 
 -- TODO: Keymaps
---key("", "<Leader><Tab>", "<cmd>NERDTreeToggle<CR>", {})
---key("", "<Leader>r", "<cmd>NERDTreeFind<CR>", {})
+key("", "<Leader><Tab>", "<cmd>NERDTreeToggle<CR>", {})
+key("", "<Leader>r", "<cmd>NERDTreeFind<CR>", {})
 
 -- PLUGINS
 

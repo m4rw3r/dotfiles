@@ -53,12 +53,16 @@ packer.startup(function(use)
 		},
 		config = telescope,
 	}
-	use { "lewis6991/gitsigns.nvim", requires = { 'nvim-lua/plenary.nvim' }}
+	use { "lewis6991/gitsigns.nvim", requires = { "nvim-lua/plenary.nvim" }}
 
 	-- UI
 	--
 	-- Status-line replacement
-	use { "shadmansaleh/lualine.nvim", requires = {"kyazdani42/nvim-web-devicons" }, config = lualine }
+	use {
+		"shadmansaleh/lualine.nvim",
+		requires = {"kyazdani42/nvim-web-devicons" },
+		config = lualine,
+	}
 	-- Allow window navigation outside of NeoVIM when in tmux
 	use { "christoomey/vim-tmux-navigator" }
 	-- Rainbow parenthesis using treesitter
@@ -181,7 +185,7 @@ opt.display:append("uhex") -- Show invalid unicode characters as hex
 opt.relativenumber = true -- Relative line-numbers in the gutter
 opt.number = true -- Show line number on the current line
 opt.cursorline = true -- Highlight the current line
-opt.signcolumn = "number"
+opt.signcolumn = "number" -- Show signs in the number column
 opt.splitbelow = true -- Split pane below by default
 opt.splitright = true -- Split pane to the right by default
 opt.scrolloff = 5 -- Always allow 5 empty "lines" beyond start and end of file
@@ -260,7 +264,6 @@ function lualine()
 
 	lualine.setup({
 		options = {
-			-- TODO: Theme
 			theme = "auto",
 		},
 	})

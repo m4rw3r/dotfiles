@@ -122,30 +122,52 @@ function _G.StripTrailingWhitespace()
 	api.nvim_win_set_cursor(0, c)
 end
 
-for k, v in pairs(indents) do
-	setmetatable(v, { __index = {
+-- Use an autogroup to avoid multiple groups being registered
+function autogroup(name, commands)
+	cmd("augroup " .. name)
+	cmd("autocmd!")
+
+	for _, line in ipairs(commands) do
+		local command = table.concat(vim.tbl_flatten{ "autocmd", line }, " ")
+
+		cmd(command)
+	end
+
+	cmd("augroup END")
+end
+
+function addIndentCommands(autogroup, filetype, config)
+	setmetatable(config, { __index = {
 		indent = nil,
 		expandtab = false,
 		trim = false,
 		autoindent = true,
 	} } )
 
-	if v.indent then
-		cmd("autocmd FileType " .. k .. " setlocal shiftwidth=" .. v.indent .. " tabstop=" .. v.indent)
+	if config.indent then
+		table.insert(autogroup, {"FileType", filetype, "setlocal", "shiftwidth=" .. config.indent, "tabstop=" .. config.indent})
 	end
 
-	if v.expandtab then
-		cmd("autocmd FileType " .. k .. " setlocal expandtab")
+	if config.expandtab then
+		table.insert(autogroup, {"FileType", filetype, "setlocal", "expandtab"})
 	end
 
-	if v.trim then
-		cmd("autocmd FileType " .. k .. " autocmd BufWritePre <buffer> lua StripTrailingWhitespace()")
+	if config.trim then
+		table.insert(autogroup, {"FileType", filetype, "autocmd", "BufWritePre", "<buffer>", "lua StripTrailingWhitespace()"})
 	end
 
-	if not v.autoindent then
-		cmd("autocmd FileType " .. k .. " setlocal indentexpr=")
+	if not config.autoindent then
+		table.insert(autogroup, {"FileType", filetype, "setlocal", "indentexpr="})
 	end
 end
+
+local indentgroup = {}
+
+for k, v in pairs(indents) do
+	addIndentCommands(indentgroup, k, v)
+end
+
+autogroup("indent", indentgroup)
 
 -- UI
 opt.showcmd = true -- Show incomplete commands

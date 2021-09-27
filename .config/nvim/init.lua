@@ -126,16 +126,16 @@ end
 
 -- Use an autogroup to avoid multiple groups being registered
 function autogroup(name, commands)
-	cmd("augroup " .. name)
-	cmd("autocmd!")
+	vim.cmd("augroup " .. name)
+	vim.cmd("autocmd!")
 
 	for _, line in ipairs(commands) do
 		local command = table.concat(vim.tbl_flatten{ "autocmd", line }, " ")
 
-		cmd(command)
+		vim.cmd(command)
 	end
 
-	cmd("augroup END")
+	vim.cmd("augroup END")
 end
 
 function addIndentCommands(autogroup, filetype, config)
@@ -285,26 +285,26 @@ function lspconfig()
 end
 
 function treesitter_after_install()
-	cmd ":TSUpdate"
-	cmd ":TSInstall bash"
-	cmd ":TSInstall c"
-	cmd ":TSInstall dockerfile"
-	cmd ":TSInstall dot"
-	cmd ":TSInstall graphql"
-	cmd ":TSInstall haskell"
-	cmd ":TSInstall html"
-	cmd ":TSInstall java"
-	cmd ":TSInstall javascript"
-	cmd ":TSInstall json"
-	cmd ":TSInstall latex"
-	cmd ":TSInstall lua"
-	cmd ":TSInstall php"
-	cmd ":TSInstall python"
-	cmd ":TSInstall ruby"
-	cmd ":TSInstall rust"
-	cmd ":TSInstall toml"
-	cmd ":TSInstall vim"
-	cmd ":TSInstall yaml"
+	vim.cmd("TSUpdate")
+	vim.cmd("TSInstall bash")
+	vim.cmd("TSInstall c")
+	vim.cmd("TSInstall dockerfile")
+	vim.cmd("TSInstall dot")
+	vim.cmd("TSInstall graphql")
+	vim.cmd("TSInstall haskell")
+	vim.cmd("TSInstall html")
+	vim.cmd("TSInstall java")
+	vim.cmd("TSInstall javascript")
+	vim.cmd("TSInstall json")
+	vim.cmd("TSInstall latex")
+	vim.cmd("TSInstall lua")
+	vim.cmd("TSInstall php")
+	vim.cmd("TSInstall python")
+	vim.cmd("TSInstall ruby")
+	vim.cmd("TSInstall rust")
+	vim.cmd("TSInstall toml")
+	vim.cmd("TSInstall vim")
+	vim.cmd("TSInstall yaml")
 end
 
 function treesitter()

@@ -79,10 +79,7 @@ packer.startup(function(use)
 	use { "nvim-treesitter/nvim-treesitter", run = treesitter_after_install, config = treesitter }
 
 	-- Colorschemes
-	use { "RRethy/nvim-base16" }
-
-	-- TODO: Plugins
-	-- TODO: Tree-plugin
+	use { "RRethy/nvim-base16", config = base16_config }
 end)
 
 -- Files
@@ -200,11 +197,6 @@ opt.smartcase = true -- Ignore case by default, but swap to case-sensitive
 
 -- Font and Color
 opt.termguicolors = true -- Enable 24-bit RGB in the terminal UI
-cmd "colorscheme base16-tomorrow-night"
--- Shortcuts to swap the theme
--- TODO: When https://github.com/neovim/neovim/pull/11613 is merged, use the Lua API
-cmd "command! Dark colorscheme base16-tomorrow-night"
-cmd "command! Light colorscheme base16-tomorrow"
 
 -- Keybindings
 g.mapleader = " "
@@ -327,4 +319,12 @@ function treesitter()
 			extended_mode = true, -- Also highlight non-bracket delimiters like html tags, boolean or table: lang -> boolean
 		},
 	})
+end
+
+function base16_config()
+	vim.cmd "colorscheme base16-tomorrow-night"
+	-- Shortcuts to swap the theme
+	-- TODO: When https://github.com/neovim/neovim/pull/11613 is merged, use the Lua API
+	vim.cmd "command! Dark colorscheme base16-tomorrow-night"
+	vim.cmd "command! Light colorscheme base16-tomorrow"
 end

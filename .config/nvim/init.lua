@@ -65,6 +65,7 @@ packer.startup(function(use)
 	use { "p00f/nvim-ts-rainbow" }
 	-- Show colors
 	use { "norcalli/nvim-colorizer.lua", config = colorizer }
+	use { "preservim/nerdtree", config = nerdtree }
 
 	-- Language integration
 	--
@@ -269,6 +270,10 @@ function colorizer()
 	local colorizer = require("colorizer")
 
 	colorizer.setup()
+end
+
+function nerdtree()
+	vim.g.NERDTreeShowHidden = 1
 end
 
 function lspconfig()

@@ -95,12 +95,12 @@ alias mysqlp='mysql --auto-vertical-output --show-warnings --sigint-ignore --pag
 alias light='kitty +kitten themes --cache-age=-1 Base16-tomorrow' # not sure why this is uppercase
 alias dark='kitty +kitten themes --cache-age=-1 Base16-tomorrow-night'
 
-if [ -x "$(command -v prettyping)" ]; then
+if command -v prettyping &>/dev/null; then
 	alias ping='prettyping --nolegend'
 fi
 
 # Use NeoVIM instead of VIM
-if [ -x "$(command -v nvim)" ]; then
+if command -v nvim &>/dev/null; then
 	export EDITOR=nvim
 	alias vim=nvim
 fi
@@ -110,7 +110,7 @@ if [[ -f $HOME/.dotfiles/keys.sh ]]; then
 fi
 
 # Create an open command if one does not exist (linux)
-if [ -z "$(command -v open)" ]; then
+if ! command -v open &>/dev/null; then
 	function open() {
 		if [ "$#" -ne 1 ]; then
 			nohup xdg-open . >/dev/null 2>&1

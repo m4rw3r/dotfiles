@@ -227,8 +227,7 @@ key("n", "<leader>d", "<cmd>lua vim.lsp.buf.definition()<CR>", { noremap = true,
 key("n", "K", "<cmd>lua vim.lsp.buf.hover()<CR>", { noremap = true, silent = true })
 key("n", "<leader>k", "<cmd>lua vim.lsp.buf.signature_help()<CR>", { noremap = true, silent = true })
 key("n", "<leader>D", "<cmd>lua vim.lsp.buf.type_definition()<CR>", { noremap = true, silent = true })
-
--- TODO: Keymaps
+-- NERDTree
 key("", "<Leader><Tab>", "<cmd>NERDTreeToggle<CR>", {})
 key("", "<Leader>r", "<cmd>NERDTreeFind<CR>", {})
 
@@ -258,6 +257,16 @@ function lualine()
 	lualine.setup({
 		options = {
 			theme = "auto",
+		},
+		sections = {
+			lualine_a = {"mode"},
+			lualine_b = {"branch"},
+			lualine_c = {
+				{ "filename", path = 1 },
+			},
+			lualine_x = {"encoding", "fileformat", "filetype"},
+			lualine_y = {"progress"},
+			lualine_z = {"location"}
 		},
 	})
 end

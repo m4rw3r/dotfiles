@@ -1,0 +1,8 @@
+{
+  "config": {
+    "sort-packages": true,
+    "preferred-install": {
+      "*": "source"
+    }
+  }
+}

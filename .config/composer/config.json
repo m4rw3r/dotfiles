@@ -3,6 +3,7 @@
     "sort-packages": true,
     "preferred-install": {
       "*": "source"
-    }
+    },
+    "process-timeout": 0
   }
 }

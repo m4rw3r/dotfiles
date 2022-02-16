@@ -94,7 +94,8 @@ alias mysqlp='mysql --auto-vertical-output --show-warnings --sigint-ignore --pag
 # TODO: Inform all NeoVIM instances to also swap on this
 alias light='kitty +kitten themes --cache-age=-1 Base16-tomorrow' # not sure why this is uppercase
 alias dark='kitty +kitten themes --cache-age=-1 Base16-tomorrow-night'
-alias kcachegrind='docker run --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v "$PWD:$PWD" -w "$PWD" -e "HOME=$PWD" quetzacoalt/kcachegrind kcachegrind'
+# KCachegrind for visualizing profiles
+alias kcachegrind='docker run --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v "$HOME:$HOME" -w "$PWD" -e "HOME=$HOME" quetzacoalt/kcachegrind kcachegrind'
 
 if command -v prettyping &>/dev/null; then
 	alias ping='prettyping --nolegend'

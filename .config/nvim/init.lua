@@ -216,7 +216,7 @@ local indents = {
 	html = { autoindent = false },
 	javascript = { expandtab = true, indent = 2, trim = true, autoindent = false },
 	json = { expandtab = true, indent = 2, trim = true },
-	php = { expandtab = true, trim = true },
+	php = { expandtab = true, trim = true, autoindent = false },
 	python = { expandtab = true },
 	ruby = { indent = 2 },
 	rust = { expandtab = true, trim = true },

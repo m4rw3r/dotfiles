@@ -169,6 +169,7 @@ packer.startup(function(use)
 					enable = true,
 				},
 				indent = {
+					disable = { "php" },
 					enable = true,
 				},
 				rainbow = {

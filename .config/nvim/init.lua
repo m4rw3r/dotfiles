@@ -63,7 +63,7 @@ packer.startup(function(use)
 					n = {
 						["<C-c>"] = actions.close,
 					},
-				}
+				},
 			})
 
 			telescope.load_extension("fzy_native")
@@ -92,7 +92,7 @@ packer.startup(function(use)
 					},
 					lualine_x = {"encoding", "fileformat", "filetype"},
 					lualine_y = {"progress"},
-					lualine_z = {"location"}
+					lualine_z = {"location"},
 				},
 			})
 		end

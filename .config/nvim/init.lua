@@ -126,7 +126,8 @@ packer.startup(function(use)
 			local lsp = require("lspconfig")
 
 			lsp.psalm.setup({
-				cmd = {"x", "psalm", "--language-server"}
+				cmd = {"x", "psalm", "--language-server"},
+				flags = { debounce_text_changes = 150 },
 			})
 
 			-- TODO: FlowJS LSP

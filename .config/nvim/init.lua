@@ -51,7 +51,23 @@ packer.startup(function(use)
 			{ "nvim-lua/plenary.nvim" },
 			{ "nvim-telescope/telescope-fzy-native.nvim" }
 		},
-		config = telescope,
+		config = function()
+			local telescope = require("telescope")
+			local actions = require("telescope.actions")
+
+			telescope.setup({
+				mappings = {
+					i = {
+						["<C-c>"] = actions.close,
+					},
+					n = {
+						["<C-c>"] = actions.close,
+					},
+				}
+			})
+
+			telescope.load_extension("fzy_native")
+		end
 	}
 	use { "lewis6991/gitsigns.nvim", requires = { "nvim-lua/plenary.nvim" }}
 
@@ -59,27 +75,121 @@ packer.startup(function(use)
 	--
 	-- Status-line replacement
 	use {
-		"shadmansaleh/lualine.nvim",
-		requires = {"kyazdani42/nvim-web-devicons" },
-		config = lualine,
+		"nvim-lualine/lualine.nvim",
+		requires = { "kyazdani42/nvim-web-devicons" },
+		config = function()
+			local lualine = require("lualine")
+
+			lualine.setup({
+				options = {
+					theme = "auto",
+				},
+				sections = {
+					lualine_a = {"mode"},
+					lualine_b = {"branch"},
+					lualine_c = {
+						{ "filename", path = 1 },
+					},
+					lualine_x = {"encoding", "fileformat", "filetype"},
+					lualine_y = {"progress"},
+					lualine_z = {"location"}
+				},
+			})
+		end
 	}
 	-- Allow window navigation outside of NeoVIM when in tmux
 	use { "christoomey/vim-tmux-navigator" }
 	-- Rainbow parenthesis using treesitter
 	use { "p00f/nvim-ts-rainbow" }
 	-- Show colors
-	use { "norcalli/nvim-colorizer.lua", config = colorizer }
-	use { "preservim/nerdtree", config = nerdtree }
+	use {
+		"norcalli/nvim-colorizer.lua",
+		config = function()
+			local colorizer = require("colorizer")
+
+			colorizer.setup()
+		end
+	}
+	use {
+		"preservim/nerdtree",
+		config = function()
+			vim.g.NERDTreeShowHidden = 1
+		end
+	}
 
 	-- Language integration
 	--
 	-- LSP
-	use { "neovim/nvim-lspconfig", config = lspconfig }
+	use {
+		"neovim/nvim-lspconfig",
+		config = function()
+			local lsp = require("lspconfig")
+
+			lsp.psalm.setup({
+				cmd = {"x", "psalm", "--language-server"}
+			})
+
+			-- TODO: FlowJS LSP
+			-- TODO: GraphQL LSP
+			-- TODO: Java LSP
+			-- TODO: Rust
+		end
+	}
 	use { "nvim-lua/completion-nvim" }
-	use { "nvim-treesitter/nvim-treesitter", run = treesitter_after_install, config = treesitter }
+	use {
+		"nvim-treesitter/nvim-treesitter",
+		run = function()
+			-- Update instead of install, since then it will install it if it is missing
+			vim.cmd("TSUpdate bash")
+			vim.cmd("TSUpdate c")
+			vim.cmd("TSUpdate dockerfile")
+			vim.cmd("TSUpdate dot")
+			vim.cmd("TSUpdate graphql")
+			vim.cmd("TSUpdate haskell")
+			vim.cmd("TSUpdate html")
+			vim.cmd("TSUpdate java")
+			vim.cmd("TSUpdate javascript")
+			vim.cmd("TSUpdate json")
+			vim.cmd("TSUpdate latex")
+			vim.cmd("TSUpdate lua")
+			vim.cmd("TSUpdate php")
+			vim.cmd("TSUpdate python")
+			vim.cmd("TSUpdate ruby")
+			vim.cmd("TSUpdate rust")
+			vim.cmd("TSUpdate toml")
+			vim.cmd("TSUpdate vim")
+			vim.cmd("TSUpdate yaml")
+		end,
+		config = function()
+			local treesitter_configs = require("nvim-treesitter.configs")
+
+			treesitter_configs.setup({
+				highlight = {
+					enable = true,
+				},
+				indent = {
+					enable = true,
+				},
+				rainbow = {
+					enable = true,
+					extended_mode = true, -- Also highlight non-bracket delimiters like html tags, boolean or table: lang -> boolean
+				},
+			})
+		end
+	}
 
 	-- Colorschemes
-	use { "RRethy/nvim-base16", config = base16_config }
+	use {
+		"RRethy/nvim-base16",
+		config = function()
+			vim.cmd "colorscheme base16-tomorrow-night"
+			-- Shortcuts to swap the theme
+			-- TODO: When https://github.com/neovim/neovim/pull/11613 is merged
+			-- and released, use the Lua API
+			vim.cmd "command! Dark colorscheme base16-tomorrow-night"
+			vim.cmd "command! Light colorscheme base16-tomorrow"
+		end
+	}
 end)
 
 -- Files
@@ -230,114 +340,3 @@ key("n", "<leader>D", "<cmd>lua vim.lsp.buf.type_definition()<CR>", { noremap = 
 -- NERDTree
 key("", "<Leader><Tab>", "<cmd>NERDTreeToggle<CR>", {})
 key("", "<Leader>r", "<cmd>NERDTreeFind<CR>", {})
-
--- PLUGINS
-
-function telescope()
-	local telescope = require("telescope")
-	local actions = require("telescope.actions")
-
-	telescope.setup({
-		mappings = {
-			i = {
-				["<C-c>"] = actions.close,
-			},
-			n = {
-				["<C-c>"] = actions.close,
-			},
-		}
-	})
-
-	telescope.load_extension("fzy_native")
-end
-
-function lualine()
-	local lualine = require("lualine")
-
-	lualine.setup({
-		options = {
-			theme = "auto",
-		},
-		sections = {
-			lualine_a = {"mode"},
-			lualine_b = {"branch"},
-			lualine_c = {
-				{ "filename", path = 1 },
-			},
-			lualine_x = {"encoding", "fileformat", "filetype"},
-			lualine_y = {"progress"},
-			lualine_z = {"location"}
-		},
-	})
-end
-
-function colorizer()
-	local colorizer = require("colorizer")
-
-	colorizer.setup()
-end
-
-function nerdtree()
-	vim.g.NERDTreeShowHidden = 1
-end
-
-function lspconfig()
-	local lsp = require("lspconfig")
-
-	lsp.psalm.setup({
-		cmd = {"x", "psalm", "--language-server"}
-	})
-
-	-- TODO: FlowJS LSP
-	-- TODO: GraphQL LSP
-	-- TODO: Java LSP
-	-- TODO: Rust
-end
-
-function treesitter_after_install()
-	-- Update instead of install, since then it will install it if it is missing
-	vim.cmd("TSUpdate bash")
-	vim.cmd("TSUpdate c")
-	vim.cmd("TSUpdate dockerfile")
-	vim.cmd("TSUpdate dot")
-	vim.cmd("TSUpdate graphql")
-	vim.cmd("TSUpdate haskell")
-	vim.cmd("TSUpdate html")
-	vim.cmd("TSUpdate java")
-	vim.cmd("TSUpdate javascript")
-	vim.cmd("TSUpdate json")
-	vim.cmd("TSUpdate latex")
-	vim.cmd("TSUpdate lua")
-	vim.cmd("TSUpdate php")
-	vim.cmd("TSUpdate python")
-	vim.cmd("TSUpdate ruby")
-	vim.cmd("TSUpdate rust")
-	vim.cmd("TSUpdate toml")
-	vim.cmd("TSUpdate vim")
-	vim.cmd("TSUpdate yaml")
-end
-
-function treesitter()
-	local treesitter_configs = require("nvim-treesitter.configs")
-
-	treesitter_configs.setup({
-		highlight = {
-			enable = true,
-		},
-		indent = {
-			enable = true,
-		},
-		rainbow = {
-			enable = true,
-			extended_mode = true, -- Also highlight non-bracket delimiters like html tags, boolean or table: lang -> boolean
-		},
-	})
-end
-
-function base16_config()
-	vim.cmd "colorscheme base16-tomorrow-night"
-	-- Shortcuts to swap the theme
-	-- TODO: When https://github.com/neovim/neovim/pull/11613 is merged, use the Lua API
-	vim.cmd "command! Dark colorscheme base16-tomorrow-night"
-	vim.cmd "command! Light colorscheme base16-tomorrow"
-end

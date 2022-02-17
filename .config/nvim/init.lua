@@ -329,6 +329,7 @@ key("n", "<F3>", "<cmd>noh<CR>", { noremap = true, silent = true }) -- Toggle se
 key("", "<Leader>j", "<cmd>bnext<CR>", {}) -- Navigate between buffers using Leader j/k
 key("", "<Leader>k", "<cmd>bprevious<CR>", {})
 key("", "<Leader>w", "<cmd>bp|bd #<CR>", {}) -- Close the current buffer with leader w
+-- Telescope
 key("", "<C-p>", "<cmd>lua require('telescope.builtin').find_files()<CR>", { noremap = true, silent = true }) -- Fuzzy find file in project
 key("", "<M-p>", "<cmd>lua require('telescope.builtin').find_files({no_ignore = true})<CR>", { noremap = true, silent = true }) -- Fuzzy find file in project, ignoring ignores
 key("", "<Leader>f", "<cmd>lua require('telescope.builtin').live_grep()<CR>", { noremap = true, silent = true }) -- Fuzzy find file in project

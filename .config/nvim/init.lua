@@ -235,7 +235,7 @@ function _G.StripTrailingWhitespace()
 end
 
 -- Use an autogroup to avoid multiple groups being registered
-function autogroup(name, commands)
+local function autogroup(name, commands)
 	vim.cmd("augroup " .. name)
 	vim.cmd("autocmd!")
 
@@ -248,7 +248,7 @@ function autogroup(name, commands)
 	vim.cmd("augroup END")
 end
 
-function addIndentCommands(autogroup, filetype, config)
+local function addIndentCommands(autogroup, filetype, config)
 	setmetatable(config, { __index = {
 		indent = nil,
 		expandtab = false,

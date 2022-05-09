@@ -92,8 +92,8 @@ alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 alias mysql='mysql --auto-vertical-output --show-warnings --sigint-ignore --line-numbers --compress'
 alias mysqlp='mysql --auto-vertical-output --show-warnings --sigint-ignore --pager=less --line-numbers --column-type-info --compress'
 # TODO: Inform all NeoVIM instances to also swap on this
-alias light='kitty +kitten themes --cache-age=-1 Base16-tomorrow' # not sure why this is uppercase
-alias dark='kitty +kitten themes --cache-age=-1 Base16-tomorrow-night'
+alias light='kitty +kitten themes --cache-age=365 Base16-tomorrow' # not sure why this is uppercase
+alias dark='kitty +kitten themes --cache-age=365 Base16-tomorrow-night'
 # KCachegrind for visualizing profiles
 alias kcachegrind='docker run --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v "$HOME:$HOME" -w "$PWD" -e "HOME=$HOME" quetzacoalt/kcachegrind kcachegrind'
 

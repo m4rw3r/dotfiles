@@ -299,6 +299,22 @@ opt.splitbelow = true -- Split pane below by default
 opt.splitright = true -- Split pane to the right by default
 opt.scrolloff = 5 -- Always allow 5 empty "lines" beyond start and end of file
 
+vim.diagnostic.config({
+	virtual_text = true,
+	signs = true,
+	float = {
+		border = "single",
+		format = function(diagnostic)
+			return string.format(
+				"%s (%s) [%s]",
+				diagnostic.message,
+				diagnostic.source,
+				diagnostic.code or diagnostic.user_data.lsp.code
+			)
+		end,
+	},
+})
+
 -- TODO: Autocmd InsertEnter timeoutlen=0, and then reset on leave
 
 -- Search
@@ -340,6 +356,7 @@ key("n", "<leader>d", "<cmd>lua vim.lsp.buf.definition()<CR>", { noremap = true,
 key("n", "K", "<cmd>lua vim.lsp.buf.hover()<CR>", { noremap = true, silent = true })
 key("n", "<leader>k", "<cmd>lua vim.lsp.buf.signature_help()<CR>", { noremap = true, silent = true })
 key("n", "<leader>D", "<cmd>lua vim.lsp.buf.type_definition()<CR>", { noremap = true, silent = true })
+key("n", "<leader>e", "<cmd>lua vim.diagnostic.open_float()<CR>", { noremap = true, silent = true })
 -- NERDTree
 key("", "<Leader><Tab>", "<cmd>NERDTreeToggle<CR>", {})
 key("", "<Leader>r", "<cmd>NERDTreeFind<CR>", {})

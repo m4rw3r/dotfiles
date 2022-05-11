@@ -179,6 +179,13 @@ packer.startup(function(use)
 			})
 		end
 	}
+	use {
+		"folke/trouble.nvim",
+		requires = "kyazdani42/nvim-web-devicons",
+		config = function()
+			require("trouble").setup {}
+		end
+	}
 
 	-- Colorschemes
 	use {

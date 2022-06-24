@@ -1,0 +1,21 @@
+#!/usr/bin/env zsh
+#
+# vim: ft=zsh
+function _get_clone_dest() {
+    if [[ $1 =~ '^(git@|https)' ]]; then
+        local tillcolon=("${(@s/:/)1}")
+        repopath=$tillcolon[-1]
+        if [[ $tillcolon[1] = 'https' ]]; then
+            local atslashes=("${(@s#/#)tillcolon}")
+            location="$atslashes[-1]"
+        else
+            local path="$tillcolon[-1]"
+            local atslashes=("${(@s#/#)path}")
+            location="$atslashes[-1]"
+        fi
+    else
+        local atslashes=("${(@s#/#)1}")
+        location="$atslashes[-1]"
+        repopath=$1;
+    fi
+}

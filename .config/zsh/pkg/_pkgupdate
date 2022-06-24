@@ -1,0 +1,52 @@
+#!/usr/bin/env zsh
+#
+# vim: ft=zsh
+function _pkgupdate() {
+    [[ -z $UPDATE_INTERVAL ]] && UPDATE_INTERVAL=30
+
+
+    local update_time="$(< $MODULES_DIR/.updatetime)"
+    [[ ! -f $MODULES_DIR/.updatetime || ${#update_time} == 0 ]] && echo 0 > $MODULES_DIR/.updatetime \
+        && update_time="$(< $MODULES_DIR/.updatetime)"
+
+
+    day=$((24 * 60 * 60 ))
+    gap=$(( $UPDATE_INTERVAL * $day ))
+    diff="$(( $EPOCHSECONDS - $update_time ))"
+
+    if [[ $diff -gt $gap ]]; then
+        if [[ $diff -lt $(($gap * 3)) ]] && [[ ! -f "$HOME/.cache/zsh/no_z_update" ]]; then
+            echo "You last updated your plugins on $(date -d "@$update_time")"
+            echo "Plugins will auto-update on $(date -d "@$(($update_time + $(( $gap * 3 ))))")"
+            echo 'Update plugins? y/Y to confirm, anything else to ignore.'
+            read confirm
+            if [[ ! $confirm =~ '^(y|Y)' ]]; then
+                echo '' > "$HOME/.cache/zsh/no_z_update"
+                return
+            fi
+        else
+            if [[ $diff -gt $(($gap * 3)) ]] && [[ -f "$HOME/.cache/zsh/no_z_update" ]]; then
+                zf_rm "$HOME/.cache/zsh/no_z_update"
+            fi
+        fi
+        _net_test
+        if [[ $? -eq 1 ]]; then
+            return
+        fi
+
+        (
+            builtin cd $MODULES_DIR
+            pwd
+            find ./ -type d -name '.git' | while read -r git
+            do
+                ( cd $(dirname $git) &&
+                      git stash &&
+                      git pull --rebase &&
+                      git stash pop)
+            done
+
+        )
+        echo $EPOCHSECONDS > "$MODULES_DIR/.updatetime"
+    fi
+
+}

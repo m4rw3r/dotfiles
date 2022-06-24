@@ -1,0 +1,62 @@
+#!/usr/bin/env zsh
+#
+# vim: ft=zsh
+function _source_or_install() {
+    # zmodload -m -F zsh/files b:zf_mkdir
+    # zmodload zsh/datetime
+
+    split_two=("${(@s#/#)2}")
+
+    _get_clone_dest "$1"
+    _get_clone_url "$1" # $HTTPS_CLONE
+    plug_name=${location:t}
+
+    if [[ ! -d "$MODULES_DIR" ]]; then
+        zf_mkdir -p "$MODULES_DIR"
+    fi
+    if [[ -a "$MODULES_DIR/$location/init.zsh" ]] && [[ "$2" == 0 ]] then;
+        source "$MODULES_DIR/$location/init.zsh"
+    elif [[ -a "$MODULES_DIR/$location/$plug_name.plugin.zsh" ]]; then
+        source "$MODULES_DIR/$location/$plug_name.plugin.zsh"
+    elif [[ -a "$MODULES_DIR/$location/$plug_name.zsh-theme" ]]; then
+        source "$MODULES_DIR/$location/$plug_name.zsh-theme"
+    elif [[ -a "$MODULES_DIR/$location/$2.plugin.zsh" ]]; then
+        source "$MODULES_DIR/$location/$2.plugin.zsh"
+    elif [[ -a "$MODULES_DIR/$location/$2.zsh-theme" ]]; then
+        source "$MODULES_DIR/$location/$2.zsh-theme"
+    elif [[ -a "$MODULES_DIR/$location/$2.zsh" ]]; then
+        source "$MODULES_DIR/$location/$2.zsh"
+        if [[ -d "$MODULES_DIR/$location/modules/$split_two[2]/functions" ]]; then
+            fpath=("$MODULES_DIR/$location/modules/$split_two[2]/functions" $fpath)
+            autoload -U $fpath[1]/*(.:t)
+        fi
+    elif [[ -a "$MODULES_DIR/$location/$2.sh" ]]; then
+        source "$MODULES_DIR/$location/$2.sh"
+    elif [[ -a  "$MODULES_DIR/$location/$split_two[1]/$split_two[2]" ]]; then
+        fpath=( "$MODULES_DIR/$location/$split_two[1]/$split_two[2]/" $fpath )
+    else
+        _net_test
+        if [[ $? -eq 1 ]]; then
+            echo "network down, try again later"
+            return
+        fi
+
+        if [[ ! -d "$MODULES_DIR/$location" ]]; then
+            zf_mkdir -p "$MODULES_DIR/logs"
+            zshpath=("${(@s/./)MODULES_DIR}")
+
+
+            (
+            builtin cd $MODULES_DIR
+            if [[ ! -d $dest ]]; then
+                git clone --depth 3 "$cloneurl" "$location"
+            fi
+        )
+
+        echo $EPOCSECONDS > "$MODULES_DIR/.updatetime"
+        return
+    else
+        echo "You have a plugin name wrong. $location does not contain $2. Check your list against the plugins included in any framworks you're using".
+        fi
+    fi
+}

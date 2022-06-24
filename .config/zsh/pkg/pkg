@@ -1,0 +1,123 @@
+#!/usr/bin/env zsh
+#
+# vim: ft=zsh
+function pkg() {
+    zmodload zsh/datetime
+    zmodload -m -F zsh/files b:zf_rm b:zf_mkdir b:zf_mv
+    zparseopts -E -D -A opts a:=alt -alt:=alt f:=from -from:=from -theme=theme t=theme d:=depends
+    local alternate=$alt[2]
+    local src=$from[2]
+    local deps=$depends[2]
+    if [[ -z $ZDOTDIR ]]; then
+        ZDOTDIR=$HOME
+    fi
+    if [[ "$1" == 'init' ]]; then
+        pkgs=()
+        return
+    elif [[ "$1" == 'load' ]]; then
+        local procs=()
+        _load_pkgs
+        if [[ $#procs -gt 0 ]] && [[ $errs -eq 0 ]]; then
+            if [[ -d  "$MODULES_DIR/logs/" ]]; then
+                zf_mkdir -p "$MODULES_DIR/log_backups"
+                 zf_mv $MODULES_DIR/logs/ $MODULES_DIR/log_backups/logs_$( date +'%j%H%M%S' )
+            fi
+            if [[ -d  "$MODULES_DIR/log_backups" ]]; then
+                echo "You have $( du -hs "$MODULES_DIR/log_backups" | awk '/[:space:]/ {print $1}' ) of log backups, clear them with pkg clear-logs"
+            fi
+            echo 'reloading...'
+            if [[ ! -f /tmp/zreload ]]; then
+                source "$ZDOTDIR/.zshrc"
+                touch /tmp/zreload
+            fi
+        elif [[ $errs -gt 0 ]]; then
+            _handle_errors
+        else
+            # do nothing
+        fi
+        unset errs
+        return
+    elif [[ $1 == 'clear-errors' ]]; then
+        _clear_errors
+    elif [[ $1 == 'clear-logs' ]]; then
+        _clear_logs
+    elif [[ "$1" == 'update' ]]; then
+        _pkgupdate $pkgs
+    fi
+    if [[ $alternate ]]; then
+        pkgs+=($1 $alternate)
+    elif [[ $src ]]; then
+        if [[ $src =~ '^(omz|ohmyzsh|oh-my-zsh)' ]]; then
+            local d=("${(@s#,#)deps}")
+            if [[ $theme ]]; then
+                pkgs+=('ohmyzsh/ohmyzsh' "themes/$1")
+                _source_deps 'ohmyzsh/ohmyzsh'
+            else
+                pkgs+=('ohmyzsh/ohmyzsh' "plugins/$1/$1")
+                _source_deps 'ohmyzsh/ohmyzsh'
+            fi
+        fi
+        if [[ $src =~ '^(prezto)' ]]; then
+            pkgs+=('sorin-ionescu/prezto' "modules/$1/init")
+            _source_deps 'sorin-ionescu/prezto'
+        fi
+    else
+        pkgs+=($1 0)
+    fi
+    unset location
+    zmodload -u zsh/datetime
+}
+
+function _source_deps() {
+    if [[ $d ]]; then
+        for p in $d; do
+            pkgs+=("$1" "$p")
+        done
+    fi
+}
+
+function _handle_errors {
+
+    echo 'There were errors cloning your plugins, showing them now'
+    echo "Errors are listed by PID in $MODULES_DIR/logs"
+    (
+    builtin cd $MODULES_DIR/logs
+    if [[ $PAGER ]]; then
+        $PAGER < $(grep -li 'error' *)
+    elif [[ $( command -v less ) ]]; then
+         less < $(grep -li 'error' *)
+    elif [[ $( command -v more ) ]]; then
+        more < $(grep -li 'error' *)
+    else
+        < $(grep -li 'error' *)
+    fi
+    )
+    _clear_errors
+}
+
+function _clear_errors() {
+
+    local clear
+    echo 'Clear errors? [ y or yes to confirm, all else cancels ]'
+        read clear
+        if [[ $clear =~ '^(y|Y|yes|Yes|YES)' ]]; then
+            zf_rm -r $MODULES_DIR/logs
+        fi
+        unset clear
+    }
+
+function _clear_logs() {
+
+    local clear
+    echo 'Clear logs? {y or yes to confirm, all else cancels}'
+        read clear
+        if [[ $clear =~ '^(y|Y|yes|Yes|YES)' ]]; then
+            if [[ -d  "$MODULES_DIR/logs" ]]; then
+                zf_rm -r "$MODULES_DIR/logs"
+            fi
+            if [[ -d  "$MODULES_DIR/log_backups" ]]; then
+                zf_rm -r "$MODULES_DIR/log_backups"
+            fi
+        fi
+        unset clear
+    }

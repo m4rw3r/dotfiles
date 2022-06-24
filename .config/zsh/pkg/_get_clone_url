@@ -1,0 +1,23 @@
+#!/usr/bin/env zsh
+#
+# vim: ft=zsh
+function _get_clone_url() {
+
+    if [[ $1 =~ '^(git@|https)' ]]; then
+        cloneurl="$1"
+        if [[ $2 -eq 1 ]]; then
+            if [[ $1 =~ '.*github.*' ]]; then
+                cloneurl="https://github.com/$repopath"
+            fi
+            if [[ $1 =~ '.*gitlab.*' ]]; then
+                cloneurl="https://gitlab.com/$repopath"
+            fi
+        fi
+        unset repopath
+    else
+        cloneurl="git@github.com:$1"
+        if [[ $2 -eq 1 ]]; then
+            cloneurl="https://github.com/$1"
+        fi
+    fi
+}

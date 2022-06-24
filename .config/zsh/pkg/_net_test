@@ -1,0 +1,21 @@
+#!/usr/bin/env zsh
+#
+# vim: ft=zsh
+function _net_test() {
+    # zmodload -m -F zsh/files b:zf_rm
+    netflag="/tmp/network_down"
+    touch $netflag
+    if [[ -n "$(curl -s --max-time 4 -I http://example.com | grep 200)" ]]; then
+        zf_rm $netflag >/dev/null
+        return 0
+    elif [[ -a $netflag ]]; then
+        return 1
+    elif [[ -z "$(curl -s --max-time 4 -I http://example.com | grep 200)" ]]; then
+        echo "NO NETWORK"
+        tput bel
+        touch $netflag
+        return 1
+    else
+        [[ -f "$netflag" ]] && zf_rm $netflag >/dev/null && return 0
+    fi
+}

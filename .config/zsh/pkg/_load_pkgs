@@ -1,0 +1,9 @@
+#!/usr/bin/env zsh
+#
+# vim: ft=zsh
+function _load_pkgs() {
+    for name alt in ${(kv)pkgs}
+    do
+        _source_or_install $name $alt
+    done
+}

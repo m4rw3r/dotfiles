@@ -1,0 +1,14 @@
+#!/usr/bin/env zsh
+#
+# vim: ft=zsh
+function jit() {
+    emulate -L zsh
+    zmodload -m -F zsh/files b:zf_rm b:zf_mv
+    [[ $1.zwc -nt $1 || ! -w ${1:h} ]] && return
+    local tmp=$1.tmp.$$.zwc
+    {
+        zcompile -R -- $tmp $1 && zf_mv -f -- $tmp $1.zwc || return
+    } always {
+        (( $? )) && zf_rm -f -- $tmp
+    }
+}

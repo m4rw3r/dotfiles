@@ -1,111 +1,201 @@
-zcompile_or_recompile() {
-	local file
+#/usr/bin/env zsh
+emulate zsh
 
-	for file in "$@"; do
-		if [[ -f "$file" ]] && [[ ! -f "$file.zwc" ]] || [[ "$file" -nt "$file.zwc" ]]; then
-			zcompile "$file"
-		fi
-	done
-}
+# Lots of this is copied from yramagicman:
+# https://gitlab.com/yramagicman/stow-dotfiles/-/blob/master/config/zsh/zshrc
 
-zcompile_or_recompile "$HOME/.zshrc"
+source "$HOME/.config/env.sh"
 
-export   LANG=en_US.UTF-8
-export   LC_ALL=en_US.UTF-8
+fpath=("$ZDOTDIR/pkg" $fpath)
+fpath=("$ZDOTDIR/functions" $fpath)
+fpath=("$ZDOTDIR/prompts" $fpath)
+autoload $ZDOTDIR/pkg/*
+#autoload $ZDOTDIR/functions/*
+autoload $ZDOTDIR/prompts/*
 
-source $HOME/.dotfiles/paths.sh
+pkg init
+[[ -z "$INSIDE_EMACS" ]] && pkg colored-man-pages -f omz
+pkg safe-paste -f omz
+pkg vi-mode -f omz
+pkg zsh-users/zsh-completions
+pkg zsh-users/zsh-syntax-highlighting
+pkg reobin/typewritten
+pkg load
+pkg update
+source "$ZDOTDIR/aliases/aliases.zsh"
+if type "dircolors" > /dev/null; then
+    eval $(dircolors)
+elif type "gdircolors" > /dev/null; then
+    eval $(gdircolors)
+fi
 
-# Path to your oh-my-zsh configuration.
-ZSH=$HOME/.dotfiles/oh-my-zsh
-ZSH_CUSTOM=$HOME/.dotfiles/oh-my-zsh-plugins
+# Set zsh options for general runtime.
+#
+# Load the prompt system and completion system and initilize them
+autoload -Uz compinit promptinit
 
-# Set name of the theme to load.
-# Look in ~/.oh-my-zsh/themes/
-# Optionally, if you set this to "random", it'll load a random theme each
-# time that oh-my-zsh is loaded.
+# Ensure cache-dir exists
+[ ! -d "$XDG_CACHE_HOME/zsh" ] && mkdir -p "$XDG_CACHE_HOME/zsh"
 
-# Use an empty name since we override the prompt with Typewritten
-ZSH_THEME=""
+# Load and initialize the completion system ignoring insecure directories with a
+# cache time of 20 hours, so it should almost always regenerate the first time a
+# shell is opened each day.
+_comp_files=($XDG_CACHE_HOME/zsh/zcompcache(Nm-20))
+if (( $#_comp_files )); then
+    compinit -i -C -d "$XDG_CACHE_HOME/zsh/zcompcache"
+else
+    compinit -i -d "$XDG_CACHE_HOME/zsh/zcompcache"
+fi
+unset _comp_files
+promptinit
+setopt prompt_subst
 
-# Uncomment this to disable bi-weekly auto-update checks
-DISABLE_AUTO_UPDATE="true"
+# load colors
+autoload -U colors && colors
 
-# Uncomment to change how often before auto-updates occur? (in days)
-# export UPDATE_ZSH_DAYS=13
+# Use case-insensitve globbing.
+unsetopt case_glob
+# glob dotfiles as well
+setopt globdots
+# use extended globbing
+setopt extendedglob
 
-# Uncomment following line if you want to disable colors in ls
-# DISABLE_LS_COLORS="true"
+# Automatically change directory if a directory is entered
+setopt autocd
 
-# Uncomment following line if you want to disable autosetting terminal title.
-# DISABLE_AUTO_TITLE="true"
+#
+# Smart URLs
+#
+autoload -Uz url-quote-magic
+zle -N self-insert url-quote-magic
 
-# Uncomment following line if you want to disable command autocorrection
-# DISABLE_CORRECTION="true"
+#
+# General
+#
 
-# Uncomment following line if you want red dots to be displayed while waiting for completion
-# COMPLETION_WAITING_DOTS="true"
+# Allow brace character class list expansion.
+setopt brace_ccl
+# Combine zero-length punctuation characters (accents) with the base character.
+setopt combining_chars
+# Allow 'Henry''s Garage' instead of 'Henry'\''s Garage'.
+setopt rc_quotes
+# Don't print a warning message if a mail file has been accessed.
+unsetopt mail_warning
 
-# Uncomment following line if you want to disable marking untracked files under
-# VCS as dirty. This makes repository status check for large repositories much,
-# much faster.
-DISABLE_UNTRACKED_FILES_DIRTY="true"
+#
+# Jobs
+#
+# List jobs in the long format by default.
+setopt long_list_jobs
+# Attempt to resume existing job before creating a new process.
+setopt auto_resume
+# Report status of background jobs immediately.
+setopt notify
+# Don't run all background jobs at a lower priority.
+unsetopt bg_nice
+# Don't kill jobs on shell exit.
+unsetopt hup
+# Don't report on jobs when shell exit.
+unsetopt check_jobs
 
-ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets)
+# turn on corrections
+setopt correct
+# Disable some shell keyboard shortcuts
+stty -ixon > /dev/null 2>/dev/null
 
-# Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
-# Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
-# Example format: plugins=(rails git textmate ruby lighthouse)
-plugins=(docker gitfast safe-paste vi-mode zsh-syntax-highlighting)
+# completion
+# options
+# Complete from both ends of a word.
+setopt complete_in_word
+# Move cursor to the end of a completed word.
+setopt always_to_end
+# Perform path search even on command names with slashes.
+setopt path_dirs
+# Show completion menu on a successive tab press.
+setopt auto_menu
+# Automatically list choices on ambiguous completion.
+setopt auto_list
+# If completed parameter is a directory, add a trailing slash.
+setopt auto_param_slash
+setopt complete_aliases
+# Do not autoselect the first completion entry.
+setopt menu_complete
+# Disable start/stop characters in shell editor.
+unsetopt flow_control
 
-source $ZSH/oh-my-zsh.sh
+# zstyle
+zstyle ':completion:*:*:*:*:*' menu select
+zstyle ':completion:*:matches' group 'yes'
+zstyle ':completion:*:options' description 'yes'
+zstyle ':completion:*:options' auto-description '%d'
+zstyle ':completion:*:corrections' format ' %F{green}-- %d (errors: %e) --%f'
+zstyle ':completion:*:descriptions' format ' %F{yellow}-- %d --%f'
+zstyle ':completion:*:messages' format ' %F{purple} -- %d --%f'
+zstyle ':completion:*:warnings' format ' %F{red}-- no matches found --%f'
+zstyle ':completion:*:default' list-prompt '%S%M matches%s'
+zstyle ':completion:*' format ' %F{yellow}-- %d --%f'
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*' verbose yes
+zstyle ':completion::complete:*' cache-path "$XDG_CACHE_HOME/zsh/zcompcache"
+zstyle ':completion::complete:*' use-cache on
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#) ([0-9a-z-]#)*=01;34=0=01'
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
+zstyle ':completion:*:functions' ignored-patterns '(_*|pre(cmd|exec))'
+zstyle ':completion:*' rehash true
+# We want autocompletion to work on 'docker run -it <tab>'
+# note that the space is required in this case
+zstyle ':completion:*:*:docker:*' option-stacking yes
+zstyle ':completion:*:*:docker-*:*' option-stacking yes
+
+zmodload zsh/complist
+
+# history
+HISTFILE="$XDG_CACHE_HOME/zsh/history"
+HISTSIZE=10000000
+SAVEHIST=10000000
+setopt appendhistory notify
+unsetopt beep nomatch
+# Treat the '!' character specially during expansion.
+setopt bang_hist
+# Write to the history file immediately, not when the shell exits.
+setopt inc_append_history
+# Share history between all sessions.
+setopt share_history
+# Expire a duplicate event first when trimming history.
+setopt hist_expire_dups_first
+# Do not record an event that was just recorded again.
+setopt hist_ignore_dups
+# Delete an old recorded event if a new event is a duplicate.
+setopt hist_ignore_all_dups
+# Do not display a previously found event.
+setopt hist_find_no_dups
+# Do not record an event starting with a space.
+setopt hist_ignore_space
+# Do not write a duplicate event to the history file.
+setopt hist_save_no_dups
+# Do not execute immediately upon history expansion.
+setopt hist_verify
+# Show timestamp in history
+setopt extended_history
+
+# The rest
 
 # Typewritten prompt (https://github.com/reobin/typewritten)
 TYPEWRITTEN_RELATIVE_PATH="adaptive"
+prompt typewritten > /dev/null
 
-fpath+=$HOME/.dotfiles/zsh-typewritten
-autoload -U promptinit; promptinit
-prompt typewritten
+if [ -f "/usr/share/fzf/key-bindings.zsh" ]; then
+	source "/usr/share/fzf/key-bindings.zsh"
+	source /usr/share/fzf/completion.zsh
+fi
+
+source "$MODULES_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 
 # Tmux
-source ~/.dotfiles/tmux.sh
+source "$XDG_CONFIG_HOME/tmux/start.sh"
 
 # Customize to your needs...
-unsetopt share_history
-setopt hist_ignore_dups
-setopt hist_ignore_space
-export EDITOR=vim
-
-alias genuuid="uuidgen | tr '[:upper:]' '[:lower:]' | tr -d \"\\n\""
-
-# GitDoge
-alias such=git
-alias very=git
-alias wow='git status'
-
-# Use this command in psql to enable less pager: \pset pager always
-export PAGER=less
-export LESS="-r"
-
-# Dotfiles management alias: https://github.com/m4rw3r/dotfiles/
-alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
-
-alias mysql='mysql --auto-vertical-output --show-warnings --sigint-ignore --line-numbers --compress'
-alias mysqlp='mysql --auto-vertical-output --show-warnings --sigint-ignore --pager=less --line-numbers --column-type-info --compress'
-# TODO: Inform all NeoVIM instances to also swap on this
-alias light='kitty +kitten themes --cache-age=365 Base16-tomorrow' # not sure why this is uppercase
-alias dark='kitty +kitten themes --cache-age=365 Base16-tomorrow-night'
-# KCachegrind for visualizing profiles
-alias kcachegrind='docker run --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v "$HOME:$HOME" -w "$PWD" -e "HOME=$HOME" quetzacoalt/kcachegrind kcachegrind'
-
-if command -v prettyping &>/dev/null; then
-	alias ping='prettyping --nolegend'
-fi
-
-# Use NeoVIM instead of VIM
-if command -v nvim &>/dev/null; then
-	export EDITOR=nvim
-	alias vim=nvim
-fi
 
 if [[ -f $HOME/.dotfiles/keys.sh ]]; then
 	source $HOME/.dotfiles/keys.sh
@@ -115,18 +205,9 @@ fi
 if ! command -v open &>/dev/null; then
 	function open() {
 		if [ "$#" -ne 1 ]; then
-			nohup xdg-open . >/dev/null 2>&1
+			nohup xdg-open . >/dev/null 2>&1 &
 		else
-			nohup xdg-open "$@" >/dev/null 2>&1
+			nohup xdg-open "$@" >/dev/null 2>&1 &
 		fi
 	}
-fi
-
-# We want autocompletion to work on 'docker run -it <tab>'
-# note that the space is required in this case
-zstyle ':completion:*:*:docker:*' option-stacking yes
-zstyle ':completion:*:*:docker-*:*' option-stacking yes
-
-if [ -f "/usr/share/fzf/key-bindings.zsh" ]; then
-	source "/usr/share/fzf/key-bindings.zsh"
 fi

@@ -1,0 +1,2 @@
+source "$HOME/.config/env.sh"
+

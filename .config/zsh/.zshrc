@@ -11,7 +11,7 @@ fpath=("$ZDOTDIR/functions" $fpath)
 fpath=("$ZDOTDIR/prompts" $fpath)
 autoload $ZDOTDIR/pkg/*
 #autoload $ZDOTDIR/functions/*
-autoload $ZDOTDIR/prompts/*
+#autoload $ZDOTDIR/prompts/*
 
 pkg init
 [[ -z "$INSIDE_EMACS" ]] && pkg colored-man-pages -f omz

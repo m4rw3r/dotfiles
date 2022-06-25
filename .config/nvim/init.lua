@@ -6,11 +6,6 @@ local swapdir = XDG_DATA_HOME .. "/nvim/swap//"
 local undodir = XDG_DATA_HOME .. "/nvim/swap/"
 local viewdir = XDG_DATA_HOME .. "/nvim/view//"
 
--- Create required folders
-for _, d in pairs({ backupdir, swapdir, undodir, viewdir }) do
-	vim.fn.system("mkdir -p '" .. d .. "'")
-end
-
 -- Skip built-in plugins
 vim.g.loaded_gzip = false
 vim.g.loaded_netrwPlugin = false
@@ -19,18 +14,35 @@ vim.g.loaded_zip = false
 vim.g.loaded_2html_plugin = false
 vim.g.loaded_remote_plugins = false
 
--- Bootstrap packer.nvim
-local install_path = vim.fn.stdpath("data") .. "/site/pack/packer/start/packer.nvim"
-
-if vim.fn.isdirectory(install_path) == 0 then
-  vim.fn.system({"git", "clone", "https://github.com/wbthomason/packer.nvim", install_path})
-  vim.cmd("packadd packer.nvim")
+local ok, impatient = pcall(require, "impatient")
+if ok then
+	impatient.enable_profile()
 end
 
-local packer = require("packer")
+-- TODO: Maybe replace packer?
+local ok, packer = pcall(require, "packer")
+if not ok then 
+	-- Create required folders
+	for _, d in pairs({ backupdir, swapdir, undodir, viewdir }) do
+		vim.fn.system("mkdir -p '" .. d .. "'")
+	end
+
+	-- Bootstrap packer.nvim
+	local install_path = vim.fn.stdpath("data") .. "/site/pack/packer/start/packer.nvim"
+
+	if vim.fn.isdirectory(install_path) == 0 then
+	  vim.fn.system({"git", "clone", "https://github.com/wbthomason/packer.nvim", install_path})
+	  vim.cmd("packadd packer.nvim")
+	end
+
+	packer = require("packer")
+end
 
 packer.startup(function(use)
 	use { "wbthomason/packer.nvim" }
+
+	use { "lewis6991/impatient.nvim" }
+	use { "tweekmonster/startuptime.vim" }
 
 	-- Utilities
 	--

@@ -193,11 +193,8 @@ if [ -f "/usr/share/fzf/completion.zsh" ]; then
 fi
 
 source "$MODULES_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-
-# Tmux
+source "$XDG_CONFIG_HOME/paths.sh"
 source "$XDG_CONFIG_HOME/tmux/start.sh"
-
-# Customize to your needs...
 
 # Create an open command if one does not exist (linux)
 if ! command -v open &>/dev/null; then

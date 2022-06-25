@@ -112,6 +112,31 @@ packer.startup(function(use)
 		tag = "nightly",
 		config = function()
 			local tree = require("nvim-tree")
+			-- Track the previous window settings when replacing, so we can close the tree view and swap back when opening new splits
+			local prevWindow = nil
+
+			-- Reimplementation of open file which works when we are replacing the current buffer
+			-- TODO: More split options?
+			local function openFile(openCommand)
+				return function(node)
+					local treeView = require("nvim-tree.view")
+					local treeLib = require("nvim-tree.lib")
+
+					if not node or node.name == ".." then
+						return
+					end
+
+					local filename = node.absolute_path
+
+					if node.link_to and not node.nodes then
+						filename = node.link_to
+					elseif node.nodes ~= nil then
+						return treeLib.expand_or_collapse(node)
+					end
+
+					vim.cmd(openCommand .. "" .. vim.fn.fnameescape(filename))
+				end
+			end
 
 			tree.setup({
 				prefer_startup_root = true,
@@ -129,18 +154,25 @@ packer.startup(function(use)
 						custom_only = true,
 						list = {
 							-- Edit in place since we use vinegar-like
-							{ key = "<CR>", action = "edit_in_place" },
-							{ key = "o", action = "edit_in_place" },
+							{ key = {"<CR>", "o"}, action = "edit_in_place", desc = "Open a file or directory, replacing the explorer buffer" },
+							{ key = "o", action = "edit_in_place", desc = "Open a file or directory, replacing the explorer buffer" },
 							-- Recreate the close-window mappings
-							{ key = "<C-w>", action = "close" },
-							{ key = "<Leader>w", action = "close" },
+							{
+								key = {"<C-w>", "<Leader>w"},
+								-- We have to have both an action and an
+								-- action_cb, the action_cb will replace any
+								-- default action
+								action = "close",
+								action_cb = closeTree,
+								desc = "Close and return to the previous buffer",
+							},
 							-- Visibility
-							{ key = "I", action = "toggle_git_ignored" },
-							{ key = "H", action = "toggle_dotfiles" },
+							{ key = "I", action = "toggle_git_ignored", desc = "Toggle showing gitignored files" },
+							{ key = "H", action = "toggle_dotfiles", desc = "Toggle showing hidden files" },
 							-- NERDTree like bindings
-							{ key = "s", action = "split" },
-							{ key = "i", action = "vsplit" },
-							{ key = "P", action = "parent" },
+							{ key = "s", action = "split", action_cb = openFile("split") },
+							{ key = "i", action = "vsplit", action_cb = openFile("vsplit") },
+							{ key = "p", action = "parent" },
 							{ key = "K", action = "first_sibling" },
 							{ key = "J", action = "last_sibling" },
 							{ key = "U", action = "dir_up" },
@@ -153,10 +185,109 @@ packer.startup(function(use)
 							{ key = "a", action = "create" },
 							{ key = "d", action = "remove" },
 							{ key = "r", action = "rename" },
+							-- TODO: change root directory
+							{ key = "C", action = "" },
 						},
 					},
 				},
 			})
+
+			-- We have to manually reimplement parts of
+			-- open_replacing_current_buffer in this case to be able to show
+			-- nvim-tree with a new buffer
+			local function openReplacingBuffer()
+				local treeCore = require("nvim-tree.core")
+				local treeRenderer = require("nvim-tree.renderer")
+				local treeView = require("nvim-tree.view")
+				local cwd = vim.fn.getcwd();
+
+				-- Save previous window and options so we can restore when closing
+				prevWindow = {
+					buffer = vim.api.nvim_get_current_buf(),
+					opts = {}
+				}
+
+				for k, _ in pairs(treeView.View.winopts) do
+					prevWindow.opts[k] = vim.opt_local[k]
+				end
+
+				if not treeCore.get_explorer() or cwd ~= treeCore.get_cwd() then
+					treeCore.init(cwd)
+				end
+
+				treeView.open_in_current_win({ hijack_current_buf = false, resize = false })
+				treeRenderer.draw()
+			end
+
+			-- Reimplementation of nvim-tree.view.close restoring the original buffer and window options
+			local function closeTree()
+				local treeView = require("nvim-tree.view")
+				local treeEvents = require("nvim-tree.events")
+				local treeWinnr = treeView.get_winnr()
+
+				treeView.abandon_current_window()
+
+				if not prevWindow then
+					vim.cmd("new")
+
+					return
+				end
+
+				-- Move to window just in case
+				if treeWinnr then
+					vim.api.nvim_set_current_win(treeWinnr)
+				end
+
+				-- Restore window contents
+				vim.cmd("buffer " .. prevWindow.buffer)
+
+				-- Restore window settings
+				for k, _ in pairs(treeView.View.winopts) do
+					vim.opt_local[k] = prevWindow.opts[k]
+				end
+
+				prevWindow = nil
+
+				treeEvents._dispatch_on_tree_close()
+			end
+
+			local function toggleTree(onOpen)
+				local treeView = require("nvim-tree.view")
+				local currentBuffer = vim.api.nvim_get_current_buf()
+
+				if treeView.is_visible() then
+					-- If the tree view is visible but this is not the buffer, move focus to the buffer
+					local treeBuffer = treeView.get_bufnr()
+
+					if currentBuffer == treeBuffer then
+						closeTree()
+
+						return
+					else
+						treeView.focus()
+					end
+				else
+					openReplacingBuffer()
+				end
+
+				onOpen(currentBuffer)
+			end
+
+			-- Toggle nvim-tree replacing current window
+			vim.keymap.set("", "<Leader><Tab>", function()
+				-- Open in root, do nothing
+				toggleTree(function() end)
+			end)
+			-- Find file in nvim-tree replacing current window
+			vim.keymap.set("", "<Leader>r", function()
+				toggleTree(function(currentBuffer)
+					local bufname = vim.api.nvim_buf_get_name(currentBuffer)
+					-- Only search for the current file if we have a saved file open
+					if bufname ~= "" and vim.loop.fs_stat(bufname) ~= nil then
+						require("nvim-tree.actions.find-file").fn(bufname)
+					end
+				end)
+			end)
 		end
 	}
 
@@ -402,48 +533,3 @@ vim.keymap.set("n", "K", vim.lsp.buf.hover)
 vim.keymap.set("n", "<leader>k", vim.lsp.buf.signature_help)
 vim.keymap.set("n", "<leader>D", vim.lsp.buf.type_definition)
 vim.keymap.set("n", "<leader>e", vim.diagnostic.open_float)
--- nvim-tree
--- Toggle nvim-tree replacing current window
-vim.keymap.set("", "<Leader><Tab>", function()
-	local treeView = require("nvim-tree.view")
-
-	if treeView.is_visible() then
-		treeView.close()
-	else
-		-- We have to manually reimplement parts of
-		-- open_replacing_current_buffer in this case to be able to show
-		-- nvim-tree with a new buffer
-		local tree = require("nvim-tree")
-		local treeCore = require("nvim-tree.core")
-		local treeRenderer = require("nvim-tree.renderer")
-		local cwd = vim.fn.getcwd();
-		local buf = api.nvim_get_current_buf()
-		local bufname = api.nvim_buf_get_name(buf)
-
-		if not treeCore.get_explorer() or cwd ~= treeCore.get_cwd() then
-			treeCore.init(cwd)
-		end
-
-		treeView.open_in_current_win({ hijack_current_buf = false, resize = false })
-		treeRenderer.draw()
-
-		-- Only search for the current file if we have a saved file open
-		if bufname ~= "" and vim.loop.fs_stat(bufname) ~= nil then
-			require("nvim-tree.actions.find-file").fn(bufname)
-		end
-	end
-end)
--- Find file in nvim-tree replacing current window
-vim.keymap.set("", "<Leader>r", function()
-	local treeView = require("nvim-tree.view")
-
-	if treeView.is_visible() then
-		treeView.close()
-	else
-		local tree = require("nvim-tree")
-		local previous_buf = api.nvim_get_current_buf()
-
-		tree.open_replacing_current_buffer(vim.fn.getcwd())
-		tree.find_file(false, previous_buf)
-	end
-end)

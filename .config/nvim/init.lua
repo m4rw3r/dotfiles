@@ -235,29 +235,18 @@ local indents = {
 }
 
 -- Global function for stripping whitespace from files
-function _G.StripTrailingWhitespace()
+local function stripTrailingWhitespace()
 	local c = api.nvim_win_get_cursor(0)
 
 	cmd("%s/\\s\\+$//e")
 
 	api.nvim_win_set_cursor(0, c)
 end
+api.nvim_create_user_command("StripTrailingWhitespace", stripTrailingWhitespace, {})
 
--- Use an autogroup to avoid multiple groups being registered
-local function autogroup(name, commands)
-	vim.cmd("augroup " .. name)
-	vim.cmd("autocmd!")
+local indentgroup = api.nvim_create_augroup("indent", {})
 
-	for _, line in ipairs(commands) do
-		local command = table.concat(vim.tbl_flatten{ "autocmd", line }, " ")
-
-		vim.cmd(command)
-	end
-
-	vim.cmd("augroup END")
-end
-
-local function addIndentCommands(autogroup, filetype, config)
+for filetype, config in pairs(indents) do
 	setmetatable(config, { __index = {
 		indent = nil,
 		expandtab = false,
@@ -265,30 +254,38 @@ local function addIndentCommands(autogroup, filetype, config)
 		autoindent = true,
 	} } )
 
-	if config.indent then
-		table.insert(autogroup, {"FileType", filetype, "setlocal", "shiftwidth=" .. config.indent, "tabstop=" .. config.indent})
-	end
+	api.nvim_create_autocmd(
+		{"FileType"},
+		{
+			pattern = filetype,
+			group = indentgroup,
+			callback = function()
+				if config.indent then
+					vim.opt_local.shiftwidth = config.indent
+					vim.opt_local.tabstop = config.indent
+				end
 
-	if config.expandtab then
-		table.insert(autogroup, {"FileType", filetype, "setlocal", "expandtab"})
-	end
+				if config.expandtab then
+					vim.opt_local.expandtab = true
+				end
 
-	if config.trim then
-		table.insert(autogroup, {"FileType", filetype, "autocmd", "BufWritePre", "<buffer>", "lua StripTrailingWhitespace()"})
-	end
+				if config.trim then
+					api.nvim_create_autocmd(
+						{"BufWritePre"},
+						{
+							callback = stripTrailingWhitespace,
+							desc = "Trim trailing whitespace on save",
+						}
+					)
+				end
 
-	if not config.autoindent then
-		table.insert(autogroup, {"FileType", filetype, "setlocal", "indentexpr="})
-	end
+				if not config.autoindent then
+					vim.opt_local.indentexpr = ""
+				end
+			end
+		}
+	)
 end
-
-local indentgroup = {}
-
-for k, v in pairs(indents) do
-	addIndentCommands(indentgroup, k, v)
-end
-
-autogroup("indent", indentgroup)
 
 -- UI
 opt.showcmd = true -- Show incomplete commands

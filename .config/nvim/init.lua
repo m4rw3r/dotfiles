@@ -111,17 +111,26 @@ packer.startup(function(use)
 		},
 		tag = "nightly",
 		config = function()
+			-- This is a major addition to better support smooth vinegar-like
+			-- window-replacement with opening files in splits, then restoring
+			-- the previous window contents.
 			local tree = require("nvim-tree")
-			-- Track the previous window settings when replacing, so we can close the tree view and swap back when opening new splits
+			local treeView = require("nvim-tree.view")
+			local treeLib = require("nvim-tree.lib")
+			local treeCore = require("nvim-tree.core")
+			local treeRenderer = require("nvim-tree.renderer")
+			local treeEvents = require("nvim-tree.events")
+			local treeUtils = require("nvim-tree.utils")
+
+			-- Track the previous window settings when replacing, so we can
+			-- close the tree view and swap back when opening new splits
 			local prevWindow = nil
 
-			-- Reimplementation of open file which works when we are replacing the current buffer
+			-- Reimplementation of open file which works when we are replacing
+			-- the current buffer
 			-- TODO: More split options?
 			local function openFile(openCommand)
 				return function(node)
-					local treeView = require("nvim-tree.view")
-					local treeLib = require("nvim-tree.lib")
-
 					if not node or node.name == ".." then
 						return
 					end
@@ -138,67 +147,39 @@ packer.startup(function(use)
 				end
 			end
 
-			tree.setup({
-				prefer_startup_root = true,
-				actions = {
-					change_dir = {
-						enable = false,
-						global = false,
-					},
-				},
-				git = {
-					ignore = true,
-				},
-				view = {
-					mappings = {
-						custom_only = true,
-						list = {
-							-- Edit in place since we use vinegar-like
-							{ key = {"<CR>", "o"}, action = "edit_in_place", desc = "Open a file or directory, replacing the explorer buffer" },
-							{ key = "o", action = "edit_in_place", desc = "Open a file or directory, replacing the explorer buffer" },
-							-- Recreate the close-window mappings
-							{
-								key = {"<C-w>", "<Leader>w"},
-								-- We have to have both an action and an
-								-- action_cb, the action_cb will replace any
-								-- default action
-								action = "close",
-								action_cb = closeTree,
-								desc = "Close and return to the previous buffer",
-							},
-							-- Visibility
-							{ key = "I", action = "toggle_git_ignored", desc = "Toggle showing gitignored files" },
-							{ key = "H", action = "toggle_dotfiles", desc = "Toggle showing hidden files" },
-							-- NERDTree like bindings
-							{ key = "s", action = "split", action_cb = openFile("split") },
-							{ key = "i", action = "vsplit", action_cb = openFile("vsplit") },
-							{ key = "p", action = "parent" },
-							{ key = "K", action = "first_sibling" },
-							{ key = "J", action = "last_sibling" },
-							{ key = "U", action = "dir_up" },
-							{ key = "<", action = "prev_sibling" },
-							{ key = ">", action = "next_sibling" },
-							{ key = "R", action = "refresh" },
-							{ key = "x", action = "close_node" },
-							{ key = "?", action = "toggle_help" },
-							-- File management bindings
-							{ key = "a", action = "create" },
-							{ key = "d", action = "remove" },
-							{ key = "r", action = "rename" },
-							-- TODO: change root directory
-							{ key = "C", action = "" },
-						},
-					},
-				},
-			})
+			-- Custom changedir which properly handles rerendering in the
+			-- current window, as well as changing to the directory of a file
+			local function changeDir(node)
+				if not node then
+					return
+				end
+
+				local filename = nil
+
+				if node.name == ".." then
+					filename = vim.fn.fnamemodify(treeUtils.path_remove_trailing(treeCore.get_cwd()), ":h")
+				elseif node.link_to then
+					filename = node.link_to
+				else
+					filename = node.absolute_path
+				end
+
+				while vim.fn.isdirectory(filename) == 0 do
+					filename = vim.fn.fnamemodify(treeUtils.path_remove_trailing(filename), ":h")
+				end
+
+				-- TODO: Configurable?
+				-- TODO: Maybe use local cd (:lcd) instead?
+				vim.cmd("cd " .. vim.fn.fnameescape(filename))
+
+				treeCore.init(filename)
+				treeRenderer.draw()
+			end
 
 			-- We have to manually reimplement parts of
 			-- open_replacing_current_buffer in this case to be able to show
 			-- nvim-tree with a new buffer
 			local function openReplacingBuffer()
-				local treeCore = require("nvim-tree.core")
-				local treeRenderer = require("nvim-tree.renderer")
-				local treeView = require("nvim-tree.view")
 				local cwd = vim.fn.getcwd();
 
 				-- Save previous window and options so we can restore when closing
@@ -211,6 +192,7 @@ packer.startup(function(use)
 					prevWindow.opts[k] = vim.opt_local[k]
 				end
 
+				-- Reinit if the file we are opening from is not in the current directory
 				if not treeCore.get_explorer() or cwd ~= treeCore.get_cwd() then
 					treeCore.init(cwd)
 				end
@@ -219,10 +201,9 @@ packer.startup(function(use)
 				treeRenderer.draw()
 			end
 
-			-- Reimplementation of nvim-tree.view.close restoring the original buffer and window options
+			-- Reimplementation of nvim-tree.view.close restoring the original
+			-- buffer and window options
 			local function closeTree()
-				local treeView = require("nvim-tree.view")
-				local treeEvents = require("nvim-tree.events")
 				local treeWinnr = treeView.get_winnr()
 
 				treeView.abandon_current_window()
@@ -252,7 +233,6 @@ packer.startup(function(use)
 			end
 
 			local function toggleTree(onOpen)
-				local treeView = require("nvim-tree.view")
 				local currentBuffer = vim.api.nvim_get_current_buf()
 
 				if treeView.is_visible() then
@@ -270,24 +250,79 @@ packer.startup(function(use)
 					openReplacingBuffer()
 				end
 
-				onOpen(currentBuffer)
+				if onOpen then
+					onOpen(currentBuffer)
+				end
+			end
+
+			tree.setup({
+				prefer_startup_root = true,
+				actions = {
+					change_dir = {
+						enable = false,
+						global = false,
+					},
+				},
+				git = {
+					ignore = true,
+				},
+				view = {
+					mappings = {
+						custom_only = true,
+						list = {
+							-- Edit in place since we use vinegar-like
+							{
+								key = {"<CR>", "o"},
+								action = "edit_in_place",
+								desc = "Open a file or directory, replacing the explorer buffer",
+							},
+							-- Recreate the close-window mappings
+							{
+								key = {"<C-w>", "<Leader>w"},
+								-- We have to have both an action and an
+								-- action_cb, the action_cb will replace any
+								-- default action
+								action = "close",
+								action_cb = closeTree,
+								desc = "Close and return to the previous buffer",
+							},
+							-- Visibility
+							{ key = "I", action = "toggle_git_ignored", desc = "Toggle showing gitignored files" },
+							{ key = "H", action = "toggle_dotfiles", desc = "Toggle showing hidden files" },
+							-- NERDTree like bindings
+							{ key = "s", action = "split", action_cb = openFile("split"), desc = "Open the given file in a horizontal split" },
+							{ key = "i", action = "vsplit", action_cb = openFile("vsplit"), desc = "Open the given file in a vertical split" },
+							{ key = "p", action = "parent", desc = "Go to the parent directory" },
+							{ key = "K", action = "first_sibling", desc = "Go to the first sibling" },
+							{ key = "J", action = "last_sibling", desc = "Go to the last sibling" },
+							{ key = "U", action = "dir_up", desc = "Navigate to the parent of the current file/directory" },
+							{ key = "<", action = "prev_sibling", desc = "Go to previous siblilng" },
+							{ key = ">", action = "next_sibling", desc = "Go to next sibling" },
+							{ key = "R", action = "refresh", desc = "Refresh the directory tree" },
+							{ key = "x", action = "close_node", desc = "Close the current directory or parent" },
+							{ key = "?", action = "toggle_help", desc = "Toggle help" },
+							{ key = "C", action = "change_dir", action_cb = changeDir, desc = "Changes the current directory to the selected directory, or the directory of the selected file" },
+							-- File management bindings
+							{ key = "a", action = "create", desc = "Create file/directory, directories end in '/'" },
+							{ key = "d", action = "remove", desc = "Delete file/directory" },
+							{ key = "r", action = "rename", desc = "Rename file/directory" },
+						},
+					},
+				},
+			})
+
+			local function findCurrentBuffer(currentBuffer)
+				local bufname = vim.api.nvim_buf_get_name(currentBuffer)
+				-- Only search for the current file if we have a saved file open
+				if bufname ~= "" and vim.loop.fs_stat(bufname) ~= nil then
+					require("nvim-tree.actions.find-file").fn(bufname)
+				end
 			end
 
 			-- Toggle nvim-tree replacing current window
-			vim.keymap.set("", "<Leader><Tab>", function()
-				-- Open in root, do nothing
-				toggleTree(function() end)
-			end)
+			vim.keymap.set("", "<Leader><Tab>", function() toggleTree() end)
 			-- Find file in nvim-tree replacing current window
-			vim.keymap.set("", "<Leader>r", function()
-				toggleTree(function(currentBuffer)
-					local bufname = vim.api.nvim_buf_get_name(currentBuffer)
-					-- Only search for the current file if we have a saved file open
-					if bufname ~= "" and vim.loop.fs_stat(bufname) ~= nil then
-						require("nvim-tree.actions.find-file").fn(bufname)
-					end
-				end)
-			end)
+			vim.keymap.set("", "<Leader>r", function() toggleTree(findCurrentBuffer) end)
 		end
 	}
 

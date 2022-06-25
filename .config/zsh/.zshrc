@@ -119,7 +119,7 @@ setopt auto_list
 setopt auto_param_slash
 setopt complete_aliases
 # Do not autoselect the first completion entry.
-setopt menu_complete
+unsetopt menu_complete
 # Disable start/stop characters in shell editor.
 unsetopt flow_control
 

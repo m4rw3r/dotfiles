@@ -157,6 +157,7 @@ packer.startup(function(use)
 				local filename = nil
 
 				if node.name == ".." then
+					-- TODO: Replace treeUtils with core-functions?
 					filename = vim.fn.fnamemodify(treeUtils.path_remove_trailing(treeCore.get_cwd()), ":h")
 				elseif node.link_to then
 					filename = node.link_to
@@ -257,12 +258,6 @@ packer.startup(function(use)
 
 			tree.setup({
 				prefer_startup_root = true,
-				actions = {
-					change_dir = {
-						enable = false,
-						global = false,
-					},
-				},
 				git = {
 					ignore = true,
 				},
@@ -301,7 +296,12 @@ packer.startup(function(use)
 							{ key = "R", action = "refresh", desc = "Refresh the directory tree" },
 							{ key = "x", action = "close_node", desc = "Close the current directory or parent" },
 							{ key = "?", action = "toggle_help", desc = "Toggle help" },
-							{ key = "C", action = "change_dir", action_cb = changeDir, desc = "Changes the current directory to the selected directory, or the directory of the selected file" },
+							{
+								key = "C",
+								action = "change_dir",
+								action_cb = changeDir,
+								desc = "Changes the current directory to the selected directory, or the directory of the selected file",
+							},
 							-- File management bindings
 							{ key = "a", action = "create", desc = "Create file/directory, directories end in '/'" },
 							{ key = "d", action = "remove", desc = "Delete file/directory" },

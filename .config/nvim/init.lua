@@ -111,9 +111,58 @@ packer.startup(function(use)
 		end
 	}
 	use {
-		"preservim/nerdtree",
+		"kyazdani42/nvim-tree.lua",
+		requires = {
+			"kyazdani42/nvim-web-devicons",
+		},
+		tag = "nightly",
 		config = function()
-			vim.g.NERDTreeShowHidden = 1
+			local tree = require("nvim-tree")
+
+			tree.setup({
+				prefer_startup_root = true,
+				actions = {
+					change_dir = {
+						enable = false,
+						global = false,
+					},
+				},
+				git = {
+					ignore = true,
+				},
+				view = {
+					mappings = {
+						custom_only = true,
+						list = {
+							-- Edit in place since we use vinegar-like
+							{ key = "<CR>", action = "edit_in_place" },
+							{ key = "o", action = "edit_in_place" },
+							-- Recreate the close-window mappings
+							{ key = "<C-w>", action = "close" },
+							{ key = "<Leader>w", action = "close" },
+							-- Visibility
+							{ key = "I", action = "toggle_git_ignored" },
+							{ key = "H", action = "toggle_dotfiles" },
+							-- NERDTree like bindings
+							{ key = "s", action = "split" },
+							{ key = "i", action = "vsplit" },
+							{ key = "P", action = "parent" },
+							{ key = "K", action = "first_sibling" },
+							{ key = "J", action = "last_sibling" },
+							{ key = "U", action = "dir_up" },
+							{ key = "<", action = "prev_sibling" },
+							{ key = ">", action = "next_sibling" },
+							{ key = "R", action = "refresh" },
+							{ key = "x", action = "close_node" },
+							{ key = "?", action = "toggle_help" },
+							-- File management bindings
+							{ key = "a", action = "create" },
+							{ key = "d", action = "remove" },
+							{ key = "r", action = "rename" },
+						},
+					},
+				},
+			})
 		end
 	}
 
@@ -352,15 +401,57 @@ key("", "<Leader>j", "<cmd>bnext<CR>", {}) -- Navigate between buffers using Lea
 key("", "<Leader>k", "<cmd>bprevious<CR>", {})
 key("", "<Leader>w", "<cmd>bp|bd #<CR>", {}) -- Close the current buffer with leader w
 -- Telescope
-key("", "<C-p>", "<cmd>lua require('telescope.builtin').find_files()<CR>", { noremap = true, silent = true }) -- Fuzzy find file in project
-key("", "<M-p>", "<cmd>lua require('telescope.builtin').find_files({no_ignore = true})<CR>", { noremap = true, silent = true }) -- Fuzzy find file in project, ignoring ignores
-key("", "<Leader>f", "<cmd>lua require('telescope.builtin').live_grep()<CR>", { noremap = true, silent = true }) -- Fuzzy find file in project
+vim.keymap.set("", "<C-p>", function() require('telescope.builtin').find_files() end) -- Fuzzy find file in project
+vim.keymap.set("", "<M-p>", function() require('telescope.builtin').find_files({no_ignore = true}) end) -- Fuzzy find file in project, ignoring ignores
+vim.keymap.set("", "<Leader>f", function() require('telescope.builtin').live_grep() end) -- Fuzzy search file in project
 -- NeoVIM LSP
-key("n", "<leader>d", "<cmd>lua vim.lsp.buf.definition()<CR>", { noremap = true, silent = true })
-key("n", "K", "<cmd>lua vim.lsp.buf.hover()<CR>", { noremap = true, silent = true })
-key("n", "<leader>k", "<cmd>lua vim.lsp.buf.signature_help()<CR>", { noremap = true, silent = true })
-key("n", "<leader>D", "<cmd>lua vim.lsp.buf.type_definition()<CR>", { noremap = true, silent = true })
-key("n", "<leader>e", "<cmd>lua vim.diagnostic.open_float()<CR>", { noremap = true, silent = true })
--- NERDTree
-key("", "<Leader><Tab>", "<cmd>NERDTreeToggle<CR>", {})
-key("", "<Leader>r", "<cmd>NERDTreeFind<CR>", {})
+vim.keymap.set("n", "<leader>d", vim.lsp.buf.definition)
+vim.keymap.set("n", "K", vim.lsp.buf.hover)
+vim.keymap.set("n", "<leader>k", vim.lsp.buf.signature_help)
+vim.keymap.set("n", "<leader>D", vim.lsp.buf.type_definition)
+vim.keymap.set("n", "<leader>e", vim.diagnostic.open_float)
+-- nvim-tree
+-- Toggle nvim-tree replacing current window
+vim.keymap.set("", "<Leader><Tab>", function()
+	local treeView = require("nvim-tree.view")
+
+	if treeView.is_visible() then
+		treeView.close()
+	else
+		-- We have to manually reimplement parts of
+		-- open_replacing_current_buffer in this case to be able to show
+		-- nvim-tree with a new buffer
+		local tree = require("nvim-tree")
+		local treeCore = require("nvim-tree.core")
+		local treeRenderer = require("nvim-tree.renderer")
+		local cwd = vim.fn.getcwd();
+		local buf = api.nvim_get_current_buf()
+		local bufname = api.nvim_buf_get_name(buf)
+
+		if not treeCore.get_explorer() or cwd ~= treeCore.get_cwd() then
+			treeCore.init(cwd)
+		end
+
+		treeView.open_in_current_win({ hijack_current_buf = false, resize = false })
+		treeRenderer.draw()
+
+		-- Only search for the current file if we have a saved file open
+		if bufname ~= "" and vim.loop.fs_stat(bufname) ~= nil then
+			require("nvim-tree.actions.find-file").fn(bufname)
+		end
+	end
+end)
+-- Find file in nvim-tree replacing current window
+vim.keymap.set("", "<Leader>r", function()
+	local treeView = require("nvim-tree.view")
+
+	if treeView.is_visible() then
+		treeView.close()
+	else
+		local tree = require("nvim-tree")
+		local previous_buf = api.nvim_get_current_buf()
+
+		tree.open_replacing_current_buffer(vim.fn.getcwd())
+		tree.find_file(false, previous_buf)
+	end
+end)

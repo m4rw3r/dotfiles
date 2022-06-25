@@ -1,14 +1,8 @@
-local api = vim.api
-local cmd = vim.cmd
-local env = vim.env
-local fn = vim.fn
-local g = vim.g
-local key = api.nvim_set_keymap
-local opt = vim.opt
+local key = vim.api.nvim_set_keymap
 
 -- Configuration
 local indent = 4
-local XDG_DATA_HOME = env.XDG_DATA_HOME or env.HOME .. "/.local/share"
+local XDG_DATA_HOME = vim.env.XDG_DATA_HOME or vim.env.HOME .. "/.local/share"
 local backupdir = XDG_DATA_HOME .. "/nvim/backup//"
 local swapdir = XDG_DATA_HOME .. "/nvim/swap//"
 local undodir = XDG_DATA_HOME .. "/nvim/swap/"
@@ -16,23 +10,23 @@ local viewdir = XDG_DATA_HOME .. "/nvim/view//"
 
 -- Create required folders
 for _, d in pairs({ backupdir, swapdir, undodir, viewdir }) do
-	fn.system("mkdir -p '" .. d .. "'")
+	vim.fn.system("mkdir -p '" .. d .. "'")
 end
 
 -- Skip built-in plugins
-g.loaded_gzip = false
-g.loaded_netrwPlugin = false
-g.loaded_tarPlugin = false
-g.loaded_zip = false
-g.loaded_2html_plugin = false
-g.loaded_remote_plugins = false
+vim.g.loaded_gzip = false
+vim.g.loaded_netrwPlugin = false
+vim.g.loaded_tarPlugin = false
+vim.g.loaded_zip = false
+vim.g.loaded_2html_plugin = false
+vim.g.loaded_remote_plugins = false
 
 -- Bootstrap packer.nvim
-local install_path = fn.stdpath("data") .. "/site/pack/packer/start/packer.nvim"
+local install_path = vim.fn.stdpath("data") .. "/site/pack/packer/start/packer.nvim"
 
-if fn.isdirectory(install_path) == 0 then
-  fn.system({"git", "clone", "https://github.com/wbthomason/packer.nvim", install_path})
-  cmd "packadd packer.nvim"
+if vim.fn.isdirectory(install_path) == 0 then
+  vim.fn.system({"git", "clone", "https://github.com/wbthomason/packer.nvim", install_path})
+  vim.cmd("packadd packer.nvim")
 end
 
 local packer = require("packer")
@@ -251,22 +245,22 @@ packer.startup(function(use)
 end)
 
 -- Files
-opt.fileencoding = "utf-8"
-opt.fileencodings = "ucs-bom,utf-8"
-opt.binary = true -- Allow binary file ediding without mangling to UTF-8
-opt.eol = false -- Do not append linebreak at EOF
-opt.backup = true -- Backup files
-opt.undofile = true -- Save undo in files
+vim.opt.fileencoding = "utf-8"
+vim.opt.fileencodings = "ucs-bom,utf-8"
+vim.opt.binary = true -- Allow binary file ediding without mangling to UTF-8
+vim.opt.eol = false -- Do not append linebreak at EOF
+vim.opt.backup = true -- Backup files
+vim.opt.undofile = true -- Save undo in files
 -- We have to replace the list to avoid having backups in the current folder
-opt.backupdir = { backupdir }
-opt.directory = { swapdir }
-opt.undodir = undodir
-opt.viewdir = viewdir
+vim.opt.backupdir = { backupdir }
+vim.opt.directory = { swapdir }
+vim.opt.undodir = undodir
+vim.opt.viewdir = viewdir
 
 -- Tabs and indent
-opt.tabstop = indent
-opt.shiftwidth = indent
-opt.foldenable = false
+vim.opt.tabstop = indent
+vim.opt.shiftwidth = indent
+vim.opt.foldenable = false
 
 local indents = {
 	cabal = { expandtab = true },
@@ -285,15 +279,15 @@ local indents = {
 
 -- Global function for stripping whitespace from files
 local function stripTrailingWhitespace()
-	local c = api.nvim_win_get_cursor(0)
+	local c = vim.api.nvim_win_get_cursor(0)
 
-	cmd("%s/\\s\\+$//e")
+	vim.cmd("%s/\\s\\+$//e")
 
-	api.nvim_win_set_cursor(0, c)
+	vim.api.nvim_win_set_cursor(0, c)
 end
-api.nvim_create_user_command("StripTrailingWhitespace", stripTrailingWhitespace, {})
+vim.api.nvim_create_user_command("StripTrailingWhitespace", stripTrailingWhitespace, {})
 
-local indentgroup = api.nvim_create_augroup("indent", {})
+local indentgroup = vim.api.nvim_create_augroup("indent", {})
 
 for filetype, config in pairs(indents) do
 	setmetatable(config, { __index = {
@@ -303,7 +297,7 @@ for filetype, config in pairs(indents) do
 		autoindent = true,
 	} } )
 
-	api.nvim_create_autocmd(
+	vim.api.nvim_create_autocmd(
 		{"FileType"},
 		{
 			pattern = filetype,
@@ -319,7 +313,7 @@ for filetype, config in pairs(indents) do
 				end
 
 				if config.trim then
-					api.nvim_create_autocmd(
+					vim.api.nvim_create_autocmd(
 						{"BufWritePre"},
 						{
 							callback = stripTrailingWhitespace,
@@ -337,20 +331,20 @@ for filetype, config in pairs(indents) do
 end
 
 -- UI
-opt.showcmd = true -- Show incomplete commands
-opt.hidden = true -- Allow buffer-switching without save
-opt.timeoutlen = 500 -- Quicker timeout on commands
-opt.ttimeoutlen = 10 -- Quicker timeout on key-combinations
-opt.list = true -- Show tabs, line-breaks, trailing spaces, end of line
-opt.listchars = { eol = "¬", nbsp = "¬" , tab = "▸ ", trail = "·" , precedes = "«", extends = "»" }
-opt.display:append("uhex") -- Show invalid unicode characters as hex
-opt.relativenumber = true -- Relative line-numbers in the gutter
-opt.number = true -- Show line number on the current line
-opt.cursorline = true -- Highlight the current line
-opt.signcolumn = "number" -- Show signs in the number column
-opt.splitbelow = true -- Split pane below by default
-opt.splitright = true -- Split pane to the right by default
-opt.scrolloff = 5 -- Always allow 5 empty "lines" beyond start and end of file
+vim.opt.showcmd = true -- Show incomplete commands
+vim.opt.hidden = true -- Allow buffer-switching without save
+vim.opt.timeoutlen = 500 -- Quicker timeout on commands
+vim.opt.ttimeoutlen = 10 -- Quicker timeout on key-combinations
+vim.opt.list = true -- Show tabs, line-breaks, trailing spaces, end of line
+vim.opt.listchars = { eol = "¬", nbsp = "¬" , tab = "▸ ", trail = "·" , precedes = "«", extends = "»" }
+vim.opt.display:append("uhex") -- Show invalid unicode characters as hex
+vim.opt.relativenumber = true -- Relative line-numbers in the gutter
+vim.opt.number = true -- Show line number on the current line
+vim.opt.cursorline = true -- Highlight the current line
+vim.opt.signcolumn = "number" -- Show signs in the number column
+vim.opt.splitbelow = true -- Split pane below by default
+vim.opt.splitright = true -- Split pane to the right by default
+vim.opt.scrolloff = 5 -- Always allow 5 empty "lines" beyond start and end of file
 
 vim.diagnostic.config({
 	virtual_text = true,
@@ -371,17 +365,17 @@ vim.diagnostic.config({
 -- TODO: Autocmd InsertEnter timeoutlen=0, and then reset on leave
 
 -- Search
-opt.showmatch = true
-opt.ignorecase = true -- Ignore case for search
-opt.smartcase = true -- Ignore case by default, but swap to case-sensitive
+vim.opt.showmatch = true
+vim.opt.ignorecase = true -- Ignore case for search
+vim.opt.smartcase = true -- Ignore case by default, but swap to case-sensitive
                      -- search as soon as at least one uppercase letter is used
 
 -- Font and Color
-opt.termguicolors = true -- Enable 24-bit RGB in the terminal UI
+vim.opt.termguicolors = true -- Enable 24-bit RGB in the terminal UI
 
 -- Keybindings
-g.mapleader = " "
-opt.omnifunc = "v:lua.vim.lsp.omnifunc"
+vim.g.mapleader = " "
+vim.opt.omnifunc = "v:lua.vim.lsp.omnifunc"
 
 key("i", "jj", "<Esc>", { noremap = true, silent = true }) -- Quick exit of insert-mode
 key("i", "<Left>", "<NOP>", { noremap = true, silent = true }) -- Do not allow arrows while editing

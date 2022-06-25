@@ -1,0 +1,11 @@
+require 'fileutils'
+
+# XDG support
+IRB.conf[:HISTORY_FILE] = ENV["XDG_CACHE_HOME"] + "/irb/history"
+
+# Make sure the parent directory exists, otherwise it will error when trying to
+# write the history:
+dirname = File.dirname(IRB.conf[:HISTORY_FILE])
+unless File.directory?(dirname)
+  FileUtils.mkdir_p(dirname)
+end

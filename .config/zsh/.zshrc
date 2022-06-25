@@ -199,10 +199,6 @@ source "$XDG_CONFIG_HOME/tmux/start.sh"
 
 # Customize to your needs...
 
-if [[ -f $HOME/.dotfiles/keys.sh ]]; then
-	source $HOME/.dotfiles/keys.sh
-fi
-
 # Create an open command if one does not exist (linux)
 if ! command -v open &>/dev/null; then
 	function open() {

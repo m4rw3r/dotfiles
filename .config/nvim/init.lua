@@ -234,12 +234,10 @@ packer.startup(function(use)
 	use {
 		"RRethy/nvim-base16",
 		config = function()
-			vim.cmd "colorscheme base16-tomorrow-night"
+			vim.cmd("colorscheme base16-tomorrow-night")
 			-- Shortcuts to swap the theme
-			-- TODO: When https://github.com/neovim/neovim/pull/11613 is merged
-			-- and released, use the Lua API
-			vim.cmd "command! Dark colorscheme base16-tomorrow-night"
-			vim.cmd "command! Light colorscheme base16-tomorrow"
+			vim.api.nvim_create_user_command("Dark", "colorscheme base16-tomorrow-night", {})
+			vim.api.nvim_create_user_command("Light", "colorscheme base16-tomorrow", {})
 		end
 	}
 end)

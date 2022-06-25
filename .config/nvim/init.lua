@@ -1,5 +1,3 @@
-local key = vim.api.nvim_set_keymap
-
 -- Configuration
 local indent = 4
 local XDG_DATA_HOME = vim.env.XDG_DATA_HOME or vim.env.HOME .. "/.local/share"
@@ -541,23 +539,23 @@ vim.opt.termguicolors = true -- Enable 24-bit RGB in the terminal UI
 vim.g.mapleader = " "
 vim.opt.omnifunc = "v:lua.vim.lsp.omnifunc"
 
-key("i", "jj", "<Esc>", { noremap = true, silent = true }) -- Quick exit of insert-mode
-key("i", "<Left>", "<NOP>", { noremap = true, silent = true }) -- Do not allow arrows while editing
-key("i", "<Down>", "<NOP>", { noremap = true, silent = true })
-key("i", "<Up>", "<NOP>", { noremap = true, silent = true })
-key("i", "<Right>", "<NOP>", { noremap = true, silent = true })
-key("n", "j", "gj", { silent = true }) -- Visual navigation using hjkl even over multiple lines
-key("n", "k", "gk", { silent = true })
-key("v", "j", "gj", { silent = true })
-key("v", "k", "gk", { silent = true })
-key("", "<C-h>", "<C-w>h", { noremap = true, silent = true }) -- Easier window pane navigation using Ctrl + hjkl
-key("", "<C-j>", "<C-w>j", { noremap = true, silent = true })
-key("", "<C-k>", "<C-w>k", { noremap = true, silent = true })
-key("", "<C-l>", "<C-w>l", { noremap = true, silent = true })
-key("n", "<F3>", "<cmd>noh<CR>", { noremap = true, silent = true }) -- Toggle search highlight
-key("", "<Leader>j", "<cmd>bnext<CR>", {}) -- Navigate between buffers using Leader j/k
-key("", "<Leader>k", "<cmd>bprevious<CR>", {})
-key("", "<Leader>w", "<cmd>bp|bd #<CR>", {}) -- Close the current buffer with leader w
+vim.keymap.set("i", "jj", "<Esc>", { silent = true }) -- Quick exit of insert-mode
+vim.keymap.set("i", "<Left>", "<NOP>", { silent = true }) -- Do not allow arrows while editing
+vim.keymap.set("i", "<Down>", "<NOP>", { silent = true })
+vim.keymap.set("i", "<Up>", "<NOP>", { silent = true })
+vim.keymap.set("i", "<Right>", "<NOP>", { silent = true })
+vim.keymap.set("n", "j", "gj", { noremap = false, silent = true }) -- Visual navigation using hjkl even over multiple lines
+vim.keymap.set("n", "k", "gk", { noremap = false, silent = true })
+vim.keymap.set("v", "j", "gj", { noremap = false, silent = true })
+vim.keymap.set("v", "k", "gk", { noremap = false, silent = true })
+vim.keymap.set("", "<C-h>", "<C-w>h", { silent = true }) -- Easier window pane navigation using Ctrl + hjkl
+vim.keymap.set("", "<C-j>", "<C-w>j", { silent = true })
+vim.keymap.set("", "<C-k>", "<C-w>k", { silent = true })
+vim.keymap.set("", "<C-l>", "<C-w>l", { silent = true })
+vim.keymap.set("n", "<F3>", "<cmd>noh<CR>", { silent = true }) -- Toggle search highlight
+vim.keymap.set("", "<Leader>j", "<cmd>bnext<CR>", { noremap = false }) -- Navigate between buffers using Leader j/k
+vim.keymap.set("", "<Leader>k", "<cmd>bprevious<CR>", { noremap = false })
+vim.keymap.set("", "<Leader>w", "<cmd>bp|bd #<CR>", { noremap = false }) -- Close the current buffer with leader w
 -- Telescope
 vim.keymap.set("", "<C-p>", function() require('telescope.builtin').find_files() end) -- Fuzzy find file in project
 vim.keymap.set("", "<M-p>", function() require('telescope.builtin').find_files({no_ignore = true}) end) -- Fuzzy find file in project, ignoring ignores

@@ -18,4 +18,3 @@ fi;
 
 config checkout
 config config status.showUntrackedFiles no
-config submodule update --init

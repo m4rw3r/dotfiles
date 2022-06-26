@@ -35,12 +35,6 @@ git clone --bare repository.git $HOME/.cfg
 git --git-dir=$HOME/.cfg show HEAD:.config/install.sh | bash
 ```
 
-## Updating submodules
-
-```bash
-config submodule foreach git pull origin master
-```
-
 ## Intial setup
 
 How to replicate this setup:

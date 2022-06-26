@@ -13,13 +13,18 @@ autoload $ZDOTDIR/pkg/*
 #autoload $ZDOTDIR/functions/*
 #autoload $ZDOTDIR/prompts/*
 
+# Smart URLs, we have to init this before F-Sy-H since otherwise zle will
+# override the highlighting, F-Sy-H will automatically call this if defined:
+autoload -Uz url-quote-magic
+zle -N self-insert url-quote-magic
+
 pkg init
 [[ -z "$INSIDE_EMACS" ]] && pkg colored-man-pages -f omz
 pkg safe-paste -f omz
-pkg vi-mode -f omz
+pkg jeffreytse/zsh-vi-mode
 pkg zsh-users/zsh-completions
-pkg zsh-users/zsh-syntax-highlighting
 pkg reobin/typewritten
+pkg z-shell/F-Sy-H
 pkg load
 pkg update
 source "$ZDOTDIR/aliases/aliases.zsh"
@@ -62,12 +67,6 @@ setopt extendedglob
 
 # Automatically change directory if a directory is entered
 setopt autocd
-
-#
-# Smart URLs
-#
-autoload -Uz url-quote-magic
-zle -N self-insert url-quote-magic
 
 #
 # General
@@ -180,10 +179,9 @@ setopt hist_verify
 setopt extended_history
 
 # The rest
-
-# Typewritten prompt (https://github.com/reobin/typewritten)
 TYPEWRITTEN_RELATIVE_PATH="adaptive"
-prompt typewritten > /dev/null
+TYPEWRITTEN_CURSOR="terminal"
+ZVM_INSERT_MODE_CURSOR=$ZVM_CURSOR_BLINKING_UNDERLINE
 
 if [ -f "/usr/share/fzf/key-bindings.zsh" ]; then
 	source "/usr/share/fzf/key-bindings.zsh"
@@ -191,10 +189,6 @@ fi
 if [ -f "/usr/share/fzf/completion.zsh" ]; then
 	source /usr/share/fzf/completion.zsh
 fi
-
-source "$MODULES_DIR/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
-source "$XDG_CONFIG_HOME/paths.sh"
-source "$XDG_CONFIG_HOME/tmux/start.sh"
 
 # Create an open command if one does not exist (linux)
 if ! command -v open &>/dev/null; then
@@ -206,3 +200,6 @@ if ! command -v open &>/dev/null; then
 		fi
 	}
 fi
+
+source "$XDG_CONFIG_HOME/paths.sh"
+source "$XDG_CONFIG_HOME/tmux/start.sh"

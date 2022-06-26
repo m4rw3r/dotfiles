@@ -198,6 +198,7 @@ packer.startup(function(use)
       -- Reimplementation of open file which works when we are replacing
       -- the current buffer
       -- TODO: More split options?
+      -- TODO: Maybe a way to split current window, preserving other window-sizes?
       local function openFile(openCommand)
         return function(node)
           if not node or node.name == ".." then
@@ -416,6 +417,11 @@ packer.startup(function(use)
           },
         },
       })
+
+      -- By removing the window width/height fixing any splits will split the current browser
+      -- TODO: Configurable?
+      treeView.View.winopts.winfixwidth = nil
+      treeView.View.winopts.winfixheight = nil
 
       local function findCurrentBuffer(currentBuffer)
         local bufname = vim.api.nvim_buf_get_name(currentBuffer)

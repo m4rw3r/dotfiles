@@ -1,6 +1,0 @@
-[submodule "tmux-resurrect"]
-	path = .dotfiles/tmux-resurrect
-	url = https://github.com/tmux-plugins/tmux-resurrect
-[submodule "tmux-yank"]
-	path = .dotfiles/tmux-yank
-	url = https://github.com/tmux-plugins/tmux-yank

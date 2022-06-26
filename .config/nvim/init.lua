@@ -366,25 +366,7 @@ packer.startup(function(use)
 		"nvim-treesitter/nvim-treesitter",
 		run = function()
 			-- Update instead of install, since then it will install it if it is missing
-			vim.cmd("TSUpdate bash")
-			vim.cmd("TSUpdate c")
-			vim.cmd("TSUpdate dockerfile")
-			vim.cmd("TSUpdate dot")
-			vim.cmd("TSUpdate graphql")
-			vim.cmd("TSUpdate haskell")
-			vim.cmd("TSUpdate html")
-			vim.cmd("TSUpdate java")
-			vim.cmd("TSUpdate javascript")
-			vim.cmd("TSUpdate json")
-			vim.cmd("TSUpdate latex")
-			vim.cmd("TSUpdate lua")
-			vim.cmd("TSUpdate php")
-			vim.cmd("TSUpdate python")
-			vim.cmd("TSUpdate ruby")
-			vim.cmd("TSUpdate rust")
-			vim.cmd("TSUpdate toml")
-			vim.cmd("TSUpdate vim")
-			vim.cmd("TSUpdate yaml")
+			vim.cmd("UserTSUpdate")
 		end,
 		config = function()
 			local treesitter_configs = require("nvim-treesitter.configs")
@@ -456,6 +438,28 @@ local indents = {
 	xml = { expandtab = true, indent = 2, trim = true },
 	yaml = { indent = 2 },
 }
+local LANGUAGES = {
+	"bash",
+	"c",
+	"dockerfile",
+	"dot",
+	"graphql",
+	"haskell",
+	"html",
+	"java",
+	"javascript",
+	"json",
+	"latex",
+	"lua",
+	"php",
+	"python",
+	"ruby",
+	"rust",
+	"toml",
+	"vim",
+	"yaml",
+}
+
 
 -- Global function for stripping whitespace from files
 local function stripTrailingWhitespace()
@@ -465,7 +469,20 @@ local function stripTrailingWhitespace()
 
 	vim.api.nvim_win_set_cursor(0, c)
 end
-vim.api.nvim_create_user_command("StripTrailingWhitespace", stripTrailingWhitespace, {})
+vim.api.nvim_create_user_command(
+	"StripTrailingWhitespace",
+	stripTrailingWhitespace,
+	{
+		desc = "Stripts the trailing whitespace from the current buffer",
+	}
+)
+vim.api.nvim_create_user_command(
+	"UserTSUpdate",
+	"TSUpdate " .. table.concat(LANGUAGES, " "),
+	{
+		desc = "Updates/Installs all user-requested languages in Treesitter",
+	}
+)
 
 local indentgroup = vim.api.nvim_create_augroup("indent", {})
 

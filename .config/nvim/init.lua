@@ -340,6 +340,9 @@ packer.startup(function(use)
           },
         },
         view = {
+          relativenumber = true,
+          number = true,
+          signcolumn = "number",
           mappings = {
             custom_only = true,
             list = {

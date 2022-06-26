@@ -183,6 +183,14 @@ packer.startup(function(use)
         return
       end
 
+      local treeActionFindFile = require("nvim-tree.actions.find-file")
+      local treeCore = require("nvim-tree.core")
+      local treeEvents = require("nvim-tree.events")
+      local treeLib = require("nvim-tree.lib")
+      local treeRenderer = require("nvim-tree.renderer")
+      local treeUtils = require("nvim-tree.utils")
+      local treeView = require("nvim-tree.view")
+
       -- Track the previous window settings when replacing, so we can
       -- close the tree view and swap back when opening new splits
       local prevWindow = nil
@@ -192,7 +200,6 @@ packer.startup(function(use)
       -- TODO: More split options?
       local function openFile(openCommand)
         return function(node)
-          local treeLib = require("nvim-tree.lib")
           if not node or node.name == ".." then
             return
           end
@@ -217,9 +224,6 @@ packer.startup(function(use)
         end
 
         local filename = nil
-        local treeCore = require("nvim-tree.core")
-        local treeRenderer = require("nvim-tree.renderer")
-        local treeUtils = require("nvim-tree.utils")
 
         if node.name == ".." then
           -- TODO: Replace treeUtils with core-functions?
@@ -246,9 +250,6 @@ packer.startup(function(use)
       -- open_replacing_current_buffer in this case to be able to show
       -- nvim-tree with a new buffer
       local function openReplacingBuffer()
-        local treeView = require("nvim-tree.view")
-        local treeCore = require("nvim-tree.core")
-        local treeRenderer = require("nvim-tree.renderer")
         local cwd = vim.fn.getcwd();
 
         -- Save previous window and options so we can restore when closing
@@ -270,13 +271,37 @@ packer.startup(function(use)
         treeRenderer.draw()
       end
 
+      -- Local copy of nvim-tree.view.save_tab_state since it is local
+      local function save_tab_state()
+        local tabpage = vim.api.nvim_get_current_tabpage()
+        treeView.View.cursors[tabpage] = vim.api.nvim_win_get_cursor(treeView.get_winnr())
+      end
+
+      -- Reimplementation of nvim-tree.actions.open-file.edit_in_place which saves
+      -- the current position.
+      local function editInPlace(node)
+        local filename = node.absolute_path
+
+        if node.link_to and not node.nodes then
+          filename = node.link_to
+        elseif node.nodes ~= nil then
+          lib.expand_or_collapse(node)
+
+          return
+        end
+
+        save_tab_state()
+        treeView.abandon_current_window()
+
+        vim.cmd("edit " .. vim.fn.fnameescape(filename))
+      end
+
       -- Reimplementation of nvim-tree.view.close restoring the original
       -- buffer and window options
       local function closeTree()
-        local treeView = require("nvim-tree.view")
         local treeWinnr = treeView.get_winnr()
-        local treeEvents = require("nvim-tree.events")
 
+        save_tab_state()
         treeView.abandon_current_window()
 
         if not prevWindow then
@@ -302,7 +327,6 @@ packer.startup(function(use)
       end
 
       local function toggleTree(onOpen)
-        local treeView = require("nvim-tree.view")
         local currentBuffer = vim.api.nvim_get_current_buf()
 
         if treeView.is_visible() then
@@ -350,6 +374,7 @@ packer.startup(function(use)
               {
                 key = {"<CR>", "o"},
                 action = "edit_in_place",
+                action_cb = editInPlace,
                 desc = "Open a file or directory, replacing the explorer buffer",
               },
               -- Recreate the close-window mappings
@@ -396,7 +421,7 @@ packer.startup(function(use)
         local bufname = vim.api.nvim_buf_get_name(currentBuffer)
         -- Only search for the current file if we have a saved file open
         if bufname ~= "" and vim.loop.fs_stat(bufname) ~= nil then
-          require("nvim-tree.actions.find-file").fn(bufname)
+          treeActionFindFile.fn(bufname)
         end
       end
 
@@ -404,7 +429,7 @@ packer.startup(function(use)
       vim.api.nvim_create_user_command(
         "UserToggleTree",
         function()
-          toggleTree()
+          toggleTree(treeView.restore_tab_state)
         end,
         {
           desc = "Toggles the nvim-tree in the current window/pane",

@@ -166,12 +166,22 @@ packer.startup(function(use)
     tag = "nightly",
     -- Lazy load on the custom tree-display commands
     opt = true,
-    cmd = {"UserToggleTree", "UserToggleTreeFind"},
+    cmd = {
+      "UserToggleTree",
+      "UserToggleTreeFind",
+    },
     config = function()
       -- This is a major addition to better support smooth vinegar-like
       -- window-replacement with opening files in splits, then restoring
       -- the previous window contents.
-      local tree = require("nvim-tree")
+
+      -- If we fail to load, just show an error instead of crashing
+      local ok, tree = pcall(require, "nvim-tree")
+      if not ok then
+        print("Failed to require nvim-tree: " .. tree)
+
+        return
+      end
 
       -- Track the previous window settings when replacing, so we can
       -- close the tree view and swap back when opening new splits

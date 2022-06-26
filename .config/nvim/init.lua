@@ -41,8 +41,10 @@ end
 packer.startup(function(use)
 	use { "wbthomason/packer.nvim" }
 
+	-- Lua bytecode cache to speed up launching
 	use { "lewis6991/impatient.nvim" }
 	use { "tweekmonster/startuptime.vim" }
+	use { "nathom/filetype.nvim" }
 
 	-- Utilities
 	--

@@ -54,10 +54,23 @@ packer.startup(function(use)
   use {
     "nvim-telescope/telescope.nvim",
     requires = {
-      { "nvim-lua/plenary.nvim" },
-      { "nvim-telescope/telescope-fzy-native.nvim" }
+      "nvim-lua/plenary.nvim",
+      "nvim-telescope/telescope-fzy-native.nvim",
+    },
+    -- Lazy
+    opt = true,
+    cmd = {
+      "Telescope",
+      "UserFindFiles",
+      "UserFindFilesNoIgnore",
+      "UserSearchFiles",
     },
     config = function()
+      -- Manually load plenary since the following option causes a miscompilation in PackerCompile:
+      -- after = { "plenary.nvim", "telescope-fzy-native.nvim" }
+      vim.cmd("packadd plenary.nvim")
+      vim.cmd("packadd telescope-fzy-native.nvim")
+
       local telescope = require("telescope")
       local actions = require("telescope.actions")
 
@@ -73,9 +86,38 @@ packer.startup(function(use)
       })
 
       telescope.load_extension("fzy_native")
+
+      -- Expose functionality behind laziness
+      vim.api.nvim_create_user_command(
+        "UserFindFiles",
+        function()
+          require('telescope.builtin').find_files()
+        end,
+        {
+          desc = "Fuzzy find file in project",
+        }
+      )
+      vim.api.nvim_create_user_command(
+        "UserFindFilesNoIgnore",
+        function()
+          require('telescope.builtin').find_files({ no_ignore = true })
+        end,
+        {
+          desc = "Fuzzy find file in project, ignoring any ignores",
+        }
+      )
+      vim.api.nvim_create_user_command(
+        "UserSearchFiles",
+        function()
+          require('telescope.builtin').live_grep()
+        end,
+        {
+          desc = "Fuzzy search files in project",
+        }
+      )
     end
   }
-  use { "lewis6991/gitsigns.nvim", requires = { "nvim-lua/plenary.nvim" }}
+  use { "lewis6991/gitsigns.nvim" }
 
   -- UI
   --
@@ -336,7 +378,7 @@ packer.startup(function(use)
         end
       end
 
-      -- Expose commands
+      -- Expose commands which we can lazy-load on
       vim.api.nvim_create_user_command(
         "UserToggleTree",
         function()
@@ -617,10 +659,9 @@ vim.keymap.set("", "<Leader>j", "<cmd>bnext<CR>", { noremap = false }) -- Naviga
 vim.keymap.set("", "<Leader>k", "<cmd>bprevious<CR>", { noremap = false })
 vim.keymap.set("", "<Leader>w", "<cmd>bp|bd #<CR>", { noremap = false }) -- Close the current buffer with leader w
 -- Telescope
--- TODO: Remake these into commands which we can then lazy-load
-vim.keymap.set("", "<C-p>", function() require('telescope.builtin').find_files() end) -- Fuzzy find file in project
-vim.keymap.set("", "<M-p>", function() require('telescope.builtin').find_files({no_ignore = true}) end) -- Fuzzy find file in project, ignoring ignores
-vim.keymap.set("", "<Leader>f", function() require('telescope.builtin').live_grep() end) -- Fuzzy search file in project
+vim.keymap.set("", "<C-p>", "<cmd>UserFindFiles<CR>")
+vim.keymap.set("", "<M-p>", "<cmd>UserFindFilesNoIgnore<CR>")
+vim.keymap.set("", "<Leader>f", "<cmd>UserSearchFiles<CR>")
 -- NeoVIM LSP
 vim.keymap.set("n", "<leader>d", vim.lsp.buf.definition)
 vim.keymap.set("n", "K", vim.lsp.buf.hover)

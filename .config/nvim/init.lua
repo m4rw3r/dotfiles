@@ -328,7 +328,16 @@ packer.startup(function(use)
       tree.setup({
         prefer_startup_root = true,
         git = {
+          enable = true,
+          timeout = 400,
           ignore = true,
+        },
+        filters = {
+          custom = {
+            "^\\.git$",
+            "^\\.DS_Store$",
+            "^Thumbs.db$",
+          },
         },
         view = {
           mappings = {

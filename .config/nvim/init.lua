@@ -337,8 +337,24 @@ packer.startup(function(use)
 			end
 
 			-- Expose commands
-			vim.api.nvim_create_user_command("UserToggleTree", function() toggleTree() end, { desc = "Toggles the nvim-tree in the current window/pane" })
-			vim.api.nvim_create_user_command("UserToggleTreeFind", function() toggleTree(findCurrentBuffer) end, { desc = "Toggles the nvim-tree in the current window/pane, expanding to and highlighting the current file" })
+			vim.api.nvim_create_user_command(
+				"UserToggleTree",
+				function()
+					toggleTree()
+				end,
+				{
+					desc = "Toggles the nvim-tree in the current window/pane",
+				}
+			)
+			vim.api.nvim_create_user_command(
+				"UserToggleTreeFind",
+				function()
+					toggleTree(findCurrentBuffer)
+				end,
+				{
+					desc = "Toggles the nvim-tree in the current window/pane, expanding to and highlighting the current file"
+				}
+			)
 		end
 	}
 
@@ -400,8 +416,16 @@ packer.startup(function(use)
 		config = function()
 			vim.cmd("colorscheme base16-tomorrow-night")
 			-- Shortcuts to swap the theme
-			vim.api.nvim_create_user_command("Dark", "colorscheme base16-tomorrow-night", {})
-			vim.api.nvim_create_user_command("Light", "colorscheme base16-tomorrow", {})
+			vim.api.nvim_create_user_command(
+				"Dark",
+				"colorscheme base16-tomorrow-night",
+				{ desc = "Switch colorscheme to dark" }
+			)
+			vim.api.nvim_create_user_command(
+				"Light",
+				"colorscheme base16-tomorrow",
+				{ desc = "Switch colorscheme to light" }
+			)
 		end
 	}
 end)

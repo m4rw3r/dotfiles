@@ -285,7 +285,7 @@ packer.startup(function(use)
         if node.link_to and not node.nodes then
           filename = node.link_to
         elseif node.nodes ~= nil then
-          lib.expand_or_collapse(node)
+          treeLib.expand_or_collapse(node)
 
           return
         end

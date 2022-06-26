@@ -122,17 +122,14 @@ packer.startup(function(use)
 			"kyazdani42/nvim-web-devicons",
 		},
 		tag = "nightly",
+		-- Lazy load on the custom tree-display commands
+		opt = true,
+		cmd = {"UserToggleTree", "UserToggleTreeFind"},
 		config = function()
 			-- This is a major addition to better support smooth vinegar-like
 			-- window-replacement with opening files in splits, then restoring
 			-- the previous window contents.
 			local tree = require("nvim-tree")
-			local treeView = require("nvim-tree.view")
-			local treeLib = require("nvim-tree.lib")
-			local treeCore = require("nvim-tree.core")
-			local treeRenderer = require("nvim-tree.renderer")
-			local treeEvents = require("nvim-tree.events")
-			local treeUtils = require("nvim-tree.utils")
 
 			-- Track the previous window settings when replacing, so we can
 			-- close the tree view and swap back when opening new splits
@@ -143,6 +140,7 @@ packer.startup(function(use)
 			-- TODO: More split options?
 			local function openFile(openCommand)
 				return function(node)
+					local treeLib = require("nvim-tree.lib")
 					if not node or node.name == ".." then
 						return
 					end
@@ -167,6 +165,9 @@ packer.startup(function(use)
 				end
 
 				local filename = nil
+				local treeCore = require("nvim-tree.core")
+				local treeRenderer = require("nvim-tree.renderer")
+				local treeUtils = require("nvim-tree.utils")
 
 				if node.name == ".." then
 					-- TODO: Replace treeUtils with core-functions?
@@ -193,6 +194,9 @@ packer.startup(function(use)
 			-- open_replacing_current_buffer in this case to be able to show
 			-- nvim-tree with a new buffer
 			local function openReplacingBuffer()
+				local treeView = require("nvim-tree.view")
+				local treeCore = require("nvim-tree.core")
+				local treeRenderer = require("nvim-tree.renderer")
 				local cwd = vim.fn.getcwd();
 
 				-- Save previous window and options so we can restore when closing
@@ -217,27 +221,27 @@ packer.startup(function(use)
 			-- Reimplementation of nvim-tree.view.close restoring the original
 			-- buffer and window options
 			local function closeTree()
+				local treeView = require("nvim-tree.view")
 				local treeWinnr = treeView.get_winnr()
+				local treeEvents = require("nvim-tree.events")
 
 				treeView.abandon_current_window()
 
 				if not prevWindow then
 					vim.cmd("new")
+				else
+					-- Move to window just in case
+					if treeWinnr then
+						vim.api.nvim_set_current_win(treeWinnr)
+					end
 
-					return
-				end
+					-- Restore window contents
+					vim.cmd("buffer " .. prevWindow.buffer)
 
-				-- Move to window just in case
-				if treeWinnr then
-					vim.api.nvim_set_current_win(treeWinnr)
-				end
-
-				-- Restore window contents
-				vim.cmd("buffer " .. prevWindow.buffer)
-
-				-- Restore window settings
-				for k, _ in pairs(treeView.View.winopts) do
-					vim.opt_local[k] = prevWindow.opts[k]
+					-- Restore window settings
+					for k, _ in pairs(treeView.View.winopts) do
+						vim.opt_local[k] = prevWindow.opts[k]
+					end
 				end
 
 				prevWindow = nil
@@ -246,6 +250,7 @@ packer.startup(function(use)
 			end
 
 			local function toggleTree(onOpen)
+				local treeView = require("nvim-tree.view")
 				local currentBuffer = vim.api.nvim_get_current_buf()
 
 				if treeView.is_visible() then
@@ -331,10 +336,9 @@ packer.startup(function(use)
 				end
 			end
 
-			-- Toggle nvim-tree replacing current window
-			vim.keymap.set("", "<Leader><Tab>", function() toggleTree() end)
-			-- Find file in nvim-tree replacing current window
-			vim.keymap.set("", "<Leader>r", function() toggleTree(findCurrentBuffer) end)
+			-- Expose commands
+			vim.api.nvim_create_user_command("UserToggleTree", function() toggleTree() end, { desc = "Toggles the nvim-tree in the current window/pane" })
+			vim.api.nvim_create_user_command("UserToggleTreeFind", function() toggleTree(findCurrentBuffer) end, { desc = "Toggles the nvim-tree in the current window/pane, expanding to and highlighting the current file" })
 		end
 	}
 
@@ -571,6 +575,7 @@ vim.keymap.set("", "<Leader>j", "<cmd>bnext<CR>", { noremap = false }) -- Naviga
 vim.keymap.set("", "<Leader>k", "<cmd>bprevious<CR>", { noremap = false })
 vim.keymap.set("", "<Leader>w", "<cmd>bp|bd #<CR>", { noremap = false }) -- Close the current buffer with leader w
 -- Telescope
+-- TODO: Remake these into commands which we can then lazy-load
 vim.keymap.set("", "<C-p>", function() require('telescope.builtin').find_files() end) -- Fuzzy find file in project
 vim.keymap.set("", "<M-p>", function() require('telescope.builtin').find_files({no_ignore = true}) end) -- Fuzzy find file in project, ignoring ignores
 vim.keymap.set("", "<Leader>f", function() require('telescope.builtin').live_grep() end) -- Fuzzy search file in project
@@ -580,3 +585,6 @@ vim.keymap.set("n", "K", vim.lsp.buf.hover)
 vim.keymap.set("n", "<leader>k", vim.lsp.buf.signature_help)
 vim.keymap.set("n", "<leader>D", vim.lsp.buf.type_definition)
 vim.keymap.set("n", "<leader>e", vim.diagnostic.open_float)
+-- nvim-tree
+vim.keymap.set("", "<Leader><Tab>", "<cmd>UserToggleTree<CR>")
+vim.keymap.set("", "<Leader>r", "<cmd>UserToggleTreeFind<CR>")

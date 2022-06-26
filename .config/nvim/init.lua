@@ -259,7 +259,7 @@ packer.startup(function(use)
         }
 
         for k, _ in pairs(treeView.View.winopts) do
-          prevWindow.opts[k] = vim.opt_local[k]
+          prevWindow.opts[k] = vim.opt_local[k]:get()
         end
 
         -- Reinit if the file we are opening from is not in the current directory

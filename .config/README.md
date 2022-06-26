@@ -32,7 +32,7 @@ Using the Bare Repo solution from https://www.atlassian.com/git/tutorials/dotfil
 
 ```bash
 git clone --bare repository.git $HOME/.cfg
-git --git-dir=$HOME/.cfg show HEAD:.dotfiles/install.sh | bash
+git --git-dir=$HOME/.cfg show HEAD:.config/install.sh | bash
 ```
 
 ## Updating submodules

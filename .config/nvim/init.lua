@@ -195,6 +195,25 @@ packer.startup(function(use)
       -- close the tree view and swap back when opening new splits
       local prevWindow = nil
 
+      -- Local copy of nvim-tree.view.save_tab_state since it is local
+      local function save_tab_state()
+        local tabpage = vim.api.nvim_get_current_tabpage()
+        local winnr = treeView.get_winnr()
+
+        if winnr ~= nil then
+          treeView.View.cursors[tabpage] = vim.api.nvim_win_get_cursor(winnr)
+        end
+      end
+
+      -- Save the tab state when moving focus so we can restore it when
+      -- nvim-tree is focused again, this is also triggered when splitting
+      vim.api.nvim_create_autocmd({"WinLeave"}, {
+        pattern = {"NvimTree*"},
+        callback = function()
+          save_tab_state()
+        end,
+      })
+
       -- Reimplementation of open file which works when we are replacing
       -- the current buffer
       -- TODO: More split options?
@@ -270,12 +289,6 @@ packer.startup(function(use)
 
         treeView.open_in_current_win({ hijack_current_buf = false, resize = false })
         treeRenderer.draw()
-      end
-
-      -- Local copy of nvim-tree.view.save_tab_state since it is local
-      local function save_tab_state()
-        local tabpage = vim.api.nvim_get_current_tabpage()
-        treeView.View.cursors[tabpage] = vim.api.nvim_win_get_cursor(treeView.get_winnr())
       end
 
       -- Reimplementation of nvim-tree.actions.open-file.edit_in_place which saves

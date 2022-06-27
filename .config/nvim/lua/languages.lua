@@ -1,43 +1,6 @@
 -- TODO: Separate config from code?
 
-local M = {
-  indents = {
-    cabal = { expandtab = true },
-    haskell = { expandtab = true },
-    html = { autoindent = false },
-    javascript = { expandtab = true, indent = 2, trim = true, autoindent = false },
-    json = { expandtab = true, indent = 2, trim = true },
-    lua = { indent = 2, expandtab = true, trim = true },
-    php = { expandtab = true, trim = true, autoindent = false },
-    python = { expandtab = true },
-    ruby = { indent = 2 },
-    rust = { expandtab = true, trim = true },
-    sql = { autoindent = false },
-    xml = { expandtab = true, indent = 2, trim = true },
-    yaml = { indent = 2 },
-  },
-  syntax = {
-    "bash",
-    "c",
-    "dockerfile",
-    "dot",
-    "graphql",
-    "haskell",
-    "html",
-    "java",
-    "javascript",
-    "json",
-    "latex",
-    "lua",
-    "php",
-    "python",
-    "ruby",
-    "rust",
-    "toml",
-    "vim",
-    "yaml",
-  },
-}
+local M = {}
 
 local function stripTrailingWhitespace()
   local c = vim.api.nvim_win_get_cursor(0)
@@ -54,10 +17,10 @@ vim.api.nvim_create_user_command(
   }
 )
 
-function M.registerIndentAutogroup()
+function M.registerIndentAutogroup(indentSettings)
   local indentgroup = vim.api.nvim_create_augroup("indent", {})
 
-  for filetype, config in pairs(M.indents) do
+  for filetype, config in pairs(indentSettings) do
     setmetatable(config, { __index = {
       indent = nil,
       expandtab = false,

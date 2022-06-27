@@ -154,8 +154,6 @@ vim.opt.tabstop = indent
 vim.opt.shiftwidth = indent
 vim.opt.foldenable = false
 
-require("languages").registerIndentAutogroup()
-
 -- UI
 vim.opt.showcmd = true -- Show incomplete commands
 vim.opt.hidden = true -- Allow buffer-switching without save
@@ -228,6 +226,10 @@ vim.keymap.set("n", "K", vim.lsp.buf.hover)
 vim.keymap.set("n", "<leader>k", vim.lsp.buf.signature_help)
 vim.keymap.set("n", "<leader>D", vim.lsp.buf.type_definition)
 vim.keymap.set("n", "<leader>e", vim.diagnostic.open_float)
+
+local languages = require("languages")
+
+languages.registerIndentAutogroup(require("config.languages").indents)
 
 -- TODO: Any way we can schedule this? Maybe just move it into a plugin folder of some kind
 paqPlus.load()

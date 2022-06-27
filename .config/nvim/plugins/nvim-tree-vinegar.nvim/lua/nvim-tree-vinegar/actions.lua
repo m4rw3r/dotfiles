@@ -117,7 +117,7 @@ function M.closeTree()
   util.saveTabState()
   treeView.abandon_current_window()
 
-  if not prevWindow then
+  if not prevWindow or not vim.api.nvim_buf_is_loaded(prevWindow.buffer) then
     vim.cmd("new")
   else
     -- Move to window just in case
@@ -126,7 +126,7 @@ function M.closeTree()
     end
 
     -- Restore window contents
-    vim.cmd("buffer " .. prevWindow.buffer)
+    vim.api.nvim_set_current_buf(prevWindow.buffer)
 
     -- Restore window settings
     for k, _ in pairs(treeView.View.winopts) do

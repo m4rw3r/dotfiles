@@ -2,5 +2,6 @@
 /kitty/current-theme.conf
 /kitty/kitty.conf.bak
 /nvim/plugin
+/nvim/colors
 /tmux/plugins
 /zsh/plugins

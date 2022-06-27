@@ -13,7 +13,6 @@ local options = vim.deepcopy(defaults)
 local logfile = nil
 
 function log.write(level, msg)
-  print(options.log.file)
   if not logfile then
     logfile = io.open(options.log.file, "a+")
   end
@@ -326,11 +325,11 @@ function M.bootstrap(opts)
     end
 
     -- Bootstrap paq-nvim
-    local install_path = pluginLocationPath .. "/start/paq-nvim"
+    local install_path = options.pluginPath .. "/start/paq-nvim"
 
     if vim.fn.isdirectory(install_path) == 0 then
       vim.fn.system({"git", "clone", "https://github.com/savq/paq-nvim.git", install_path})
-      vim.cmd("packadd paq")
+      vim.cmd("packadd paq-nvim")
     end
 
     require("paq")

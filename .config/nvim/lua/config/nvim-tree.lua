@@ -1,30 +1,43 @@
-local util = require("config.util")
+-- Lazy loaded, make sure to only load the module in callbacks
 
 local M = {
-  keymap = {},
-  keys = {},
-  cmd = {
-    "UserToggleTree",
-    "UserToggleTreeFind",
+  "./plugins/nvim-tree-vinegar.nvim",
+  requires = {
+    {
+      "kyazdani42/nvim-tree.lua",
+      tag = "nightly",
+    },
+    "lkyazdani42/nvim-web-devicons",
+  },
+  wants = {
+    "nvim-tree.lua",
+    "nvim-web-devicons",
+  },
+  -- Lazy load on the custom tree-display commands
+  opt = true,
+  keys = {
+    {
+      "",
+      "<Leader><Tab>",
+      function()
+        local tree = require("nvim-tree-vinegar")
+
+        tree.actions.toggle(tree.restoreTabState)
+      end,
+      { desc = "Toggles the nvim-tree in the current window/pane" },
+    },
+    {
+      "",
+      "<Leader>r",
+      function()
+        local tree = require("nvim-tree-vinegar")
+
+        tree.actions.toggle(tree.findBuffer)
+      end,
+      { desc = "Toggles the nvim-tree in the current window/pane, expanding to and highlighting the current file" },
+    },
   },
 }
-
-util.addKey(M, "", "<Leader><Tab>",
-  function()
-    local tree = require("nvim-tree-vinegar")
-
-    tree.actions.toggle(tree.restoreTabState)
-  end,
-  { desc = "Toggles the nvim-tree in the current window/pane" }
-)
-util.addKey(M, "", "<Leader>r",
-  function()
-    local tree = require("nvim-tree-vinegar")
-
-    tree.actions.toggle(tree.findBuffer)
-  end,
-  { desc = "Toggles the nvim-tree in the current window/pane, expanding to and highlighting the current file" }
-)
 
 function M.config()
   local tree = require("nvim-tree-vinegar")
@@ -49,8 +62,6 @@ function M.config()
       signcolumn = "number",
     },
   })
-
-  util.registerModuleKeymap(M)
 end
 
 return M

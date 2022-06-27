@@ -1,6 +1,8 @@
 local languages = require("languages")
 
-local M = {}
+local M = {
+  "nvim-treesitter/nvim-treesitter",
+}
 
 vim.api.nvim_create_user_command(
   "UserTSUpdate",

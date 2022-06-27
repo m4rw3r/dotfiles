@@ -19,265 +19,37 @@ if ok then
   impatient.enable_profile()
 end
 
-local ok, paq = pcall(require, "paq")
-if not ok then
-  -- Create required folders
-  for _, d in pairs({ backupdir, swapdir, undodir, viewdir }) do
-    vim.fn.system("mkdir -p '" .. d .. "'")
-  end
+local paqPlus = require("paq-plus")
 
-  -- Bootstrap paq-nvim
-  local install_path = vim.fn.stdpath("data") .. "/site/pack/paqs/start/paq-nvim"
-
-  if vim.fn.isdirectory(install_path) == 0 then
-    vim.fn.system({"git", "clone", "https://github.com/savq/paq-nvim.git", install_path})
-    vim.cmd("packadd paq")
-  end
-
-  paq = require("paq")
-end
-
-local pluginPath = vim.fn.stdpath("data") .. "/site/pack/paqs"
-
-local function isLocal(spec)
-  return string.sub(spec[1], 1, 1) == "."
-end
-
-local function localPath(spec)
-  if isLocal(spec) then
-    -- Drop any trailing slashes, also remove the leading .
-    return vim.fn.stdpath("config") .. (string.sub(spec[1], -1) == "/" and string.sub(spec[1], 2, -1) or string.sub(spec[1], 2))
-  else
-    return pluginPath .. (spec.opt and "/opt/" or "/start/") .. spec.name
-  end
-end
-
-local function isInstalled(spec)
-  return vim.fn.isdirectory(localPath(spec)) ~= 0
-end
-
-local specs = {}
-local packages = {}
-
-local function addPackage(spec)
-  if type(spec) == "string" then
-    spec = { spec }
-  end
-
-  -- TODO: Url?
-  name = spec.as or spec[1]:match("/([%w-_.]+)$")
-
-  spec.loaded = not spec.opt
-  spec.name = name
-
-  specs[name] = spec
-
-  if isLocal(spec) then
-    -- Local module
-  else
-    table.insert(packages, {
-      spec[1],
-      as = spec.as,
-      opt = spec.opt,
-      branch = spec.branch,
-      pin = spec.pin,
-      run = spec.run,
-      url = spec.url,
-    })
-  end
-
-  -- TODO: Determine required packages for opts
-
-  if spec.requires then
-    if type(spec.requires) == "string" then
-      addPackage(spec.requires)
-    else
-      for _, dep in pairs(spec.requires) do
-        addPackage(dep)
-      end
+paqPlus.bootstrap({
+  before = function()
+    -- Create required folders
+    for _, d in pairs({ backupdir, swapdir, undodir, viewdir }) do
+      vim.fn.system("mkdir -p '" .. d .. "'")
     end
   end
-end
-
-local function lazyLoad(spec)
-  if spec.loaded then
-    return
-  end
-
-  -- print("Loading " .. spec.name)
-
-  spec.loaded = true
-
-  -- TODO: Load dependencies (ie. wants)
-
-  if isInstalled(spec) then
-    for _, name in pairs(spec.wants or {}) do
-      if specs[name] then
-        lazyLoad(specs[name])
-      else
-        -- TODO: log
-      end
-    end
-
-    if not isLocal(spec) then
-      vim.cmd("packadd " .. spec.name)
-    else
-      vim.o.runtimepath = vim.o.runtimepath .. "," .. vim.fn.escape(localPath(spec), '\\,')
-    end
-
-    if spec.config then
-      -- print("Configuring " .. spec.name)
-      spec.config()
-    end
-  else
-    -- TODO: log
-  end
-
-  -- TODO: Load after?
-end
-
-local function registerLazyLoaders(spec)
-  -- FIXME: events
-  -- FIXME: filetypes
-  for _, cmd in pairs(spec.cmd or {}) do
-    if type(cmd) == "string" then
-      cmd = { cmd }
-    end
-
-    local called = false
-
-    vim.api.nvim_create_user_command(
-      cmd[1],
-      function(cause)
-        -- Sanity check to avoid loops
-        if called then
-          -- TODO: Error
-          return print("No plugin registered command " .. cmd[1])
-        end
-
-        called = true
-
-        lazyLoad(spec)
-
-        local lines = cause.line1 == cause.line2 and '' or (cause.line1 .. ',' .. cause.line2)
-
-        -- Reconstruct the command
-        vim.cmd(string.format('%s %s%s%s %s', cause.mods or '', lines, cmd[1], cause.bang and "!" or "", cause.args))
-      end,
-      {
-        -- silent = true,
-        desc = cmd.desc,
-        -- We have to allow all of these just in case since we do not know
-        bang = true,
-        nargs = "*",
-        range = true,
-        complete = "file",
-      }
-    )
-  end
-
-  for _, key in pairs(spec.keys or {}) do
-    local called = false
-
-    if type(key) == "string" then
-      key = { "", key }
-    end
-
-    vim.keymap.set(
-      key[1],
-      key[2],
-      function()
-        -- Sanity check to avoid loops
-        if called then
-          -- TODO: Error
-          return print("No plugin registered keybind " .. key[2])
-        end
-
-        called = true
-
-        lazyLoad(spec)
-
-        local extra = ''
-        while true do
-          local c = vim.fn.getchar(0)
-          if c == 0 then
-            break
-          end
-          extra = extra .. vim.fn.nr2char(c)
-        end
-
-        local escaped_keys = vim.api.nvim_replace_termcodes(key[2] .. extra, true, true, true)
-
-        vim.api.nvim_feedkeys(escaped_keys, "m", true)
-      end,
-      {
-        -- silent = true,
-        docs = key.docs,
-      }
-    )
-  end
-end
-
-local function loadPackage(spec)
-  if spec.opt then
-    registerLazyLoaders(spec)
-  elseif spec.config and isInstalled(spec) then
-    spec.config()
-  end
-end
-
-local function initPackages(fn)
-  fn(addPackage)
-  paq(packages)
-end
-
-function loadPackages()
-  for _, spec in pairs(specs) do
-    loadPackage(spec)
-  end
-end
-
-initPackages(function(use)
-  use { "savq/paq-nvim" }
+})
+paqPlus.init(function(use)
+  use({ "savq/paq-nvim" })
 
   -- Lua bytecode cache to speed up launching
-  use { "lewis6991/impatient.nvim" }
-  use { "tweekmonster/startuptime.vim" }
+  use({ "lewis6991/impatient.nvim" })
+  use({ "tweekmonster/startuptime.vim" })
   -- Faster filetype detection
-  use { "nathom/filetype.nvim" }
+  use({ "nathom/filetype.nvim" })
 
   -- Utilities
   --
   -- Automatically sets the working-directory to the detected project root if any
-  use { "ygm2/rooter.nvim" }
+  use({ "ygm2/rooter.nvim" })
   -- Fuzzy finder for files, and in files
-  use {
-    "nvim-telescope/telescope.nvim",
-    requires = {
-      "nvim-lua/plenary.nvim",
-      "nvim-telescope/telescope-fzy-native.nvim",
-    },
-    -- Use wants instead of after to make sure we load the required modules
-    -- before running telescope:
-    wants = {
-      "plenary.nvim",
-      "telescope-fzy-native.nvim"
-    },
-    -- Lazy
-    opt = true,
-    -- Important that this require does not immediately perform further
-    -- requires, but that it is deferred to the config function:
-    -- TODO: This is annoying, requries a full restart of neovim for this to properly work due to compiling
-    keys = require("config.telescope").keys,
-    cmd = require("config.telescope").cmd,
-    config = function() require("config.telescope").config() end
-  }
-  use { "lewis6991/gitsigns.nvim" }
+  use(require("config.telescope"))
+  use({ "lewis6991/gitsigns.nvim" })
 
   -- UI
   --
   -- Status-line replacement
-  use {
+  use({
     "nvim-lualine/lualine.nvim",
     requires = { "kyazdani42/nvim-web-devicons" },
     config = function()
@@ -299,44 +71,26 @@ initPackages(function(use)
         },
       })
     end
-  }
+  })
   -- Allow window navigation outside of NeoVIM when in tmux
-  use { "christoomey/vim-tmux-navigator" }
+  use({ "christoomey/vim-tmux-navigator" })
   -- Rainbow parenthesis using treesitter
-  use { "p00f/nvim-ts-rainbow" }
+  use({ "p00f/nvim-ts-rainbow" })
   -- Show colors
-  use {
+  use({
     "norcalli/nvim-colorizer.lua",
     config = function()
       local colorizer = require("colorizer")
 
       colorizer.setup()
     end
-  }
-  use {
-    "./plugins/nvim-tree-vinegar.nvim",
-    requires = {
-      {
-        "kyazdani42/nvim-tree.lua",
-        tag = "nightly",
-      },
-      "lkyazdani42/nvim-web-devicons",
-    },
-    wants = {
-      "nvim-tree.lua",
-      "nvim-web-devicons",
-    },
-    -- Lazy load on the custom tree-display commands
-    opt = true,
-    keys = require("config.nvim-tree").keys,
-    cmd = require("config.nvim-tree").cmd,
-    config = function() require("config.nvim-tree").config() end
-  }
+  })
+  use(require("config.nvim-tree"))
 
   -- Language integration
   --
   -- LSP
-  use {
+  use({
     "neovim/nvim-lspconfig",
     config = function()
       local lsp = require("lspconfig")
@@ -351,23 +105,19 @@ initPackages(function(use)
       -- TODO: Java LSP
       -- TODO: Rust
     end
-  }
-  use { "nvim-lua/completion-nvim" }
-  use {
-    "nvim-treesitter/nvim-treesitter",
-    run = function() require("config.treesitter").run() end,
-    config = function() require("config.treesitter").config() end
-  }
-  use {
+  })
+  use({ "nvim-lua/completion-nvim" })
+  use(require("config.treesitter"))
+  use({
     "folke/trouble.nvim",
     requires = { "kyazdani42/nvim-web-devicons" },
     config = function()
-      require("trouble").setup {}
+      require("trouble").setup({})
     end
-  }
+  })
 
   -- Colorschemes
-  use {
+  use({
     "RRethy/nvim-base16",
     config = function()
       vim.cmd("colorscheme base16-tomorrow-night")
@@ -383,7 +133,7 @@ initPackages(function(use)
         { desc = "Switch colorscheme to light" }
       )
     end
-  }
+  })
 end)
 
 -- Files
@@ -471,6 +221,7 @@ vim.keymap.set("", "<Leader>j", "<cmd>bnext<CR>", { noremap = false }) -- Naviga
 vim.keymap.set("", "<Leader>k", "<cmd>bprevious<CR>", { noremap = false })
 vim.keymap.set("", "<Leader>w", "<cmd>bp|bd #<CR>", { noremap = false }) -- Close the current buffer with leader w
 
+-- TODO: Move to autocmd lazy loading
 -- NeoVIM LSP
 vim.keymap.set("n", "<leader>d", vim.lsp.buf.definition)
 vim.keymap.set("n", "K", vim.lsp.buf.hover)
@@ -479,4 +230,4 @@ vim.keymap.set("n", "<leader>D", vim.lsp.buf.type_definition)
 vim.keymap.set("n", "<leader>e", vim.diagnostic.open_float)
 
 -- TODO: Any way we can schedule this? Maybe just move it into a plugin folder of some kind
-loadPackages()
+paqPlus.load()

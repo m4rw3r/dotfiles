@@ -52,6 +52,13 @@ function M.config()
         ["<C-c>"] = actions.close,
       },
     },
+    pickers  = {
+      find_files = {
+        hidden = true,
+        -- Hide git
+        file_ignore_patterns = {".git"}
+      },
+    },
   })
 
   telescope.load_extension("fzy_native")

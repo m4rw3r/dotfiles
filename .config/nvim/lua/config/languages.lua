@@ -30,6 +30,7 @@ local M = {
     "lua",
     "php",
     "python",
+    "query",
     "ruby",
     "rust",
     "toml",

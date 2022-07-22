@@ -97,22 +97,7 @@ paqPlus.init(function(use)
   -- Language integration
   --
   -- LSP
-  use({
-    "neovim/nvim-lspconfig",
-    config = function()
-      local lsp = require("lspconfig")
-
-      lsp.psalm.setup({
-        cmd = {"x", "psalm", "--language-server"},
-        flags = { debounce_text_changes = 150 },
-      })
-
-      -- TODO: FlowJS LSP
-      -- TODO: GraphQL LSP
-      -- TODO: Java LSP
-      -- TODO: Rust
-    end
-  })
+  use(require("config.nvim-lspconfig"))
   use({ "nvim-lua/completion-nvim" })
   use(require("config.treesitter"))
   use({
@@ -225,14 +210,6 @@ vim.keymap.set("n", "<F3>", "<cmd>noh<CR>", { silent = true }) -- Toggle search 
 vim.keymap.set("", "<Leader>j", "<cmd>bnext<CR>", { noremap = false }) -- Navigate between buffers using Leader j/k
 vim.keymap.set("", "<Leader>k", "<cmd>bprevious<CR>", { noremap = false })
 vim.keymap.set("", "<Leader>w", "<cmd>bp|bd #<CR>", { noremap = false }) -- Close the current buffer with leader w
-
--- TODO: Move to autocmd lazy loading
--- NeoVIM LSP
-vim.keymap.set("n", "<leader>d", vim.lsp.buf.definition)
-vim.keymap.set("n", "K", vim.lsp.buf.hover)
-vim.keymap.set("n", "<leader>k", vim.lsp.buf.signature_help)
-vim.keymap.set("n", "<leader>D", vim.lsp.buf.type_definition)
-vim.keymap.set("n", "<leader>e", vim.diagnostic.open_float)
 
 local languages = require("languages")
 

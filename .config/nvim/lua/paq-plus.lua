@@ -118,7 +118,7 @@ local function registerKeys(spec)
     return
   end
 
-  log.debug("Registering keys on demand for plugin " .. spec.name)
+  log.debug("Registering keys for plugin " .. spec.name)
 
   for _, key in pairs(spec.keys) do
     if type(key) == "table" and vim.tbl_count(key) >= 3 then
@@ -301,6 +301,9 @@ local function loadPackage(spec)
       log.debug("Configuring " .. spec.name)
 
       spec.config()
+
+      registerKeys(spec)
+      registerCmds(spec)
     else
       log.error("Failed to configure " .. spec.name .. ", plugin not installed")
     end

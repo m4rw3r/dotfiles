@@ -178,8 +178,6 @@ vim.diagnostic.config({
   },
 })
 
--- TODO: Autocmd InsertEnter timeoutlen=0, and then reset on leave
-
 -- Search
 vim.opt.showmatch = true
 vim.opt.ignorecase = true -- Ignore case for search

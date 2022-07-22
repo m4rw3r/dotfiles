@@ -6,13 +6,20 @@ local swapdir = XDG_DATA_HOME .. "/nvim/swap//"
 local undodir = XDG_DATA_HOME .. "/nvim/swap/"
 local viewdir = XDG_DATA_HOME .. "/nvim/view//"
 
--- Skip built-in plugins
-vim.g.loaded_gzip = false
-vim.g.loaded_netrwPlugin = false
-vim.g.loaded_tarPlugin = false
-vim.g.loaded_zip = false
-vim.g.loaded_2html_plugin = false
-vim.g.loaded_remote_plugins = false
+-- Skip some unused built-in plugins
+vim.g.loaded_zipPlugin = true
+vim.g.loaded_tarPlugin = true
+-- We do not use netrw
+vim.g.loaded_netrw = true
+vim.g.loaded_netrwSettings = true
+vim.g.loaded_netrwPlugin = true
+vim.g.loaded_netrwFileHandlers = true
+-- Or advanced matching
+vim.g.loaded_matchit = true
+vim.g.loaded_remote_plugins = true
+vim.g.loaded_2html_plugin = true
+-- Skip FZF since we use FZY
+vim.g.loaded_fzf = true
 
 local ok, impatient = pcall(require, "impatient")
 if ok then

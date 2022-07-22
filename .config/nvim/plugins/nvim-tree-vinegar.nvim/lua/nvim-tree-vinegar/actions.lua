@@ -91,7 +91,7 @@ function M.openReplacingBuffer()
 end
 
 -- Reimplementation of nvim-tree.actions.open-file.edit_in_place which saves
--- the current position.
+-- the current cursor position.
 function M.editInPlace(node)
   local filename = node.absolute_path
 

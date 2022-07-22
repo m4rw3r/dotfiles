@@ -2,7 +2,9 @@
   "config": {
     "sort-packages": true,
     "preferred-install": {
-      "*": "source"
+      "awardit/*": "source",
+      "crossroads/*": "source",
+      "m4rw3r/*": "source"
     },
     "process-timeout": 0
   }

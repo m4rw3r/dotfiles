@@ -5,7 +5,7 @@
 local M = {}
 
 local tree = require("nvim-tree")
-local treeActionFindFile = require("nvim-tree.actions.find-file")
+local treeActionFindFile = require("nvim-tree.actions.finders.find-file")
 local treeView = require("nvim-tree.view")
 
 local actions = require("nvim-tree-vinegar.actions")

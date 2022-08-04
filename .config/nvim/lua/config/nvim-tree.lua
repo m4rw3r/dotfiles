@@ -1,12 +1,9 @@
 -- Lazy loaded, make sure to only load the module in callbacks
 
 local M = {
-  "./plugins/nvim-tree-vinegar.nvim",
+  "kyazdani42/nvim-tree.lua",
+  tag = "nightly",
   requires = {
-    {
-      "kyazdani42/nvim-tree.lua",
-      tag = "nightly",
-    },
     "lkyazdani42/nvim-web-devicons",
   },
   wants = {

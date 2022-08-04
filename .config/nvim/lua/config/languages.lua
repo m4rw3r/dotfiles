@@ -2,6 +2,7 @@
 local M = {
   indents = {
     cabal = { expandtab = true },
+    glsl = { expandtab = true },
     haskell = { expandtab = true },
     html = { autoindent = false },
     javascript = { expandtab = true, indent = 2, trim = true, autoindent = false },
@@ -20,6 +21,7 @@ local M = {
     "c",
     "dockerfile",
     "dot",
+    "glsl",
     "graphql",
     "haskell",
     "html",

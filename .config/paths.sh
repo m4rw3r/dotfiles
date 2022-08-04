@@ -1,18 +1,33 @@
 #!/bin/sh
 
 # Rustup
-[[ -f $HOME/.cargo/env ]] && source $HOME/.cargo/env
+if [[ -f $HOME/.cargo/env ]]; then
+	source $HOME/.cargo/env
+fi
 # Python PIP and other user stuff
-[[ -d $HOME/.local/bin ]] && export PATH="$HOME/.local/bin:$PATH"
+if [[ -d $HOME/.local/bin ]]; then
+	export PATH="$HOME/.local/bin:$PATH"
+fi
 
 # OS X
 
 # MacPorts, this includes (tmux and rxvt-unicode)
-[[ -d /opt/local/bin ]] && export PATH="/opt/local/bin:$PATH"
-[[ -d /opt/local/sbin ]] && export PATH="/opt/local/sbin:$PATH"
-[[ -d /usr/local/sbin ]] && export PATH="/usr/local/sbin:$PATH"
+if [[ -d /opt/local/bin ]]; then
+	export PATH="/opt/local/bin:$PATH"
+fi
+if [[ -d /opt/local/sbin ]]; then
+	export PATH="/opt/local/sbin:$PATH"
+fi
+if [[ -d /usr/local/sbin ]]; then
+	export PATH="/usr/local/sbin:$PATH"
+fi
 
 # X11
-[[ -d /opt/X11/bin ]] && export PATH="/opt/X11/bin:$PATH"
+if [[ -d /opt/X11/bin ]]; then
+	export PATH="/opt/X11/bin:$PATH"
+fi
 # MySQL
-[[ -d /usr/local/mysql/bin ]] && export PATH="/usr/local/mysql/bin:$PATH"
+if [[ -d /usr/local/mysql/bin ]]; then
+	export PATH="/usr/local/mysql/bin:$PATH"
+fi
+

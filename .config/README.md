@@ -7,8 +7,6 @@ Using the Bare Repo solution from https://www.atlassian.com/git/tutorials/dotfil
  * Fzf
  * Git
  * Kitty
- * Tmux
- * `tmux-256color` terminfo, [Installing tmux-256color for macOS](https://gist.github.com/bbqtd/a4ac060d6f6b9ea6fe3aabe735aa9d95)
  * NeoVIM
  * ZSH
 

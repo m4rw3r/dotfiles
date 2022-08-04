@@ -11,7 +11,7 @@ fi
 
 # OS X
 
-# MacPorts, this includes (tmux and rxvt-unicode)
+# MacPorts
 if [[ -d /opt/local/bin ]]; then
 	export PATH="/opt/local/bin:$PATH"
 fi

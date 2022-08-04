@@ -210,6 +210,3 @@ if ! command -v open &>/dev/null; then
 fi
 
 source "$XDG_CONFIG_HOME/paths.sh"
-
-# TODO: Delete when we know we are not using it anymore
-# source "$XDG_CONFIG_HOME/tmux/start.sh"

@@ -25,6 +25,18 @@ alias dark='kitty +kitten themes --cache-age=365 Base16-tomorrow-night'
 # KCachegrind for visualizing profiles
 alias kcachegrind='docker run --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v "$HOME:$HOME" -w "$PWD" -e "HOME=$HOME" quetzacoalt/kcachegrind kcachegrind'
 
+# Use NeoVIM
+if command -v nvim &>/dev/null; then
+	alias vim=nvim
+fi
+
+# Kitty kittens
+if test -n "$KITTY_INSTALLATION_DIR"; then
+	alias icat="kitty +kitten icat"
+	alias ssh="kitty +kitten ssh"
+	alias kdiff="kitty +kitten diff"
+fi
+
 # Colorize stuff
 if ls --color >/dev/null 2>&1; then # GNU `ls`
     colorflag="--color=auto"

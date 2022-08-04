@@ -55,6 +55,14 @@ unset _comp_files
 promptinit
 setopt prompt_subst
 
+# Manually load Kitty terminal integration if available
+if test -n "$KITTY_INSTALLATION_DIR"; then
+	export KITTY_SHELL_INTEGRATION="enabled"
+	autoload -Uz -- "$KITTY_INSTALLATION_DIR"/shell-integration/zsh/kitty-integration
+	kitty-integration
+	unfunction kitty-integration
+fi
+
 # load colors
 autoload -U colors && colors
 
@@ -202,4 +210,6 @@ if ! command -v open &>/dev/null; then
 fi
 
 source "$XDG_CONFIG_HOME/paths.sh"
-source "$XDG_CONFIG_HOME/tmux/start.sh"
+
+# TODO: Delete when we know we are not using it anymore
+# source "$XDG_CONFIG_HOME/tmux/start.sh"

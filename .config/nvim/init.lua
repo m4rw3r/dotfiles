@@ -79,8 +79,6 @@ paqPlus.init(function(use)
       })
     end
   })
-  -- Allow window navigation outside of NeoVIM when in tmux
-  use({ "christoomey/vim-tmux-navigator" })
   -- Rainbow parenthesis using treesitter
   use({ "p00f/nvim-ts-rainbow" })
   -- Show colors
@@ -200,10 +198,6 @@ vim.keymap.set("n", "j", "gj", { noremap = false, silent = true }) -- Visual nav
 vim.keymap.set("n", "k", "gk", { noremap = false, silent = true })
 vim.keymap.set("v", "j", "gj", { noremap = false, silent = true })
 vim.keymap.set("v", "k", "gk", { noremap = false, silent = true })
-vim.keymap.set("", "<C-h>", "<C-w>h", { silent = true }) -- Easier window pane navigation using Ctrl + hjkl
-vim.keymap.set("", "<C-j>", "<C-w>j", { silent = true })
-vim.keymap.set("", "<C-k>", "<C-w>k", { silent = true })
-vim.keymap.set("", "<C-l>", "<C-w>l", { silent = true })
 vim.keymap.set("n", "<F3>", "<cmd>noh<CR>", { silent = true }) -- Toggle search highlight
 vim.keymap.set("", "<Leader>j", "<cmd>bnext<CR>", { noremap = false }) -- Navigate between buffers using Leader j/k
 vim.keymap.set("", "<Leader>k", "<cmd>bprevious<CR>", { noremap = false })
@@ -215,3 +209,11 @@ languages.registerIndentAutogroup(require("config.languages").indents)
 
 -- TODO: Any way we can schedule this? Maybe just move it into a plugin folder of some kind
 paqPlus.load()
+
+local kitty = require("kitty")
+
+-- Easier window pane navigation using Ctrl + hjkl, with Kitty integration
+vim.keymap.set("", "<C-h>", kitty.navigate("h", "left"), { silent = false, noremap = true })
+vim.keymap.set("", "<C-j>", kitty.navigate("j", "bottom"), { silent = false, noremap = true })
+vim.keymap.set("", "<C-k>", kitty.navigate("k", "up"), { silent = false, noremap = true })
+vim.keymap.set("", "<C-l>", kitty.navigate("l", "right"), { silent = false, noremap = true })

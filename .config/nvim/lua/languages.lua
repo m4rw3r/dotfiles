@@ -9,6 +9,7 @@ local function stripTrailingWhitespace()
 
   vim.api.nvim_win_set_cursor(0, c)
 end
+
 vim.api.nvim_create_user_command(
   "StripTrailingWhitespace",
   stripTrailingWhitespace,

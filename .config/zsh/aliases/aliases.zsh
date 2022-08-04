@@ -39,12 +39,12 @@ fi
 
 # Colorize stuff
 if ls --color >/dev/null 2>&1; then # GNU `ls`
-    colorflag="--color=auto"
+	colorflag="--color=auto"
 else # OS X `ls`
-    colorflag="-G"
+	colorflag="-G"
 fi
 if [[ "$INSIDE_EMACS" ]]; then
-    colorflag=""
+	colorflag=""
 fi
 
 # Always use color output for `ls`
@@ -62,13 +62,13 @@ alias ip="ip --color=auto"
 
 # System management aliases
 if  [[ -z $SSH_CLIENT ]] ; then
-    alias poweroff="systemctl poweroff"
-    alias reboot="systemctl reboot"
-    alias hibernate="systemctl suspend"
+	alias poweroff="systemctl poweroff"
+	alias reboot="systemctl reboot"
+	alias hibernate="systemctl suspend"
 else
-    alias poweroff="sudo systemctl poweroff"
-    alias reboot="sudo systemctl reboot"
-    alias hibernate="sudo systemctl suspend"
+	alias poweroff="sudo systemctl poweroff"
+	alias reboot="sudo systemctl reboot"
+	alias hibernate="sudo systemctl suspend"
 fi
 
 alias q="exit"

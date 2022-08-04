@@ -29,9 +29,9 @@ pkg load
 pkg update
 source "$ZDOTDIR/aliases/aliases.zsh"
 if type "dircolors" > /dev/null; then
-    eval $(dircolors)
+	eval $(dircolors)
 elif type "gdircolors" > /dev/null; then
-    eval $(gdircolors)
+	eval $(gdircolors)
 fi
 
 # Set zsh options for general runtime.
@@ -47,9 +47,9 @@ autoload -Uz compinit promptinit
 # shell is opened each day.
 _comp_files=($XDG_CACHE_HOME/zsh/zcompcache(Nm-20))
 if (( $#_comp_files )); then
-    compinit -i -C -d "$XDG_CACHE_HOME/zsh/zcompcache"
+	compinit -i -C -d "$XDG_CACHE_HOME/zsh/zcompcache"
 else
-    compinit -i -d "$XDG_CACHE_HOME/zsh/zcompcache"
+	compinit -i -d "$XDG_CACHE_HOME/zsh/zcompcache"
 fi
 unset _comp_files
 promptinit

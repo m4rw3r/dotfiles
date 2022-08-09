@@ -28,6 +28,7 @@ export LESS="-r"
 if command -v nvim &>/dev/null; then
 	export EDITOR=nvim
 	export GIT_EDITOR="nvim"
+	export VISUAL='nvim'
 else
 	export GIT_EDITOR="vim"
 	export EDITOR=vim

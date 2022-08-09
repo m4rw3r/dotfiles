@@ -6,6 +6,9 @@ local M = {}
 
 local tree = require("nvim-tree")
 local treeActionFindFile = require("nvim-tree.actions.finders.find-file")
+local treeCore = require("nvim-tree.core")
+local treeRenderer = require("nvim-tree.renderer")
+local treeUtils = require("nvim-tree.utils")
 local treeView = require("nvim-tree.view")
 
 local actions = require("nvim-tree-vinegar.actions")
@@ -75,6 +78,19 @@ function M.findBuffer(buffer)
   local bufname = vim.api.nvim_buf_get_name(buffer)
   -- Only search for the current file if we have a saved file open
   if bufname ~= "" and vim.loop.fs_stat(bufname) ~= nil then
+    local cwd = treeUtils.path_remove_trailing(treeCore.get_cwd())
+
+    if string.find(bufname, cwd, 0, true) ~= 1 then
+      -- If the buffer is above the current working directory change to it to the first common folder
+      repeat
+        cwd = vim.fn.fnamemodify(treeUtils.path_remove_trailing(cwd), ":h")
+      until string.find(bufname, cwd, 0, true) == 1
+
+      -- TODO: cd vim?
+      treeCore.init(cwd)
+      treeRenderer.draw()
+    end
+
     treeActionFindFile.fn(bufname)
   end
 end

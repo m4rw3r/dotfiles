@@ -38,3 +38,4 @@ symbol = " "
 [status]
 disabled = false
 map_symbol = false
+symbol = ""

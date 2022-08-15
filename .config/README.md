@@ -8,6 +8,7 @@ Using the Bare Repo solution from https://www.atlassian.com/git/tutorials/dotfil
  * Git
  * Kitty
  * NeoVIM
+ * Starship
  * ZSH
 
 ### Fonts

@@ -1,0 +1,40 @@
+# Editor completion based on the config schema
+"$schema" = 'https://starship.rs/config-schema.json'
+
+add_newline = false
+scan_timeout = 5
+command_timeout = 10
+
+format = """
+$username\
+$hostname\
+$localip\
+$shlvl\
+$status\
+$character"""
+
+right_format = """
+$directory\
+$git_branch\
+$git_commit\
+$git_state\
+$hg_branch\
+$custom\
+$jobs\
+"""
+
+[character]
+success_symbol = "[❯](bold blue)"
+error_symbol = "[❯](bold red)"
+vimcmd_symbol = "[❯](bold blue)"
+vimcmd_replace_one_symbol = "[❯](bold purple)"
+vimcmd_replace_symbol = "[❯](bold purple)"
+vimcmd_visual_symbol = "[❯](bold yellow)"
+
+[git_branch]
+format = "[$symbol$branch(:$remote_branch)]($style) "
+symbol = " "
+
+[status]
+disabled = false
+map_symbol = false

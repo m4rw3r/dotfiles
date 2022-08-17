@@ -19,17 +19,11 @@ export NPM_CONFIG_USERCONFIG="$XDG_CONFIG_HOME/npm/config"
 export NPM_CONFIG_CACHE="$XDG_CACHE_HOME/npm"
 #export NPM_CONFIG_TMP="$XDG_RUNTIME_DIR/npm"
 
-export VISUAL='vim'
 # Use this command in psql to enable less pager: \pset pager always
 export PAGER=less
 export LESS="-r"
 
-# Use NeoVIM instead of VIM
-if command -v nvim &>/dev/null; then
-	export EDITOR=nvim
-	export GIT_EDITOR="nvim"
-	export VISUAL='nvim'
-else
-	export GIT_EDITOR="vim"
-	export EDITOR=vim
-fi
+export VISUAL='vim'
+export GIT_EDITOR="vim"
+export EDITOR=vim
+

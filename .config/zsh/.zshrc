@@ -194,6 +194,13 @@ if [ -f "/usr/share/fzf/completion.zsh" ]; then
 	source /usr/share/fzf/completion.zsh
 fi
 
+# Use NeoVIM instead of VIM
+if command -v nvim &>/dev/null; then
+	export EDITOR=nvim
+	export GIT_EDITOR="nvim"
+	export VISUAL='nvim'
+fi
+
 # Create an open command if one does not exist (linux)
 if ! command -v open &>/dev/null; then
 	function open() {
@@ -204,7 +211,5 @@ if ! command -v open &>/dev/null; then
 		fi
 	}
 fi
-
-source "$XDG_CONFIG_HOME/paths.sh"
 
 eval "$(starship init zsh)"

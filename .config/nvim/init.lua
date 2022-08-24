@@ -161,7 +161,7 @@ vim.opt.splitright = true -- Split pane to the right by default
 vim.opt.scrolloff = 5 -- Always allow 5 empty "lines" beyond start and end of file
 
 vim.diagnostic.config({
-  virtual_text = true,
+  virtual_text = false,
   signs = true,
   float = {
     border = "single",
@@ -202,6 +202,7 @@ vim.keymap.set("n", "<F3>", "<cmd>noh<CR>", { silent = true }) -- Toggle search 
 vim.keymap.set("", "<Leader>j", "<cmd>bnext<CR>", { noremap = false }) -- Navigate between buffers using Leader j/k
 vim.keymap.set("", "<Leader>k", "<cmd>bprevious<CR>", { noremap = false })
 vim.keymap.set("", "<Leader>w", "<cmd>bp|bd #<CR>", { noremap = false }) -- Close the current buffer with leader w
+vim.keymap.set("", "<Leader>e", "vim.diagnostic.open_float()", { noremap = false })
 
 local languages = require("languages")
 

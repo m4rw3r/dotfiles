@@ -33,7 +33,8 @@ fi
 # Kitty kittens
 if test -n "$KITTY_INSTALLATION_DIR"; then
 	alias icat="kitty +kitten icat"
-	alias ssh="kitty +kitten ssh"
+	# Kitty terminfo does not work well on older linux-servers for some reason, fallback to xterm-256color
+	alias ssh="TERM=xterm-256color kitty +kitten ssh"
 	alias kdiff="kitty +kitten diff"
 fi
 

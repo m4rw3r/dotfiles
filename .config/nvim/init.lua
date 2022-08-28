@@ -216,5 +216,5 @@ local kitty = require("kitty")
 -- Easier window pane navigation using Ctrl + hjkl, with Kitty integration
 vim.keymap.set("", "<C-h>", kitty.navigate("h", "left"), { silent = false, noremap = true })
 vim.keymap.set("", "<C-j>", kitty.navigate("j", "bottom"), { silent = false, noremap = true })
-vim.keymap.set("", "<C-k>", kitty.navigate("k", "up"), { silent = false, noremap = true })
+vim.keymap.set("", "<C-k>", kitty.navigate("k", "top"), { silent = false, noremap = true })
 vim.keymap.set("", "<C-l>", kitty.navigate("l", "right"), { silent = false, noremap = true })

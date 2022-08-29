@@ -42,12 +42,10 @@ function M.navigate(vimDirection, kittyDirection)
     if M.enabled then
       local currentWindow = vim.api.nvim_win_get_number(0);
       local nextWindow = vim.fn.winnr(vimDirection);
-      local function callback(code, output)
-      end
 
       -- We get the current window back if there is no window in the direction we are looking
       if currentWindow == nextWindow then
-        local code, content = M.navigateKitty(kittyDirection, callback)
+        local code, output = M.navigateKitty(kittyDirection)
 
         if code == 0 then
           return

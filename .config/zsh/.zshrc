@@ -185,6 +185,7 @@ setopt hist_verify
 # Show timestamp in history
 setopt extended_history
 
+ZLE_REMOVE_SUFFIX_CHARS=""
 ZVM_INSERT_MODE_CURSOR=$ZVM_CURSOR_BLINKING_UNDERLINE
 
 if [ -f "/usr/share/fzf/key-bindings.zsh" ]; then

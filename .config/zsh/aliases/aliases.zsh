@@ -8,6 +8,9 @@ alias .....="cd ../../../.."
 alias ~="cd ~"
 alias d="dirs -v"
 
+# Alias sudo to sudo with a trailing space, this means the next word should *also* be checked for alias expansion
+alias sudo='sudo '
+
 # Dotfiles management alias: https://github.com/m4rw3r/dotfiles/
 alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 

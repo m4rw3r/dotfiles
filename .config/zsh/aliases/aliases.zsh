@@ -22,6 +22,7 @@ alias wow='git status'
 
 alias mysql='mysql --auto-vertical-output --show-warnings --sigint-ignore --line-numbers --compress'
 alias mysqlp='mysql --auto-vertical-output --show-warnings --sigint-ignore --pager=less --line-numbers --column-type-info --compress'
+alias json_escape='jq -aR'
 # TODO: Inform all NeoVIM instances to also swap on this
 alias light='kitty +kitten themes --cache-age=365 Base16-tomorrow' # not sure why this is uppercase
 alias dark='kitty +kitten themes --cache-age=365 Base16-tomorrow-night'

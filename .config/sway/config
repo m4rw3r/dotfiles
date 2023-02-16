@@ -176,7 +176,7 @@ bar {
 output * bg $wallpaper fill
 font $font
 
-gaps inner 5
+gaps inner 10
 gaps outer 0
 
 # Hide title bar

@@ -19,6 +19,8 @@ local prevWindow = nil
 -- TODO: Maybe a way to split current window, preserving other window-sizes?
 function M.openFile(openCb)
   return function(node)
+    node = node or treeLib.get_node_at_cursor()
+
     if not node or node.name == ".." then
       return
     end
@@ -38,6 +40,8 @@ end
 -- Custom changedir which properly handles rerendering in the
 -- current window, as well as changing to the directory of a file
 function M.changeDir(node)
+  node = node or treeLib.get_node_at_cursor()
+
   if not node then
     return
   end
@@ -93,6 +97,7 @@ end
 -- Reimplementation of nvim-tree.actions.open-file.edit_in_place which saves
 -- the current cursor position.
 function M.editInPlace(node)
+  node = node or treeLib.get_node_at_cursor()
   local filename = node.absolute_path
 
   if node.link_to and not node.nodes then

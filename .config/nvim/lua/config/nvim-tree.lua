@@ -36,10 +36,45 @@ local M = {
   },
 }
 
+local function on_attach(bufnr)
+  local api = require("nvim-tree.api")
+  local vinegar = require("nvim-tree-vinegar")
+
+  local function opts(desc)
+    return { desc = "nvim-tree: " .. desc, buffer = bufnr, noremap = true, silent = true, nowait = true }
+  end
+
+  -- Edit in place since we use vinegar-like
+  vim.keymap.set("n", "<CR>", vinegar.actions.editInPlace, opts("Open: In Place"))
+  vim.keymap.set("n", "o", vinegar.actions.editInPlace, opts("Open: In Place"))
+  vim.keymap.set("n", "<C-w>", vinegar.actions.closeTree, opts("Close"))
+  vim.keymap.set("n", "<Leader>w", vinegar.actions.closeTree, opts("Close"))
+
+  vim.keymap.set("n", "I", api.tree.toggle_gitignore_filter, opts("Toggle Git Ignore"))
+  vim.keymap.set("n", "H", api.tree.toggle_hidden_filter, opts("Toggle Dotfiles"))
+  vim.keymap.set("n", "s", api.node.open.horizontal, opts("Open: Horizontal Split"))
+  vim.keymap.set("n", "i", api.node.open.vertical, opts("Open: Vertical Split"))
+
+  vim.keymap.set("n", "K", api.node.navigate.sibling.first, opts("First Sibling"))
+  vim.keymap.set("n", "J", api.node.navigate.sibling.last, opts("Last Sibling"))
+  vim.keymap.set("n", "U", api.tree.change_root_to_parent, opts("Up"))
+  vim.keymap.set("n", "<", api.node.navigate.sibling.prev, opts("Previous Sibling"))
+  vim.keymap.set("n", ">", api.node.navigate.sibling.next, opts("Next Sibling"))
+  vim.keymap.set("n", "R", api.tree.reload, opts("Refresh"))
+  vim.keymap.set("n", "x", api.node.navigate.parent_close, opts("Close Directory"))
+  vim.keymap.set("n", "?", api.tree.toggle_help, opts("Help"))
+  vim.keymap.set("n", "C", vinegar.actions.changeDir, opts("Changes the current directory to the selected directory, or the directory of the selected file"))
+
+  vim.keymap.set("n", "a", api.fs.create, opts("Create"))
+  vim.keymap.set("n", "d", api.fs.remove, opts("Delete"))
+  vim.keymap.set("n", "r", api.fs.rename, opts("Rename"))
+end
+
 function M.config()
   local tree = require("nvim-tree-vinegar")
 
   tree.setup({
+    on_attach = on_attach,
     prefer_startup_root = true,
     git = {
       enable = true,
@@ -57,53 +92,6 @@ function M.config()
       relativenumber = true,
       number = true,
       signcolumn = "number",
-      mappings = {
-        custom_only = true,
-        list = {
-          -- Edit in place since we use vinegar-like
-          {
-            key = {"<CR>", "o"},
-            action = "edit_in_place",
-            action_cb = tree.actions.editInPlace,
-            desc = "Open a file or directory, replacing the explorer buffer",
-          },
-          -- Recreate the close-window mappings
-          {
-            key = {"<C-w>", "<Leader>w"},
-            -- We have to have both an action and an
-            -- action_cb, the action_cb will replace any
-            -- default action
-            action = "close",
-            action_cb = tree.actions.closeTree,
-            desc = "Close and return to the previous buffer",
-          },
-          -- Visibility
-          { key = "I", action = "toggle_git_ignored", desc = "Toggle showing gitignored files" },
-          { key = "H", action = "toggle_dotfiles", desc = "Toggle showing hidden files" },
-          -- NERDTree like bindings
-          { key = "s", action = "split", action_cb = tree.actions.openFile(tree.open.split), desc = "Open the given file in a horizontal split" },
-          { key = "i", action = "vsplit", action_cb = tree.actions.openFile(tree.open.vsplit), desc = "Open the given file in a vertical split" },
-          { key = "p", action = "parent", desc = "Go to the parent directory" },
-          { key = "K", action = "first_sibling", desc = "Go to the first sibling" },
-          { key = "J", action = "last_sibling", desc = "Go to the last sibling" },
-          { key = "U", action = "dir_up", desc = "Navigate to the parent of the current file/directory" },
-          { key = "<", action = "prev_sibling", desc = "Go to previous siblilng" },
-          { key = ">", action = "next_sibling", desc = "Go to next sibling" },
-          { key = "R", action = "refresh", desc = "Refresh the directory tree" },
-          { key = "x", action = "close_node", desc = "Close the current directory or parent" },
-          { key = "?", action = "toggle_help", desc = "Toggle help" },
-          {
-            key = "C",
-            action = "change_dir",
-            action_cb = tree.actions.changeDir,
-            desc = "Changes the current directory to the selected directory, or the directory of the selected file",
-          },
-          -- File management bindings
-          { key = "a", action = "create", desc = "Create file/directory, directories end in '/'" },
-          { key = "d", action = "remove", desc = "Delete file/directory" },
-          { key = "r", action = "rename", desc = "Rename file/directory" },
-        },
-      },
     },
   })
 end

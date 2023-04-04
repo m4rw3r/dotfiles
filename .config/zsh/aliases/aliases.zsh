@@ -24,8 +24,8 @@ alias mysql='mysql --auto-vertical-output --show-warnings --sigint-ignore --line
 alias mysqlp='mysql --auto-vertical-output --show-warnings --sigint-ignore --pager=less --line-numbers --column-type-info --compress'
 alias json_escape='jq -aR'
 # TODO: Inform all NeoVIM instances to also swap on this
-alias light='kitty +kitten themes --cache-age=365 Base16-tomorrow' # not sure why this is uppercase
-alias dark='kitty +kitten themes --cache-age=365 Base16-tomorrow-night'
+alias light='echo "include themes/base16-tomorrow.conf" > $XDG_CONFIG_HOME/kitty/current-theme.conf && kitty +runpy "from kitty.utils import *; reload_conf_in_all_kitties()"'
+alias dark='echo "include themes/base16-tomorrow-night.conf" > $XDG_CONFIG_HOME/kitty/current-theme.conf && kitty +runpy "from kitty.utils import *; reload_conf_in_all_kitties()"'
 # KCachegrind for visualizing profiles
 alias kcachegrind='docker run --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v "$HOME:$HOME" -w "$PWD" -e "HOME=$HOME" quetzacoalt/kcachegrind kcachegrind'
 

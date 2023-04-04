@@ -52,8 +52,8 @@ local function on_attach(bufnr)
 
   vim.keymap.set("n", "I", api.tree.toggle_gitignore_filter, opts("Toggle Git Ignore"))
   vim.keymap.set("n", "H", api.tree.toggle_hidden_filter, opts("Toggle Dotfiles"))
-  vim.keymap.set("n", "s", api.node.open.horizontal, opts("Open: Horizontal Split"))
-  vim.keymap.set("n", "i", api.node.open.vertical, opts("Open: Vertical Split"))
+  vim.keymap.set("n", "s", vinegar.actions.openFile(vinegar.open.split), opts("Open: Horizontal Split"))
+  vim.keymap.set("n", "i", vinegar.actions.openFile(vinegar.open.vsplit), opts("Open: Vertical Split"))
 
   vim.keymap.set("n", "K", api.node.navigate.sibling.first, opts("First Sibling"))
   vim.keymap.set("n", "J", api.node.navigate.sibling.last, opts("Last Sibling"))

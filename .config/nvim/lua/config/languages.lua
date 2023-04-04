@@ -15,7 +15,7 @@ local M = {
     sql = { autoindent = false },
     typescript = { expandtab = true, indent = 2, trim = true, autoindent = true },
     xml = { expandtab = true, indent = 2, trim = true },
-    yaml = { indent = 2 },
+    yaml = { expandtab = true, indent = 2 },
   },
   syntax = {
     "bash",

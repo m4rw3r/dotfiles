@@ -33,6 +33,9 @@ function M.config()
 end
 
 function M.run()
+  -- Make sure to configure ourselves before we run
+  M.config()
+
   -- Update instead of install, since then it will install it if it is missing
   vim.cmd("UserTSUpdate")
 end

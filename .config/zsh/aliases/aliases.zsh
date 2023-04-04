@@ -54,6 +54,7 @@ fi
 
 # Always use color output for `ls`
 alias ls="command ls -Fh ${colorflag}"
+alias grep="command grep --color=auto"
 
 if command -v prettyping &>/dev/null; then
 	alias ping='prettyping --nolegend'

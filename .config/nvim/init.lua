@@ -52,6 +52,7 @@ paqPlus.init(function(use)
   -- Fuzzy finder for files, and in files
   use(require("config.telescope"))
   use({ "lewis6991/gitsigns.nvim" })
+  use({ "gpanders/editorconfig.nvim" })
 
   -- UI
   --

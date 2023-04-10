@@ -20,6 +20,9 @@ vim.g.loaded_remote_plugins = true
 vim.g.loaded_2html_plugin = true
 -- Skip FZF since we use FZY
 vim.g.loaded_fzf = true
+-- Do not load old filetype.vim, use the new filetype.lua
+vim.g.do_filetype_lua = true
+vim.g.did_load_filetypes = false
 
 local ok, impatient = pcall(require, "impatient")
 if ok then
@@ -42,8 +45,6 @@ paqPlus.init(function(use)
   -- Lua bytecode cache to speed up launching
   use({ "lewis6991/impatient.nvim" })
   use({ "tweekmonster/startuptime.vim" })
-  -- Faster filetype detection
-  use({ "nathom/filetype.nvim" })
 
   -- Utilities
   --

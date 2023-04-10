@@ -36,6 +36,7 @@ local M = {
     "query",
     "ruby",
     "rust",
+    "sql",
     "toml",
     "typescript",
     "vim",

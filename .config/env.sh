@@ -17,6 +17,7 @@ export MODULES_DIR="$ZDOTDIR/plugins"
 # NPM XDG support
 export NPM_CONFIG_USERCONFIG="$XDG_CONFIG_HOME/npm/config"
 export NPM_CONFIG_CACHE="$XDG_CACHE_HOME/npm"
+export NPM_CONFIG_PREFIX="$HOME/.local"
 #export NPM_CONFIG_TMP="$XDG_RUNTIME_DIR/npm"
 
 # Use this command in psql to enable less pager: \pset pager always

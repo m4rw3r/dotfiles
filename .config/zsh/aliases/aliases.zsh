@@ -28,6 +28,8 @@ alias light='echo "include themes/base16-tomorrow.conf" > $XDG_CONFIG_HOME/kitty
 alias dark='echo "include themes/base16-tomorrow-night.conf" > $XDG_CONFIG_HOME/kitty/current-theme.conf && kitty +runpy "from kitty.utils import *; reload_conf_in_all_kitties()"'
 # KCachegrind for visualizing profiles
 alias kcachegrind='docker run --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v "$HOME:$HOME" -w "$PWD" -e "HOME=$HOME" quetzacoalt/kcachegrind kcachegrind'
+# Wget does not have any configuration variable for default file location
+alias wget=wget --hsts-file="$XDG_CACHE_HOME/wget-hsts"
 
 # Use NeoVIM
 if command -v nvim &>/dev/null; then

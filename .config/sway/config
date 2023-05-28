@@ -198,7 +198,8 @@ client.background       $base07
 input type:pointer pointer_accel 0
 
 # Fix for slow start of GTK applications
-exec systemctl --user import-environment
+exec systemctl --user import-environment XDG_SESSION_TYPE XDG_CURRENT_DESKTOP
+exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway
 
 # Notifications
 exec mako

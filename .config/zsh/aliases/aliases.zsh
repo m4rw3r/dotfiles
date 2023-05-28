@@ -20,8 +20,8 @@ alias such=git
 alias very=git
 alias wow='git status'
 
-alias mysql='mysql --auto-vertical-output --show-warnings --sigint-ignore --line-numbers --compress'
-alias mysqlp='mysql --auto-vertical-output --show-warnings --sigint-ignore --pager=less --line-numbers --column-type-info --compress'
+alias mysql='mysql --auto-vertical-output --show-warnings --sigint-ignore --line-numbers'
+alias mysqlp='mysql --auto-vertical-output --show-warnings --sigint-ignore --pager=less --line-numbers --column-type-info'
 alias json_escape='jq -aR'
 # TODO: Inform all NeoVIM instances to also swap on this
 alias light='echo "include themes/base16-tomorrow.conf" > $XDG_CONFIG_HOME/kitty/current-theme.conf && kitty +runpy "from kitty.utils import *; reload_conf_in_all_kitties()"'

@@ -90,7 +90,7 @@ function M.openReplacingBuffer()
     treeCore.init(cwd)
   end
 
-  treeView.open_in_current_win({ hijack_current_buf = false, resize = false })
+  treeView.open_in_win({ hijack_current_buf = false, resize = false })
   treeRenderer.draw()
 end
 

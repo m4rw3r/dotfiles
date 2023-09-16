@@ -44,12 +44,18 @@ function M.config()
   local actions = require("telescope.actions")
 
   telescope.setup({
-    mappings = {
-      i = {
-        ["<C-c>"] = actions.close,
-      },
-      n = {
-        ["<C-c>"] = actions.close,
+    defaults = {
+      mappings = {
+        i = {
+          ["<C-c>"] = actions.close,
+          ["<C-j>"] = actions.cycle_history_next,
+          ["<C-k>"] = actions.cycle_history_prev,
+        },
+        n = {
+          ["<C-c>"] = actions.close,
+          ["<C-j>"] = actions.cycle_history_next,
+          ["<C-k>"] = actions.cycle_history_prev,
+        },
       },
     },
     pickers  = {

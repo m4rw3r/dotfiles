@@ -91,7 +91,7 @@ function M.config()
     view = {
       relativenumber = true,
       number = true,
-      signcolumn = "number",
+      signcolumn = "auto",
     },
   })
 end

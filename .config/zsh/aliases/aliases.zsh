@@ -30,6 +30,8 @@ alias dark='echo "include themes/base16-tomorrow-night.conf" > $XDG_CONFIG_HOME/
 alias kcachegrind='docker run --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v "$HOME:$HOME" -w "$PWD" -e "HOME=$HOME" quetzacoalt/kcachegrind kcachegrind'
 # Wget does not have any configuration variable for default file location
 alias wget=wget --hsts-file="$XDG_CACHE_HOME/wget-hsts"
+# Clear with clearing scrollback as well in multiple terminals (Kitty, iTerm2, Apple Terminal)
+alias clear="printf '\\033[2J\\033[3J\\033[1;1H'"
 
 # Use NeoVIM
 if command -v nvim &>/dev/null; then

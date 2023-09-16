@@ -78,7 +78,7 @@ function M.config()
     prefer_startup_root = true,
     git = {
       enable = true,
-      timeout = 400,
+      timeout = 3000,
       ignore = true,
     },
     filters = {

@@ -32,7 +32,8 @@ function M.config()
   })
 end
 
-function M.run()
+-- Run on install/update
+function M.build()
   -- Make sure to configure ourselves before we run
   M.config()
 

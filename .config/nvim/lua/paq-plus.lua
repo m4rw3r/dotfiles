@@ -65,23 +65,31 @@ end
 local specs = {}
 local packages = {}
 
-local function addPackage(spec)
+local function normalizeSpec(spec)
   if type(spec) == "string" then
     spec = { spec }
   end
 
   -- TODO: Url?
-  name = spec.as or spec[1]:match("/([%w-_.]+)$")
-
+  spec.name = spec.as or spec[1]:match("/([%w-_.]+)$")
   spec.loaded = not spec.opt
-  spec.name = name
+
+  if type(spec.requires) == "string" then
+    spec.requires = { spec.requires }
+  end
+
+  return spec
+end
+
+local function addPackage(spec)
+  spec = normalizeSpec(spec)
 
   -- TODO: Deduplicate and merge, since requires can be in conflict
   if specs[name] then
     log.debug(name .. " is already added, overwriting")
   end
 
-  specs[name] = spec
+  specs[spec.name] = spec
 
   if isLocal(spec) then
     -- Local plugin
@@ -93,22 +101,22 @@ local function addPackage(spec)
       opt = spec.opt,
       branch = spec.branch,
       pin = spec.pin,
-      run = spec.run,
+      build = spec.build,
       url = spec.url,
     })
 
-    log.debug("Added " .. name .. " to paq")
+    log.debug("Added " .. spec.name .. " to paq")
   end
 
   if spec.requires then
-    if type(spec.requires) == "string" then
-      -- TODO: Inherit opt
-      addPackage(spec.requires)
-    else
-      for _, dep in pairs(spec.requires) do
-        -- TODO: Inherit opt
-        addPackage(dep)
-      end
+    for _, dep in pairs(spec.requires) do
+      dep = normalizeSpec(dep)
+
+      -- We cannot overwrite laziness if it is already set as eager elsewhere
+      -- Instead a manual add of the package will change eager to lazy
+      dep.opt = spec[dep.name] and spec[dep.name].opt or spec.opt
+
+      addPackage(dep)
     end
   end
 end
@@ -148,40 +156,42 @@ local function lazyLoad(spec)
 
   spec.loaded = true
 
-  if isInstalled(spec) then
-    for _, name in pairs(spec.wants or {}) do
-      if specs[name] then
-        log.debug("Lazy plugin " .. spec.name .. " wants plugin " .. name)
-
-        lazyLoad(specs[name])
-      else
-        log.error("Lazy plugin " .. spec.name .. " wants missing plugin '" .. name)
-      end
-    end
-
-    if not isLocal(spec) then
-      log.debug("Lazy-loading plugin " .. spec.name)
-
-      vim.cmd("packadd " .. spec.name)
-    else
-      log.debug("Lazy-loading local plugin " .. spec.name)
-
-      vim.o.runtimepath = vim.o.runtimepath .. "," .. vim.fn.escape(pluginPath(spec), '\\,')
-    end
-
-    if spec.config then
-      log.debug("Configuring plugin " .. spec.name)
-
-      spec.config()
-    end
-
-    registerKeys(spec)
-    registerCmds(spec)
-
-    log.debug("Finished lazy-loading " .. spec.name)
-  else
+  if not isInstalled(spec) then
     log.error("Failed to lazy-load " .. spec.name .. ", plugin not installed")
+
+    return
   end
+
+  for _, name in pairs(spec.wants or {}) do
+    if specs[name] then
+      log.debug("Lazy plugin " .. spec.name .. " wants plugin " .. name)
+
+      lazyLoad(specs[name])
+    else
+      log.error("Lazy plugin " .. spec.name .. " wants missing plugin '" .. name)
+    end
+  end
+
+  if not isLocal(spec) then
+    log.debug("Lazy-loading plugin " .. spec.name)
+
+    vim.cmd("packadd " .. spec.name)
+  else
+    log.debug("Lazy-loading local plugin " .. spec.name)
+
+    vim.o.runtimepath = vim.o.runtimepath .. "," .. vim.fn.escape(pluginPath(spec), '\\,')
+  end
+
+  if spec.config then
+    log.debug("Configuring plugin " .. spec.name)
+
+    spec.config()
+  end
+
+  registerKeys(spec)
+  registerCmds(spec)
+
+  log.debug("Finished lazy-loading " .. spec.name)
 
   -- TODO: Load after?
 end
@@ -293,20 +303,22 @@ local function lazyRegisterKeys(spec)
 end
 
 local function loadPackage(spec)
+  if not isInstalled(spec) then
+    log.error("Failed to configure " .. spec.name .. ", plugin not installed")
+
+    return
+  end
+
   if spec.opt then
     lazyRegisterKeys(spec)
     lazyRegisterCommands(spec)
   elseif spec.config then
-    if isInstalled(spec) then
-      log.debug("Configuring " .. spec.name)
+    log.debug("Configuring " .. spec.name)
 
-      spec.config()
+    spec.config()
 
-      registerKeys(spec)
-      registerCmds(spec)
-    else
-      log.error("Failed to configure " .. spec.name .. ", plugin not installed")
-    end
+    registerKeys(spec)
+    registerCmds(spec)
   end
 end
 
@@ -363,6 +375,8 @@ function M.load()
   for _, spec in pairs(specs) do
     loadPackage(spec)
   end
+
+  log.debug("Done loading packages")
 end
 
 return M

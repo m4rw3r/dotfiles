@@ -82,7 +82,10 @@ paqPlus.init(function(use)
     end
   })
   -- Rainbow parenthesis using treesitter
-  use({ "p00f/nvim-ts-rainbow" })
+  -- Broken original:
+  --   use({ "p00f/nvim-ts-rainbow" })
+  -- FIXME: This plugin does nothing
+  use({ "lincheney/nvim-ts-rainbow" })
   -- Show colors
   use({
     "norcalli/nvim-colorizer.lua",

@@ -206,6 +206,8 @@ exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DE
 
 # Notifications
 exec mako
+# Dropbox
+exec dropbox start
 
 output DP-1 scale 1
 output DP-1 pos 0 0 res 3440x1440

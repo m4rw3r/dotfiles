@@ -24,6 +24,7 @@ export K9SCONFIG="$XDG_CONFIG_HOME/k9s"
 export KDEHOME="$XDG_CONFIG_HOME/kde"
 export MYSQL_HISTFILE="$XDG_STATE_HOME/mysql_history"
 export NODE_REPL_HISTORY="$XDG_STATE_HOME/node_repl_history"
+export PNPM_HOME="$XDG_DATA_HOME/pnpm"
 export PSQL_HISTORY="$XDG_STATE_HOME/psql_history"
 export PYTHONHISTFILE="$XDG_STATE_HOME/python_history"
 

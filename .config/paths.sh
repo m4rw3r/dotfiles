@@ -28,3 +28,7 @@ fi
 if [[ -d $HOME/.local/bin ]]; then
 	export PATH="$HOME/.local/bin:$PATH"
 fi
+# Pnpm
+if [[ -d "$PNPM_HOME" ]]; then
+	export PATH="$PNPM_HOME:$PATH"
+fi

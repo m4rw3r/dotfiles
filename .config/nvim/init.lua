@@ -1,3 +1,6 @@
+-- Use the experimental bytecode cache
+vim.loader.enable()
+
 -- Configuration
 local indent = 4
 local XDG_DATA_HOME = vim.env.XDG_DATA_HOME or vim.env.HOME .. "/.local/share"
@@ -24,11 +27,6 @@ vim.g.loaded_fzf = true
 vim.g.do_filetype_lua = true
 vim.g.did_load_filetypes = false
 
-local ok, impatient = pcall(require, "impatient")
-if ok then
-  impatient.enable_profile()
-end
-
 local paqPlus = require("paq-plus")
 
 paqPlus.bootstrap({
@@ -43,7 +41,6 @@ paqPlus.init(function(use)
   use({ "savq/paq-nvim" })
 
   -- Lua bytecode cache to speed up launching
-  use({ "lewis6991/impatient.nvim" })
   use({ "tweekmonster/startuptime.vim" })
 
   -- Utilities

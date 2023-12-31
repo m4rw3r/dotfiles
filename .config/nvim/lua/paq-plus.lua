@@ -367,6 +367,8 @@ function M.init(fn)
   paq(packages)
 
   log.debug("Done registering paq packages")
+
+  vim.schedule(M.load)
 end
 
 function M.load()

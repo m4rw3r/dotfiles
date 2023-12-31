@@ -208,9 +208,6 @@ local languages = require("languages")
 
 languages.registerIndentAutogroup(require("config.languages").indents)
 
--- TODO: Any way we can schedule this? Maybe just move it into a plugin folder of some kind
-paqPlus.load()
-
 local kitty = require("kitty")
 
 -- Easier window pane navigation using Ctrl + hjkl, with Kitty integration

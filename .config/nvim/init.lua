@@ -79,11 +79,9 @@ paqPlus.init(function(use)
     end
   })
   -- Rainbow parenthesis using treesitter
-  -- Broken original:
-  --   use({ "p00f/nvim-ts-rainbow" })
-  -- FIXME: This plugin does nothing
-  use({ "lincheney/nvim-ts-rainbow" })
-  -- Show colors
+  use({ "HiPhish/rainbow-delimiters.nvim" })
+  -- Show colors like #f0f
+  -- TODO: no longer works
   use({
     "norcalli/nvim-colorizer.lua",
     config = function()

@@ -23,12 +23,6 @@ function M.config()
       disable = { "php" },
       enable = true,
     },
-    rainbow = {
-      enable = true,
-      -- Also highlight non-bracket delimiters like html tags, boolean or
-      -- table: lang -> boolean
-      extended_mode = true,
-    },
   })
 end
 

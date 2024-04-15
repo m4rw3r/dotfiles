@@ -96,7 +96,7 @@ paqPlus.init(function(use)
   --
   -- LSP
   use(require("config.nvim-lspconfig"))
-  use({ "nvim-lua/completion-nvim" })
+  use(require("config.nvim-cmp"))
   use(require("config.treesitter"))
   use({
     "folke/trouble.nvim",
@@ -104,73 +104,6 @@ paqPlus.init(function(use)
     config = function()
       require("trouble").setup({})
     end
-  })
-
-  use({
-    "hrsh7th/nvim-cmp",
-    requires = {
-      "hrsh7th/cmp-nvim-lsp",
-      "hrsh7th/cmp-buffer",
-      "hrsh7th/cmp-path",
-      "hrsh7th/cmp-cmdline",
-    },
-    config = function()
-      local cmp = require("cmp")
-      local has_words_before = function()
-        unpack = unpack or table.unpack
-        local line, col = unpack(vim.api.nvim_win_get_cursor(0))
-        return col ~= 0 and vim.api.nvim_buf_get_lines(0, line - 1, line, true)[1]:sub(col, col):match('%s') == nil
-      end
-
-      cmp.setup({
-        window = {
-          completion = cmp.config.window.bordered(),
-          documentation = cmp.config.window.bordered(),
-        },
-        mapping = cmp.mapping.preset.insert({
-          ['<C-b>'] = cmp.mapping.scroll_docs(-4),
-          ['<C-f>'] = cmp.mapping.scroll_docs(4),
-          ['<C-Space>'] = cmp.mapping.complete(),
-          ['<Tab>'] = function(fallback)
-            if not cmp.select_next_item() then
-              if vim.bo.buftype ~= 'prompt' and has_words_before() then
-                cmp.complete()
-              else
-                fallback()
-              end
-            end
-          end,
-          ['<S-Tab>'] = function(fallback)
-            if not cmp.select_prev_item() then
-              if vim.bo.buftype ~= 'prompt' and has_words_before() then
-                cmp.complete()
-              else
-                fallback()
-              end
-            end
-          end,
-          ['<C-e>'] = cmp.mapping.abort(),
-          -- Safe selection on enter only
-          -- when something has explicitly been selected
-          ["<CR>"] = cmp.mapping({
-            i = function(fallback)
-              if cmp.visible() and cmp.get_active_entry() then
-                cmp.confirm({ behavior = cmp.ConfirmBehavior.Replace, select = false })
-              else
-                fallback()
-              end
-            end,
-            s = cmp.mapping.confirm({ select = true }),
-            c = cmp.mapping.confirm({ behavior = cmp.ConfirmBehavior.Replace, select = true }),
-          }),
-        }),
-        sources = cmp.config.sources({
-          { name = 'nvim_lsp' },
-        }, {
-          { name = 'buffer' },
-        })
-      })
-    end,
   })
 
   -- Colorschemes
@@ -269,7 +202,9 @@ vim.keymap.set("n", "<F3>", "<cmd>noh<CR>", { silent = true }) -- Toggle search 
 vim.keymap.set("", "<Leader>j", "<cmd>bnext<CR>", { noremap = false }) -- Navigate between buffers using Leader j/k
 vim.keymap.set("", "<Leader>k", "<cmd>bprevious<CR>", { noremap = false })
 vim.keymap.set("", "<Leader>w", "<cmd>bp|bd #<CR>", { noremap = false }) -- Close the current buffer with leader w
-vim.keymap.set("", "<Leader>e", "vim.diagnostic.open_float()", { noremap = false })
+vim.keymap.set("n", "<Leader>e", vim.diagnostic.open_float, { noremap = false })
+vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, { noremap = false })
+vim.keymap.set("n", "]d", vim.diagnostic.goto_next, { noremap = false })
 
 local languages = require("languages")
 

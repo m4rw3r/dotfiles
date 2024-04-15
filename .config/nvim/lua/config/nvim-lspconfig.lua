@@ -15,6 +15,9 @@ function M.config()
   lsp.psalm.setup({
     cmd = {"x", "psalm", "--language-server"},
     flags = { debounce_text_changes = 150 },
+    root_dir = function()
+      return vim.fs.dirname(vim.fs.find({ "composer.json" }, { upward = true })[1])
+    end,
   })
 
   -- TODO: FlowJS LSP

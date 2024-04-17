@@ -1,11 +1,11 @@
 local M = {
   "neovim/nvim-lspconfig",
   keys = {
-    { "n", "<leader>d", vim.lsp.buf.definition},
-    { "n", "K", vim.lsp.buf.hover},
-    { "n", "<leader>k", vim.lsp.buf.signature_help},
-    { "n", "<leader>D", vim.lsp.buf.type_definition},
-    { "n", "<leader>e", vim.diagnostic.open_float},
+    { "n", "<leader>d", vim.lsp.buf.definition },
+    { "n", "<leader>D", vim.lsp.buf.type_definition },
+    { "n", "K", vim.lsp.buf.hover },
+    { "n", "<leader>K", vim.lsp.buf.signature_help },
+    { "n", "<leader>e", vim.diagnostic.open_float },
   },
 }
 
@@ -20,10 +20,11 @@ function M.config()
     end,
   })
 
-  -- TODO: FlowJS LSP
+  lsp.rust_analyzer.setup({})
+  lsp.tsserver.setup({})
+
   -- TODO: GraphQL LSP
   -- TODO: Java LSP
-  -- TODO: Rust
 end
 
 return M

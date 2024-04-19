@@ -24,6 +24,7 @@ pkg safe-paste -f omz
 pkg jeffreytse/zsh-vi-mode
 pkg zsh-users/zsh-completions
 pkg z-shell/F-Sy-H
+pkg amyreese/zsh-titles --alt titles
 pkg load
 pkg update
 source "$ZDOTDIR/aliases/aliases.zsh"

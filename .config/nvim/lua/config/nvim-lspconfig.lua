@@ -21,7 +21,10 @@ function M.config()
   })
 
   lsp.rust_analyzer.setup({})
-  lsp.tsserver.setup({})
+  lsp.tsserver.setup({
+    filetypes = { "typescript", "typescriptreact", "typescript.tsx" },
+    cmd = { "typescript-language-server", "--stdio" }
+  })
 
   -- TODO: GraphQL LSP
   -- TODO: Java LSP

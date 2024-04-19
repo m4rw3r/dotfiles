@@ -205,6 +205,7 @@ vim.keymap.set("", "<Leader>w", "<cmd>bp|bd #<CR>", { noremap = false }) -- Clos
 vim.keymap.set("n", "<Leader>e", vim.diagnostic.open_float, { noremap = false })
 vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, { noremap = false })
 vim.keymap.set("n", "]d", vim.diagnostic.goto_next, { noremap = false })
+vim.keymap.set("n", "<Leader>v", "<c-v>", { noremap = false }) -- Make sure we can do vertical selection in Windows Terminal
 
 local languages = require("languages")
 

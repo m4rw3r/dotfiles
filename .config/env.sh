@@ -36,3 +36,5 @@ export VISUAL='vim'
 export GIT_EDITOR="vim"
 export EDITOR=vim
 
+# Disable AWS pager by default
+export AWS_PAGER=""

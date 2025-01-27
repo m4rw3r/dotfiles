@@ -21,10 +21,10 @@ function M.config()
   })
 
   lsp.rust_analyzer.setup({})
-  lsp.tsserver.setup({
-    filetypes = { "typescript", "typescriptreact", "typescript.tsx" },
-    cmd = { "typescript-language-server", "--stdio" }
-  })
+  lsp.ts_ls.setup({})
+  -- To install ESLint LSP:
+  -- npm install --global vscode-langservers-extracted@4.8.0
+  lsp.eslint.setup({})
 
   -- TODO: GraphQL LSP
   -- TODO: Java LSP

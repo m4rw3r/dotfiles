@@ -34,6 +34,7 @@ function M.registerIndentAutogroup(indentSettings)
       {
         pattern = filetype,
         group = indentgroup,
+        desc = "Indent settings for " .. filetype,
         callback = function()
           if config.indent then
             vim.opt_local.shiftwidth = config.indent

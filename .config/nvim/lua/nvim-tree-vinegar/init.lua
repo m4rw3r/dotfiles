@@ -9,7 +9,6 @@ local treeApi = require("nvim-tree.api")
 
 local treeActionFindFile = require("nvim-tree.actions.finders.find-file")
 local treeCore = require("nvim-tree.core")
-local treeRenderer = require("nvim-tree.renderer")
 local treeUtils = require("nvim-tree.utils")
 local treeView = require("nvim-tree.view")
 
@@ -90,7 +89,7 @@ function M.findBuffer(buffer)
 
       -- TODO: cd vim?
       treeCore.init(cwd)
-      treeRenderer.draw()
+      util.drawTree()
     end
 
     treeApi.tree.find_file(bufname)

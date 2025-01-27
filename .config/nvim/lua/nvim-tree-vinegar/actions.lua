@@ -3,7 +3,6 @@ local util = require("nvim-tree-vinegar.util")
 local treeCore = require("nvim-tree.core")
 local treeEvents = require("nvim-tree.events")
 local treeLib = require("nvim-tree.lib")
-local treeRenderer = require("nvim-tree.renderer")
 local treeUtils = require("nvim-tree.utils")
 local treeView = require("nvim-tree.view")
 
@@ -19,7 +18,7 @@ local prevWindow = nil
 -- TODO: Maybe a way to split current window, preserving other window-sizes?
 function M.openFile(openCb)
   return function(node)
-    node = node or treeLib.get_node_at_cursor()
+    node = node or util.get_node_at_cursor()
 
     if not node or node.name == ".." then
       return
@@ -30,7 +29,7 @@ function M.openFile(openCb)
     if node.link_to and not node.nodes then
       filename = node.link_to
     elseif node.nodes ~= nil then
-      return treeLib.expand_or_collapse(node)
+      return node:expand_or_collapse()
     end
 
     openCb(filename)
@@ -40,7 +39,7 @@ end
 -- Custom changedir which properly handles rerendering in the
 -- current window, as well as changing to the directory of a file
 function M.changeDir(node)
-  node = node or treeLib.get_node_at_cursor()
+  node = node or util.get_node_at_cursor()
 
   if not node then
     return
@@ -66,7 +65,7 @@ function M.changeDir(node)
   vim.cmd("cd " .. vim.fn.fnameescape(filename))
 
   treeCore.init(filename)
-  treeRenderer.draw()
+  util.drawTree()
 end
 
 -- We have to manually reimplement parts of
@@ -91,19 +90,19 @@ function M.openReplacingBuffer()
   end
 
   treeView.open_in_win({ hijack_current_buf = false, resize = false })
-  treeRenderer.draw()
+  util.drawTree()
 end
 
 -- Reimplementation of nvim-tree.actions.open-file.edit_in_place which saves
 -- the current cursor position.
 function M.editInPlace(node)
-  node = node or treeLib.get_node_at_cursor()
+  node = node or util.get_node_at_cursor()
   local filename = node.absolute_path
 
   if node.link_to and not node.nodes then
     filename = node.link_to
   elseif node.nodes ~= nil then
-    treeLib.expand_or_collapse(node)
+    node:expand_or_collapse()
 
     return
   end

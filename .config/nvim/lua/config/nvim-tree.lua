@@ -1,10 +1,10 @@
 -- Lazy loaded, make sure to only load the module in callbacks
 
 local M = {
-  "kyazdani42/nvim-tree.lua",
-  tag = "nightly",
+  "nvim-tree/nvim-tree.lua",
+  branch = "master",
   requires = {
-    "lkyazdani42/nvim-web-devicons",
+    "nvim-tree/nvim-web-devicons",
   },
   wants = {
     "nvim-tree.lua",

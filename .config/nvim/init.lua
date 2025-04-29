@@ -159,12 +159,13 @@ vim.opt.signcolumn = "number" -- Show signs in the number column
 vim.opt.splitbelow = true -- Split pane below by default
 vim.opt.splitright = true -- Split pane to the right by default
 vim.opt.scrolloff = 5 -- Always allow 5 empty "lines" beyond start and end of file
+vim.opt.winborder = "rounded" -- Rounded borders for floating windows
 
 vim.diagnostic.config({
   virtual_text = false,
   signs = true,
   float = {
-    border = "single",
+    border = "rounded",
     format = function(diagnostic)
       return string.format(
         "%s (%s) [%s]",

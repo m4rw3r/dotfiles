@@ -163,6 +163,10 @@ vim.opt.winborder = "rounded" -- Rounded borders for floating windows
 
 vim.diagnostic.config({
   virtual_text = false,
+  -- virtual_lines = {
+  --   -- Show diagnostics on current line only
+  --   current_line = true,
+  -- },
   signs = true,
   float = {
     border = "rounded",
@@ -203,10 +207,40 @@ vim.keymap.set("n", "<F3>", "<cmd>noh<CR>", { silent = true }) -- Toggle search 
 vim.keymap.set("", "<Leader>j", "<cmd>bnext<CR>", { noremap = false }) -- Navigate between buffers using Leader j/k
 vim.keymap.set("", "<Leader>k", "<cmd>bprevious<CR>", { noremap = false })
 vim.keymap.set("", "<Leader>w", "<cmd>bp|bd #<CR>", { noremap = false }) -- Close the current buffer with leader w
-vim.keymap.set("n", "<Leader>e", vim.diagnostic.open_float, { noremap = false })
 vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, { noremap = false })
 vim.keymap.set("n", "]d", vim.diagnostic.goto_next, { noremap = false })
 vim.keymap.set("n", "<Leader>v", "<c-v>", { noremap = false }) -- Make sure we can do vertical selection in Windows Terminal
+-- vim.keymap.set("n", "K", vim.lsp.buf.hover) -- Set this here to not reset it and fail with E31 No Such Mapping
+
+-- TODO: Move to config file
+local momentary_virtual_lines_active = false
+local function close_diagnostic_virtual_lines()
+  if momentary_virtual_lines_active then
+    local current_config = vim.diagnostic.config().virtual_lines
+    if type(current_config) == "table" and current_config.current_line == true then
+        vim.diagnostic.config({ virtual_lines = false })
+    end
+    momentary_virtual_lines_active = false
+  end
+end
+vim.keymap.set("n", "<Leader>e", function()
+  if momentary_virtual_lines_active then
+    close_diagnostic_virtual_lines()
+  else
+    vim.diagnostic.config({ virtual_lines = { current_line = true } })
+
+    momentary_virtual_lines_active = true
+  end
+end, { desc = "Show momentary diagnostic virtual lines (current line)", remap = true })
+vim.keymap.set("n", "<Leader>E", vim.diagnostic.open_float)
+
+local augroup = vim.api.nvim_create_augroup("MomentaryVirtualLines", { clear = true })
+
+vim.api.nvim_create_autocmd("CursorMoved", {
+  group = augroup,
+  pattern = "*",
+  callback = close_diagnostic_virtual_lines,
+})
 
 local languages = require("languages")
 

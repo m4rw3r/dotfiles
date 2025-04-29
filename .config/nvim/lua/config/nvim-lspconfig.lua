@@ -5,7 +5,8 @@ local M = {
     { "n", "<leader>D", vim.lsp.buf.type_definition },
     { "n", "K", vim.lsp.buf.hover },
     { "n", "<leader>K", vim.lsp.buf.signature_help },
-    { "n", "<leader>e", vim.diagnostic.open_float },
+    -- { "n", "<leader>K", function() vim.lsp.buf.hover({ border = "rounded" }) end },
+    -- { "n", "<leader>e", vim.diagnostic.open_float },
   },
 }
 

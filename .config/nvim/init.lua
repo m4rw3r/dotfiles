@@ -49,7 +49,14 @@ paqPlus.init(function(use)
   use({ "ygm2/rooter.nvim" })
   -- Fuzzy finder for files, and in files
   use(require("config.telescope"))
-  use({ "lewis6991/gitsigns.nvim" })
+  use({
+    "lewis6991/gitsigns.nvim",
+    config = function()
+      require("gitsigns").setup({
+        signcolumn = false,
+      })
+    end
+  })
   use({ "gpanders/editorconfig.nvim" })
 
   -- UI

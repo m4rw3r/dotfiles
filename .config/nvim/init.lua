@@ -123,6 +123,8 @@ paqPlus.init(function(use)
       require("trouble").setup({})
     end
   })
+  -- AI-assisted coding tool
+  use(require("config.codecompanion"))
 
   -- Colorschemes
   use({

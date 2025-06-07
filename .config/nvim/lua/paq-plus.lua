@@ -6,9 +6,9 @@ Provides advanced configuration options and logging capabilities
 ]]
 
 ---@class PaqPlusLogOptions
----@field file string
----@field console boolean
----@field debug boolean
+---@field file string|nil
+---@field console boolean|nil
+---@field debug boolean|nil
 
 ---@class PaqPlusOptions
 ---@field pluginPath string|nil
@@ -219,6 +219,7 @@ local function addPackage(pkg)
     log.debug("Added " .. spec.name .. " to paq")
   end
 
+  -- FIXME: Propagate and merge requires properly, and skip the use of wants
   if spec.requires then
     for _, val in pairs(spec.requires) do
       local dep = normalizeSpec(val)

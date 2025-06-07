@@ -105,12 +105,15 @@ paqPlus.init(function(use)
   })
   -- File navigator
   use(require("config.nvim-tree"))
+  -- Fast completion UI
+  use(require("config.blink-cmp"))
+
 
   -- Language integration
   --
   -- LSP
   use(require("config.nvim-lspconfig"))
-  use(require("config.nvim-cmp"))
+  -- Syntax highlighting
   use(require("config.treesitter"))
   -- Language diagnostics
   use({

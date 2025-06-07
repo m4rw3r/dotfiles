@@ -6,11 +6,13 @@ local M = {
     "nvim-lua/plenary.nvim",
     "nvim-treesitter/nvim-treesitter",
     "j-hui/fidget.nvim",
+    "nvim-telescope/telescope.nvim",
   },
   wants = {
     "nvim-lua/plenary.nvim",
     "nvim-treesitter/nvim-treesitter",
     "j-hui/fidget.nvim",
+    "nvim-telescope/telescope.nvim",
   },
   keys = {
     {

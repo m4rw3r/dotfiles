@@ -1,6 +1,22 @@
+--[[
+Paq-Plus Plugin Manager for Neovim
 
-local M = {}
-local log = {}
+Manages plugin installation and lazy loading through paq-nvim integration
+Provides advanced configuration options and logging capabilities
+]]
+
+---@class PaqPlusLogOptions
+---@field file string
+---@field console boolean
+---@field debug boolean
+
+---@class PaqPlusOptions
+---@field pluginPath string|nil
+---@field log PaqPlusLogOptions|nil
+---@field before (fun(): nil)|nil
+---@field after (fun(): nil)|nil
+
+---@type PaqPlusOptions
 local defaults = {
   pluginPath = vim.fn.stdpath("data") .. "/site/pack/paqs",
   log = {
@@ -9,18 +25,38 @@ local defaults = {
     debug = false,
   },
 }
-local options = vim.deepcopy(defaults)
-local logfile = nil
 
+---@type PaqPlusOptions
+local options = vim.deepcopy(defaults)
+---@type file*?
+local logfile = nil
+---@class Log
+---@field write fun(level: string, msg: string): nil
+---@field debug fun(msg: string): nil
+---@field error fun(msg: string): nil
+local log = {}
+
+---@param level string
+---@param msg string
 function log.write(level, msg)
   if not logfile then
-    logfile = io.open(options.log.file, "a+")
+    local err
+
+    logfile, err = io.open(options.log.file, "a+")
+
+    if logfile == nil then
+      print("PaqPlus: Error opening log-file: '" .. err .. "'")
+
+      return
+    end
   end
 
   logfile:write(string.format("[%s] %s: %s\n", os.date(), level, msg))
   logfile:flush()
 end
 
+
+---@param msg string
 function log.debug(msg)
   if not options.log or not options.log.debug then
     return
@@ -33,6 +69,7 @@ function log.debug(msg)
   log.write("DEBUG", msg)
 end
 
+---@param msg string
 function log.error(msg)
   if not options.log then
     return
@@ -45,10 +82,14 @@ function log.error(msg)
   log.write("error", msg)
 end
 
+---@param spec PaqPlusPluginSpec
+---@return boolean
 local function isLocal(spec)
   return string.sub(spec[1], 1, 1) == "."
 end
 
+---@param spec PaqPlusPluginSpec
+---@return string
 local function pluginPath(spec)
   if isLocal(spec) then
     -- Drop any trailing slashes, also remove the leading .
@@ -58,42 +99,112 @@ local function pluginPath(spec)
   end
 end
 
+---@param spec PaqPlusPluginSpec
+---@return boolean
 local function isInstalled(spec)
   return vim.fn.isdirectory(pluginPath(spec)) ~= 0
 end
 
+---@class PaqPlusCmd
+---@field [1] string
+---@field [2] string|fun(args: vim.api.keyset.create_user_command.command_args):nil
+---@field [3] vim.api.keyset.user_command
+
+---@class PaqPlusKey
+---@field [1] string
+---@field [2] string
+---@field [3] string|fun():nil
+---@field [4] vim.keymap.set.Opts?
+
+---@class PaqPlusPlugin
+---@field [1] string
+---@field name string|nil
+---@field as string|nil
+---@field opt boolean|nil
+---@field requires string|string[]|nil
+---@field branch string|nil
+---@field pin boolean|nil
+---@field build string|nil
+---@field url string|nil
+---@field keys PaqPlusKey[]|nil
+---@field cmds PaqPlusCmd[]|nil
+---@field config (fun(): nil)|nil
+---@field wants string[]|nil
+
+---@class PaqPlusPluginSpec
+---@field [1] string
+---@field name string
+---@field as string
+---@field loaded boolean
+---@field opt boolean
+---@field requires string[]
+---@field branch string|nil
+---@field pin boolean|nil
+---@field build string|nil
+---@field url string|nil
+---@field keys PaqPlusKey[]
+---@field cmds PaqPlusCmd[]
+---@field config fun(): nil
+---@field wants string[]
+
+---@class PaqSpec
+---@field [1] string
+---@field as string
+---@field opt boolean
+---@field branch string|nil
+---@field pin string|nil
+---@field build string|nil
+---@field url string|nil
+
+---@type table<string, PaqPlusPluginSpec>
 local specs = {}
+---@type PaqSpec[]
 local packages = {}
 
+local function noop()
+end
+
+--- Normalize plugin spec to consistent format
+---@param spec string|PaqPlusPlugin
+---@return PaqPlusPluginSpec
 local function normalizeSpec(spec)
   if type(spec) == "string" then
     spec = { spec }
   end
 
-  -- TODO: Url?
-  spec.name = spec.as or spec[1]:match("/([%w-_.]+)$")
-  spec.loaded = not spec.opt
-
-  if type(spec.requires) == "string" then
-    spec.requires = { spec.requires }
-  end
-
-  return spec
+  return {
+    spec[1],
+    name = spec.as or spec[1]:match("/([%w-_.]+)$"),
+    loaded = not spec.opt,
+    opt = spec.opt,
+    requires = type(spec.requires) == "string" and { spec.requires } or spec.requires or {},
+    as = spec.as,
+    branch = spec.branch,
+    pin = spec.pin,
+    build = spec.build,
+    url = spec.url,
+    keys = spec.keys or {},
+    cmds = spec.cmds or {},
+    config = spec.config or noop,
+    wants = spec.wants or {},
+  }
 end
 
-local function addPackage(spec)
-  spec = normalizeSpec(spec)
+--- Add plugin to registry with dependency resolution
+---@param pkg string|PaqPlusPlugin
+local function addPackage(pkg)
+  local spec = normalizeSpec(pkg)
 
   -- TODO: Deduplicate and merge, since requires can be in conflict
-  if specs[name] then
-    log.debug(name .. " is already added, overwriting")
+  if specs[spec.name] then
+    log.debug(spec.name .. " is already added, overwriting")
   end
 
   specs[spec.name] = spec
 
   if isLocal(spec) then
     -- Local plugin
-    log.debug("Added " .. name .. " as a local plugin")
+    log.debug("Added " .. spec.name .. " as a local plugin")
   else
     table.insert(packages, {
       spec[1],
@@ -109,8 +220,8 @@ local function addPackage(spec)
   end
 
   if spec.requires then
-    for _, dep in pairs(spec.requires) do
-      dep = normalizeSpec(dep)
+    for _, val in pairs(spec.requires) do
+      local dep = normalizeSpec(val)
 
       -- We cannot overwrite laziness if it is already set as eager elsewhere
       -- Instead a manual add of the package will change eager to lazy
@@ -121,34 +232,34 @@ local function addPackage(spec)
   end
 end
 
+---@param spec PaqPlusPluginSpec
 local function registerKeys(spec)
-  if not spec.keys or vim.tbl_count(spec.keys) == 0 then
+  if vim.tbl_count(spec.keys) == 0 then
     return
   end
 
   log.debug("Registering keys for plugin " .. spec.name)
 
   for _, key in pairs(spec.keys) do
-    if type(key) == "table" and vim.tbl_count(key) >= 3 then
-      vim.keymap.set(key[1], key[2], key[3], key[4] or {})
-    end
+    vim.keymap.set(key[1], key[2], key[3], key[4] or {})
   end
 end
 
+---@param spec PaqPlusPluginSpec
 local function registerCmds(spec)
-  if not spec.cmds or vim.tbl_count(spec.cmds) == 0 then
+  if vim.tbl_count(spec.cmds) == 0 then
     return
   end
 
   log.debug("Registering commands on demand for plugin " .. spec.name)
 
   for _, cmd in pairs(spec.cmds) do
-    if type(cmd) == "table" and vim.tbl_count(cmd) >= 2 then
-      vim.api.nvim_create_user_command(cmd[1], cmd[2], cmd[3] or {})
-    end
+    vim.api.nvim_create_user_command(cmd[1], cmd[2], cmd[3] or {})
   end
 end
 
+--- Lazy-load plugin when triggered
+---@param spec PaqPlusPluginSpec
 local function lazyLoad(spec)
   if spec.loaded then
     return
@@ -198,14 +309,15 @@ end
 
 -- FIXME: events
 -- FIXME: filetypes
+---@param spec PaqPlusPluginSpec
 local function lazyRegisterCommands(spec)
-  if not spec.cmd or vim.tbl_count(spec.cmd) == 0 then
+  if not spec.cmds or vim.tbl_count(spec.cmds) == 0 then
     return
   end
 
   log.debug("Registering lazy-loading commands for plugin " .. spec.name)
 
-  for _, cmd in pairs(spec.cmd or {}) do
+  for _, cmd in pairs(spec.cmds or {}) do
     if type(cmd) == "string" then
       cmd = { cmd }
     end
@@ -248,8 +360,9 @@ local function lazyRegisterCommands(spec)
   end
 end
 
+---@param spec PaqPlusPluginSpec
 local function lazyRegisterKeys(spec)
-  if not spec.keys or vim.tbl_count(spec.keys) == 0 then
+  if vim.tbl_count(spec.keys) == 0 then
     return
   end
 
@@ -257,10 +370,6 @@ local function lazyRegisterKeys(spec)
 
   for _, key in pairs(spec.keys or {}) do
     local called = false
-
-    if type(key) == "string" then
-      key = { "", key }
-    end
 
     -- Reuse command configuration if we have one
     local opts = vim.deepcopy(key[4]) or {}
@@ -290,7 +399,7 @@ local function lazyRegisterKeys(spec)
           if c == 0 then
             break
           end
-          extra = extra .. vim.fn.nr2char(c)
+          extra = extra .. (type(c) == "number" and vim.fn.nr2char(c) or c)
         end
 
         local escaped_keys = vim.api.nvim_replace_termcodes(key[2] .. extra, true, true, true)
@@ -322,14 +431,22 @@ local function loadPackage(spec)
   end
 end
 
+---@class PaqPlus
+---@field reset fun(): nil
+---@field bootstrap fun(opts: PaqPlusOptions): nil
+---@field init fun(fn: fun(add: fun(spec: PaqPlusPlugin|string)): nil): nil
+---@field load fun(): nil
+local M = {}
+
+--- Reset all internal state and reapply defaults
 function M.reset()
   specs = {}
   packages = {}
   options = vim.deepcopy(defaults)
 end
 
--- TODO: Parameters (paq options)
--- Bootstraps paq-nvim if not already installed
+--- Bootstrap paq-nvim if not installed
+---@param opts PaqPlusOptions
 function M.bootstrap(opts)
   options = vim.tbl_deep_extend("force", options, opts or {})
 
@@ -355,6 +472,8 @@ function M.bootstrap(opts)
   end
 end
 
+--- Register plugins and configurations
+---@param fn fun(add: fun(spec: PaqPlusPlugin|string)): nil
 function M.init(fn)
   log.debug("Loading paq")
 
@@ -371,6 +490,7 @@ function M.init(fn)
   vim.schedule(M.load)
 end
 
+--- Load and configure all registered plugins
 function M.load()
   log.debug("Loading packages")
 

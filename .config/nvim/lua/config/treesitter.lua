@@ -1,5 +1,6 @@
 local languages = require("config.languages")
 
+---@type PaqPlusPlugin
 local M = {
   "nvim-treesitter/nvim-treesitter",
 }

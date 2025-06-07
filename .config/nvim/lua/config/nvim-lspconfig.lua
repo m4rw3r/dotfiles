@@ -54,6 +54,7 @@ local function stop_clients(names)
   return clients
 end
 
+---@type PaqPlusPlugin
 local M = {
   "neovim/nvim-lspconfig",
   keys = {

@@ -1,5 +1,6 @@
 -- Lazy loaded, make sure to only load the module in callbacks
 
+---@type PaqPlusPlugin
 local M = {
   "nvim-tree/nvim-tree.lua",
   branch = "master",

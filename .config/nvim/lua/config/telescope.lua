@@ -1,3 +1,4 @@
+---@type PaqPlusPlugin
 local M = {
   "nvim-telescope/telescope.nvim",
   requires = {

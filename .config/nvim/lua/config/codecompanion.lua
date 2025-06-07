@@ -24,7 +24,8 @@ local M = {
 }
 
 function M.config()
-  local codecompanion = require("codecompanion")
+  -- LuaLS finds some extension-files, causing the module to appear as a function
+  local codecompanion = require("codecompanion") --[[@as CodeCompanion]]
 
   codecompanion.setup({
     strategies = {
@@ -34,8 +35,8 @@ function M.config()
           -- Send prompt with Ctrl + Enter
           send = {
             modes = {
-              n = "<C-CR>",
-              i = "<C-CR>",
+              n = "<C-s>",
+              i = "<C-s>",
             },
             opts = {},
           },

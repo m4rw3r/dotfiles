@@ -43,6 +43,7 @@ paqPlus.bootstrap({
   end
 })
 paqPlus.init(function(use)
+  -- We need the base plugin manager
   use({ "savq/paq-nvim" })
 
   -- Lua bytecode cache to speed up launching
@@ -62,6 +63,7 @@ paqPlus.init(function(use)
       })
     end
   })
+  -- Editorconfig file support, might not be needed anymore
   use({ "gpanders/editorconfig.nvim" })
 
   -- UI
@@ -93,7 +95,6 @@ paqPlus.init(function(use)
   -- Rainbow parenthesis using treesitter
   use({ "HiPhish/rainbow-delimiters.nvim" })
   -- Show colors like #f0f
-  -- TODO: no longer works
   use({
     "norcalli/nvim-colorizer.lua",
     config = function()
@@ -102,6 +103,7 @@ paqPlus.init(function(use)
       colorizer.setup()
     end
   })
+  -- File navigator
   use(require("config.nvim-tree"))
 
   -- Language integration
@@ -110,6 +112,7 @@ paqPlus.init(function(use)
   use(require("config.nvim-lspconfig"))
   use(require("config.nvim-cmp"))
   use(require("config.treesitter"))
+  -- Language diagnostics
   use({
     "folke/trouble.nvim",
     requires = { "kyazdani42/nvim-web-devicons" },

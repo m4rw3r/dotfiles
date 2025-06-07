@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/sumneko/vscode-lua/master/setting/schema.json",
+  "diagnostics": {
+    "enable": true,
+    "globals": [
+      "vim"
+    ]
+  },
+  "telemetry": {
+    "enable": false
+  },
+  "workspace.library": [
+    "$VIMRUNTIME",
+    "$XDG_DATA_HOME/nvim/site"
+  ]
+}

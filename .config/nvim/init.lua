@@ -26,6 +26,11 @@ vim.g.loaded_fzf = true
 -- Do not load old filetype.vim, use the new filetype.lua
 vim.g.do_filetype_lua = true
 vim.g.did_load_filetypes = false
+-- Disable the integration providers, we only run lua here
+vim.g.loaded_node_provider = 0
+vim.g.loaded_perl_provider = 0
+vim.g.loaded_python3_provider = 0
+vim.g.loaded_ruby_provider = 0
 
 local paqPlus = require("paq-plus")
 

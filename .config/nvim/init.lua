@@ -122,7 +122,34 @@ paqPlus.init(function(use)
   use({
     "RRethy/nvim-base16",
     config = function()
+      local base16 = require("base16-colorscheme")
+
+      -- Change floating window decoration background
+      vim.api.nvim_create_autocmd({ "VimEnter", "ColorScheme" }, {
+        group = vim.api.nvim_create_augroup("Color", {}),
+        pattern = "*",
+        callback = function ()
+          base16.highlight.NormalFloat = {
+            guifg = base16.colors.base05,
+            guibg = base16.colors.base01,
+            gui = nil,
+            guisp = nil,
+            ctermfg = base16.colors.cterm05,
+            ctermbg = base16.colors.cterm01
+          }
+          base16.highlight.FloatBorder = {
+            guifg = base16.colors.base02,
+            guibg = base16.colors.base01,
+            gui = nil,
+            guisp = nil,
+            ctermfg = base16.colors.cterm02,
+            ctermbg = base16.colors.cterm01
+          }
+        end
+      })
+
       vim.cmd("colorscheme base16-tomorrow-night")
+
       -- Shortcuts to swap the theme
       vim.api.nvim_create_user_command(
         "Dark",
@@ -171,7 +198,7 @@ vim.opt.signcolumn = "number" -- Show signs in the number column
 vim.opt.splitbelow = true -- Split pane below by default
 vim.opt.splitright = true -- Split pane to the right by default
 vim.opt.scrolloff = 5 -- Always allow 5 empty "lines" beyond start and end of file
-vim.opt.winborder = "rounded" -- Rounded borders for floating windows
+vim.opt.winborder = "solid" -- Rounded borders for floating windows
 
 vim.diagnostic.config({
   virtual_text = false,
@@ -181,7 +208,9 @@ vim.diagnostic.config({
   -- },
   signs = true,
   float = {
-    border = "rounded",
+    -- border = vim.opt.winborder,
+    -- We have no solid border in diagnostics
+    border = { " ", " ", " ", " ", " ", " ", " ", " " },
     format = function(diagnostic)
       return string.format(
         "%s (%s) [%s]",

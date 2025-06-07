@@ -16,6 +16,8 @@ vim.api.nvim_create_user_command(
 function M.config()
   local treesitter_configs = require("nvim-treesitter.configs")
 
+  vim.treesitter.language.register("markdown", "codecompanion")
+
   treesitter_configs.setup({
     highlight = {
       enable = true,

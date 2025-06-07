@@ -129,34 +129,58 @@ paqPlus.init(function(use)
   })
   -- AI-assisted coding tool
   use(require("config.codecompanion"))
+  use({
+    "MeanderingProgrammer/render-markdown.nvim",
+    requires = { "nvim-treesitter/nvim-treesitter" },
+    config = function()
+      -- FIXME: Headings need background colours
+      require('render-markdown').setup({
+        file_types = { "markdown", "codecompanion" },
+        render_modes = true,
+        overrides = {
+          buftype = {
+            -- Make sure we trim the space around code-blocks in hover
+            nofile = {
+              anti_conceal = { enabled = false },
+              code = { border = "hide", style = "normal" }
+            },
+          },
+          filetype = {
+            -- But override the filetype of codecompanion to show full code-blocks
+            codecompanion = {
+              code = { style = "full", border = "thick", sign = false },
+            },
+          }
+        },
+      })
+    end
+  })
 
   -- Colorschemes
   use({
     "RRethy/nvim-base16",
     config = function()
       local base16 = require("base16-colorscheme")
+      local hl = base16.highlight
 
       -- Change floating window decoration background
       vim.api.nvim_create_autocmd({ "VimEnter", "ColorScheme" }, {
         group = vim.api.nvim_create_augroup("Color", {}),
         pattern = "*",
         callback = function ()
-          base16.highlight.NormalFloat = {
-            guifg = base16.colors.base05,
-            guibg = base16.colors.base01,
-            gui = nil,
-            guisp = nil,
-            ctermfg = base16.colors.cterm05,
-            ctermbg = base16.colors.cterm01
-          }
-          base16.highlight.FloatBorder = {
-            guifg = base16.colors.base02,
-            guibg = base16.colors.base01,
-            gui = nil,
-            guisp = nil,
-            ctermfg = base16.colors.cterm02,
-            ctermbg = base16.colors.cterm01
-          }
+          hl.NormalFloat = { guifg = base16.colors.base05, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm05, ctermbg = base16.colors.cterm01 }
+          hl.FloatBorder = { guifg = base16.colors.base02, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm02, ctermbg = base16.colors.cterm01 }
+
+          -- Better for markdown headings
+          hl.DiffAdd     = { guifg = base16.colors.base0B, guibg = base16.colors.base02, gui = nil, guisp = nil, ctermfg = base16.colors.cterm0B, ctermbg = base16.colors.cterm02 }
+          hl.DiffChange  = { guifg = base16.colors.base03, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm03, ctermbg = base16.colors.cterm01 }
+          hl.DiffDelete  = { guifg = base16.colors.base08, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm08, ctermbg = base16.colors.cterm01 }
+          hl.DiffText    = { guifg = base16.colors.base0D, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm0D, ctermbg = base16.colors.cterm01 }
+          hl.DiffAdded   = { guifg = base16.colors.base0B, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm0B, ctermbg = base16.colors.cterm01 }
+          hl.DiffFile    = { guifg = base16.colors.base08, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm08, ctermbg = base16.colors.cterm01 }
+          hl.DiffNewFile = { guifg = base16.colors.base0B, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm0B, ctermbg = base16.colors.cterm01 }
+          hl.DiffLine    = { guifg = base16.colors.base0D, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm0D, ctermbg = base16.colors.cterm01 }
+          hl.DiffRemoved = { guifg = base16.colors.base08, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm08, ctermbg = base16.colors.cterm01 }
         end
       })
 

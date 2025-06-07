@@ -53,6 +53,14 @@ function M.config()
       end
     },
   })
+
+  vim.api.nvim_create_autocmd("User", {
+    pattern = "CodeCompanionChatCreated",
+    callback = function(request)
+      -- Manually start treesitter to get embedded code highlights
+      vim.treesitter.start()
+    end,
+  })
 end
 
 return M

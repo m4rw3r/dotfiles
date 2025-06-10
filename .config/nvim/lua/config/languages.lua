@@ -1,4 +1,5 @@
 
+---@type LanguageConfiguration
 local M = {
   indents = {
     cabal = { expandtab = true },

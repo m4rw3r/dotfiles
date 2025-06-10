@@ -1,7 +1,16 @@
--- TODO: Separate config from code?
-
 local M = {}
 
+---@class LanguageConfiguration
+---@field indents table<string, LanguageConfigurationIndent>
+---@field syntax string[]
+
+---@class LanguageConfigurationIndent
+---@field expandtab boolean|nil
+---@field indent number|nil
+---@field trim boolean|nil
+---@field autoindent boolean|nil
+
+--- Strips the trailing whitespace in the current buffer
 local function stripTrailingWhitespace()
   local c = vim.api.nvim_win_get_cursor(0)
 
@@ -18,6 +27,7 @@ vim.api.nvim_create_user_command(
   }
 )
 
+---@param indentSettings table<string, LanguageConfigurationIndent>
 function M.registerIndentAutogroup(indentSettings)
   local indentgroup = vim.api.nvim_create_augroup("indent", {})
 

@@ -4,15 +4,9 @@ local M = {
   "olimorris/codecompanion.nvim",
   requires = {
     "nvim-lua/plenary.nvim",
-    -- "nvim-treesitter/nvim-treesitter",
+    "nvim-treesitter/nvim-treesitter",
     "j-hui/fidget.nvim",
-    -- "nvim-telescope/telescope.nvim",
-  },
-  wants = {
-    "nvim-lua/plenary.nvim",
-    -- "nvim-treesitter/nvim-treesitter",
-    "j-hui/fidget.nvim",
-    -- "nvim-telescope/telescope.nvim",
+    "nvim-telescope/telescope.nvim",
   },
   keys = {
     {

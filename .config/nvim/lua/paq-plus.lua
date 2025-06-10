@@ -51,7 +51,7 @@ function log.write(level, msg)
     end
   end
 
-  logfile:write(string.format("[%s] %s: %s\n", os.date(), level, msg))
+  logfile:write(string.format("[%s] [%s]: %s\n", os.date(), level, msg))
   logfile:flush()
 end
 
@@ -70,6 +70,19 @@ function log.debug(msg)
 end
 
 ---@param msg string
+function log.warn(msg)
+  if not options.log then
+    return
+  end
+
+  if options.log.console then
+    print("[WARN] paq+: " .. msg)
+  end
+
+  log.write("WARN", msg)
+end
+
+---@param msg string
 function log.error(msg)
   if not options.log then
     return
@@ -79,7 +92,7 @@ function log.error(msg)
     print("[ERROR] paq+: " .. msg)
   end
 
-  log.write("error", msg)
+  log.write("ERROR", msg)
 end
 
 ---@param spec PaqPlusPluginSpec
@@ -105,6 +118,12 @@ local function isInstalled(spec)
   return vim.fn.isdirectory(pluginPath(spec)) ~= 0
 end
 
+---@param url string
+---@return string
+local function toName(url)
+  return url:match("/([%w-_.]+)$")
+end
+
 ---@class PaqPlusCmd
 ---@field [1] string
 ---@field [2] string|fun(args: vim.api.keyset.create_user_command.command_args):nil
@@ -121,7 +140,7 @@ end
 ---@field name string|nil
 ---@field as string|nil
 ---@field opt boolean|nil
----@field requires string|string[]|nil
+---@field requires string[]|nil
 ---@field branch string|nil
 ---@field pin boolean|nil
 ---@field build string|nil
@@ -136,7 +155,7 @@ end
 ---@field name string
 ---@field as string
 ---@field loaded boolean
----@field opt boolean
+---@field opt boolean|nil
 ---@field requires string[]
 ---@field branch string|nil
 ---@field pin boolean|nil
@@ -144,13 +163,13 @@ end
 ---@field url string|nil
 ---@field keys PaqPlusKey[]
 ---@field cmds PaqPlusCmd[]
----@field config fun(): nil
+---@field config (fun(): nil)|nil
 ---@field wants string[]
 
 ---@class PaqSpec
 ---@field [1] string
 ---@field as string
----@field opt boolean
+---@field opt boolean|nil
 ---@field branch string|nil
 ---@field pin string|nil
 ---@field build string|nil
@@ -158,13 +177,8 @@ end
 
 ---@type table<string, PaqPlusPluginSpec>
 local specs = {}
----@type PaqSpec[]
-local packages = {}
 
-local function noop()
-end
-
---- Normalize plugin spec to consistent format
+---Normalize plugin spec to consistent format
 ---@param spec string|PaqPlusPlugin
 ---@return PaqPlusPluginSpec
 local function normalizeSpec(spec)
@@ -172,12 +186,13 @@ local function normalizeSpec(spec)
     spec = { spec }
   end
 
+  ---@type PaqPlusPluginSpec
   return {
     spec[1],
-    name = spec.as or spec[1]:match("/([%w-_.]+)$"),
-    loaded = not spec.opt,
+    name = spec.as or toName(spec[1]),
+    loaded = false,
     opt = spec.opt,
-    requires = type(spec.requires) == "string" and { spec.requires } or spec.requires or {},
+    requires = spec.requires or {},
     as = spec.as,
     branch = spec.branch,
     pin = spec.pin,
@@ -185,51 +200,57 @@ local function normalizeSpec(spec)
     url = spec.url,
     keys = spec.keys or {},
     cmds = spec.cmds or {},
-    config = spec.config or noop,
+    config = spec.config,
     wants = spec.wants or {},
   }
 end
 
---- Add plugin to registry with dependency resolution
+---@param parent string Name of parent
+---@param dep string Dependency name
+---@param opt boolean If the dependency is lazy
+local function registerDependency(parent, dep, opt)
+  if specs[dep] then
+    if specs[dep].opt and opt ~= true then
+      log.warn(parent .. " requires " .. toName(dep) .. " to be eager")
+
+      specs[dep].opt = false
+
+      for _, nested in pairs(specs[dep].requires) do
+        registerDependency(toName(dep), nested, opt)
+      end
+    end
+  else
+    log.debug(parent .. " requires " .. (opt and "lazy " or "") .. "dependency " .. toName(dep))
+
+    specs[dep] = normalizeSpec({
+      dep,
+      opt = opt,
+    })
+  end
+end
+
+---Add plugin to registry with dependency resolution
 ---@param pkg string|PaqPlusPlugin
 local function addPackage(pkg)
   local spec = normalizeSpec(pkg)
 
-  -- TODO: Deduplicate and merge, since requires can be in conflict
-  if specs[spec.name] then
-    log.debug(spec.name .. " is already added, overwriting")
-  end
+  if specs[spec[1]] then
+    log.warn(spec.name .. " is already added, overwriting")
 
-  specs[spec.name] = spec
+    ---Make sure to keep opt setting, if set
+    if specs[spec[1]].opt == false and spec.opt == true then
+      log.warn(spec.name .. " requested to be lazy, required to NOT be by dependent")
 
-  if isLocal(spec) then
-    -- Local plugin
-    log.debug("Added " .. spec.name .. " as a local plugin")
-  else
-    table.insert(packages, {
-      spec[1],
-      as = spec.as,
-      opt = spec.opt,
-      branch = spec.branch,
-      pin = spec.pin,
-      build = spec.build,
-      url = spec.url,
-    })
-
-    log.debug("Added " .. spec.name .. " to paq")
-  end
-
-  -- FIXME: Propagate and merge requires properly, and skip the use of wants
-  if spec.requires then
-    for _, val in pairs(spec.requires) do
-      local dep = normalizeSpec(val)
-
-      -- We cannot overwrite laziness if it is already set as eager elsewhere
-      -- Instead a manual add of the package will change eager to lazy
-      dep.opt = spec[dep.name] and spec[dep.name].opt or spec.opt
-
-      addPackage(dep)
+      spec.opt = false
     end
+  end
+
+  log.debug(spec.name .. " added as " .. (spec.opt and "lazy" or "eager"))
+
+  specs[spec[1]] = spec
+
+  for _, dep in pairs(spec.requires) do
+    registerDependency(spec.name, dep, spec.opt)
   end
 end
 
@@ -239,7 +260,7 @@ local function registerKeys(spec)
     return
   end
 
-  log.debug("Registering keys for plugin " .. spec.name)
+  log.debug(spec.name .. " registering keys")
 
   for _, key in pairs(spec.keys) do
     vim.keymap.set(key[1], key[2], key[3], key[4] or {})
@@ -252,17 +273,27 @@ local function registerCmds(spec)
     return
   end
 
-  log.debug("Registering commands on demand for plugin " .. spec.name)
+  log.debug(spec.name .. " registering commands")
 
   for _, cmd in pairs(spec.cmds) do
     vim.api.nvim_create_user_command(cmd[1], cmd[2], cmd[3] or {})
   end
 end
 
+local function registerAutocmds(spec)
+  -- TODO?
+end
+
 --- Lazy-load plugin when triggered
 ---@param spec PaqPlusPluginSpec
 local function lazyLoad(spec)
   if spec.loaded then
+    return
+  end
+
+  if not spec.opt then
+    log.error(spec.name .. " is not lazy, skipping lazyLoad")
+
     return
   end
 
@@ -274,36 +305,37 @@ local function lazyLoad(spec)
     return
   end
 
-  for _, name in pairs(spec.wants or {}) do
-    if specs[name] then
-      log.debug("Lazy plugin " .. spec.name .. " wants plugin " .. name)
+  for _, dep in pairs(spec.requires) do
+    if specs[dep] then
+      log.debug(spec.name .. " lazy-load wants " .. dep)
 
-      lazyLoad(specs[name])
+      lazyLoad(specs[dep])
     else
-      log.error("Lazy plugin " .. spec.name .. " wants missing plugin '" .. name)
+      log.error(spec.name .. " lazy-load wants missing plugin " .. dep)
     end
   end
 
   if not isLocal(spec) then
-    log.debug("Lazy-loading plugin " .. spec.name)
+    log.debug(spec.name .. " lazy-loading package")
 
     vim.cmd("packadd " .. spec.name)
   else
-    log.debug("Lazy-loading local plugin " .. spec.name)
+    log.debug(spec.name .. " lazy-loading local package")
 
     vim.o.runtimepath = vim.o.runtimepath .. "," .. vim.fn.escape(pluginPath(spec), '\\,')
   end
 
   if spec.config then
-    log.debug("Configuring plugin " .. spec.name)
+    log.debug(spec.name .. "is configuring")
 
     spec.config()
   end
 
   registerKeys(spec)
   registerCmds(spec)
+  registerAutocmds(spec)
 
-  log.debug("Finished lazy-loading " .. spec.name)
+  log.debug(spec.name .. " finished lazy-loading")
 
   -- TODO: Load after?
 end
@@ -316,7 +348,7 @@ local function lazyRegisterCommands(spec)
     return
   end
 
-  log.debug("Registering lazy-loading commands for plugin " .. spec.name)
+  log.debug(spec.name .. " registers lazy-loading commands")
 
   for _, cmd in pairs(spec.cmds or {}) do
     if type(cmd) == "string" then
@@ -367,7 +399,7 @@ local function lazyRegisterKeys(spec)
     return
   end
 
-  log.debug("Registering lazy-loading keys for plugin " .. spec.name)
+  log.debug(spec.name .. " registers lazy-loading keys")
 
   for _, key in pairs(spec.keys or {}) do
     local called = false
@@ -412,41 +444,70 @@ local function lazyRegisterKeys(spec)
   end
 end
 
-local function loadPackage(spec)
+---@param spec PaqPlusPluginSpec
+local function lazyRegisterAutocmds(spec)
+  if not spec.filetypes then
+    return
+  end
+
+  vim.api.nvim_create_autocmd(
+    {"FileType"},
+    {
+      pattern = spec.filetypes,
+      callback = function()
+        lazyLoad(spec)
+      end
+    }
+  )
+end
+
+---@param spec PaqPlusPluginSpec
+local function loadPackage(spec, force)
   if not isInstalled(spec) then
-    log.error("Failed to configure " .. spec.name .. ", plugin not installed")
+    log.error(spec.name .. " failed to configure, plugin not installed in " .. pluginPath(spec))
 
     return
   end
 
-  if spec.opt then
+  if spec.loaded then
+    return
+  end
+
+  for _, dep in pairs(spec.requires) do
+    loadPackage(specs[dep])
+  end
+
+  if spec.opt and not force then
     lazyRegisterKeys(spec)
     lazyRegisterCommands(spec)
+    lazyRegisterAutocmds(spec)
   elseif spec.config then
-    log.debug("Configuring " .. spec.name)
+    log.debug(spec.name .. " configuring...")
 
+    spec.loaded = true
     spec.config()
 
     registerKeys(spec)
     registerCmds(spec)
+
+    log.debug(spec.name .. " finished")
   end
 end
 
 ---@class PaqPlus
 ---@field reset fun(): nil
 ---@field bootstrap fun(opts: PaqPlusOptions): nil
----@field init fun(fn: fun(add: fun(spec: PaqPlusPlugin|string)): nil): nil
+---@field init fun(fn: fun(add: fun(pkg: PaqPlusPlugin|string)): nil): nil
 ---@field load fun(): nil
 local M = {}
 
---- Reset all internal state and reapply defaults
+---Reset all internal state and reapply defaults
 function M.reset()
   specs = {}
-  packages = {}
   options = vim.deepcopy(defaults)
 end
 
---- Bootstrap paq-nvim if not installed
+---Bootstrap paq-nvim if not installed
 ---@param opts PaqPlusOptions
 function M.bootstrap(opts)
   options = vim.tbl_deep_extend("force", options, opts or {})
@@ -473,8 +534,8 @@ function M.bootstrap(opts)
   end
 end
 
---- Register plugins and configurations
----@param fn fun(add: fun(spec: PaqPlusPlugin|string)): nil
+---Register plugins and configurations
+---@param fn fun(add: fun(pkg: PaqPlusPlugin|string)): nil
 function M.init(fn)
   log.debug("Loading paq")
 
@@ -483,6 +544,27 @@ function M.init(fn)
   fn(addPackage)
 
   log.debug("Registering paq packages")
+
+  ---@type PaqSpec[]
+  local packages = {}
+
+  for _, spec in pairs(specs) do
+    if isLocal(spec) then
+      log.debug(spec.name .. " is a local plugin")
+    else
+      table.insert(packages, {
+        spec[1],
+        as = spec.as,
+        opt = spec.opt,
+        branch = spec.branch,
+        pin = spec.pin,
+        build = spec.build,
+        url = spec.url,
+      })
+
+      log.debug(spec.name .. " added to paq")
+    end
+  end
 
   paq(packages)
 
@@ -500,6 +582,16 @@ function M.load()
   end
 
   log.debug("Done loading packages")
+end
+
+function M.loadall()
+  log.debug("Loading all packages")
+
+  for _, spec in pairs(specs) do
+    lazyLoad(spec)
+  end
+
+  log.debug("Done loading all packages")
 end
 
 return M

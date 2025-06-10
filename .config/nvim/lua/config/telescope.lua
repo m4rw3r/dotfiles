@@ -5,15 +5,7 @@ local M = {
     "nvim-lua/plenary.nvim",
     "nvim-telescope/telescope-fzy-native.nvim",
   },
-  -- Use wants instead of after to make sure we load the required modules
-  -- before running telescope:
-  wants = {
-    "nvim-lua/plenary.nvim",
-    "nvim-telescope/telescope-fzy-native.nvim",
-  },
-  -- FIXME: Adjust once we have working lazy loading with merging, codecompanion requires this and it will overwrite
-  -- Lazy, does not work
-  --opt = true,
+  opt = true,
   -- Important that this require does not immediately perform further
   -- requires, but that it is deferred to the config function:
   keys = {

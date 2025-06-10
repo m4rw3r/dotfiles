@@ -1,20 +1,24 @@
 --- NeoVIM Kitty integration in lua.
---
--- This module requires two kittens installed in Kitty to provide the key
--- forwarding as well as the window-switching:
---
--- * ~/.config/kitty/neighboring_window_vim.py
--- * ~/.config/kitty/neighboring_window.py
+---
+---This module requires two kittens installed in Kitty to provide the key
+---forwarding as well as the window-switching:
+---
+--- * ~/.config/kitty/neighboring_window_vim.py
+--- * ~/.config/kitty/neighboring_window.py
+
+---@alias KittyDirection "left"|"bottom"|"up"|"right"
+---@alias VimDirection "h"|"j"|"k"|"l"
 
 local M = {}
 
---- Kitty always sets KITTY_INSTALLATION_DIR env-variable for integration purposes.
+---Kitty always sets KITTY_INSTALLATION_DIR env-variable for integration purposes.
 M.in_kitty = os.getenv("KITTY_INSTALLATION_DIR") ~= nil
 ---
 M.listen_on = os.getenv("KITTY_LISTEN_ON")
 M.enabled = M.in_kitty
 
---- Tells kitty to swap window
+---Tells kitty to swap window
+---@param kittyDirection KittyDirection
 function M.navigateKitty(kittyDirection)
   if M.listen_on then
     local output = vim.fn.system({"kitty", "@", "kitten", "neighboring_window.py", kittyDirection})
@@ -28,15 +32,16 @@ function M.navigateKitty(kittyDirection)
   end
 end
 
---- Wrapper around normal ":wincmd direction-key" function
+---Wrapper around normal ":wincmd direction-key" function
+---@param vimDirection VimDirection
 function M.navigateVim(vimDirection)
   return vim.api.nvim_command("wincmd " .. vimDirection)
 end
 
---- Kitty-aware window-navigation
--- @param vimDirection One of the letters hjkl
--- @param kittyDirection One of "left", "bottom", "up", "right"
--- @param A callback which will attempt to navigate when triggered
+---Kitty-aware window-navigation
+---@param vimDirection VimDirection
+---@param kittyDirection KittyDirection
+---@return fun() callback A callback which will attempt to navigate when triggered
 function M.navigate(vimDirection, kittyDirection)
   return function()
     if M.enabled then
@@ -94,7 +99,7 @@ end
 --
 -- @param cmd Command
 -- @param args List of command arguments
-function runInTty(cmd, args, callback)
+local function runInTty(cmd, args, callback)
   -- Use LibUV to manually control file descriptors
   local uv = vim.loop
   local data = {}

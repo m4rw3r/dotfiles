@@ -2,9 +2,7 @@ local util = require("nvim-tree-vinegar.util")
 
 local treeCore = require("nvim-tree.core")
 local treeEvents = require("nvim-tree.events")
-local treeLib = require("nvim-tree.lib")
 local treeUtils = require("nvim-tree.utils")
-local treeView = require("nvim-tree.view")
 
 -- TODO: Add standard actions which do not need to be modified
 local M = {}
@@ -49,7 +47,7 @@ function M.changeDir(node)
 
   if node.name == ".." then
     -- TODO: Replace treeUtils with core-functions?
-    filename = vim.fn.fnamemodify(treeUtils.path_remove_trailing(treeCore.get_cwd()), ":h")
+    filename = vim.fn.fnamemodify(treeUtils.path_remove_trailing(treeCore.get_cwd() or ""), ":h")
   elseif node.link_to then
     filename = node.link_to
   else
@@ -64,9 +62,29 @@ function M.changeDir(node)
   -- TODO: Maybe use local cd (:lcd) instead?
   vim.cmd("cd " .. vim.fn.fnameescape(filename))
 
-  treeCore.init(filename)
+  treeCore.init(filename, "nvim-tree-vinegar.changeDir")
   util.drawTree()
 end
+
+-- List of window options the new window will set
+local PRESERVE_WINOPTS = {
+  "relativenumber",
+  "number",
+  "list",
+  "foldenable",
+  "winfixwidth",
+  "winfixheight",
+  "spell",
+  "signcolumn",
+  "foldmethod",
+  "foldcolumn",
+  "cursorcolumn",
+  "cursorline",
+  "cursorlineopt",
+  "colorcolumn",
+  "wrap",
+  "winhl",
+}
 
 -- We have to manually reimplement parts of
 -- open_replacing_current_buffer in this case to be able to show
@@ -80,16 +98,26 @@ function M.openReplacingBuffer()
     opts = {}
   }
 
-  for k, _ in pairs(treeView.View.winopts) do
+  for _, k in ipairs(PRESERVE_WINOPTS) do
     prevWindow.opts[k] = vim.opt_local[k]:get()
   end
 
   -- Reinit if the file we are opening from is not in the current directory
   if not treeCore.get_explorer() or cwd ~= treeCore.get_cwd() then
-    treeCore.init(cwd)
+    print("nvim-tree-vinegar.openReplacingBuffer: reinitializing explorer")
+
+    treeCore.init(cwd, "nvim-tree-vinegar.openReplacingBuffer")
   end
 
-  treeView.open_in_win({ hijack_current_buf = false, resize = false })
+  local explorer = treeCore.get_explorer()
+
+  if not explorer then
+    print("nvim-tree-vinegar.openReplacingBuffer: explorer = nil")
+
+    return;
+  end
+
+  explorer.view:open_in_win({ hijack_current_buf = false, resize = false })
   util.drawTree()
 end
 
@@ -107,8 +135,17 @@ function M.editInPlace(node)
     return
   end
 
-  util.saveTabState()
-  treeView.abandon_current_window()
+  local explorer = treeCore.get_explorer()
+
+  if not explorer then
+    print("nvim-tree-vinegar.editInPlace: explorer = nil")
+
+    return;
+  end
+
+  -- abandon_current_window does not save the tab state
+  explorer.view:save_tab_state()
+  explorer.view:abandon_current_window()
 
   vim.cmd("edit " .. vim.fn.fnameescape(filename))
 end
@@ -116,10 +153,19 @@ end
 -- Reimplementation of nvim-tree.view.close restoring the original
 -- buffer and window options
 function M.closeTree()
-  local treeWinnr = treeView.get_winnr()
+  local explorer = treeCore.get_explorer()
 
-  util.saveTabState()
-  treeView.abandon_current_window()
+  if not explorer then
+    print("nvim-tree-vinegar.closeTree: explorer = nil")
+
+    return
+  end
+
+  local treeWinnr = explorer.view:get_winnr(nil, "nvim-tree-vinegar.closeTree")
+
+  -- abandon_current_window does not save the tab state
+  explorer.view:save_tab_state()
+  explorer.view:abandon_current_window()
 
   if not prevWindow or not vim.api.nvim_buf_is_loaded(prevWindow.buffer) then
     vim.cmd("new")
@@ -133,7 +179,7 @@ function M.closeTree()
     vim.api.nvim_set_current_buf(prevWindow.buffer)
 
     -- Restore window settings
-    for k, _ in pairs(treeView.View.winopts) do
+    for _, k in ipairs(PRESERVE_WINOPTS) do
       vim.opt_local[k] = prevWindow.opts[k]
     end
   end
@@ -144,18 +190,19 @@ function M.closeTree()
 end
 
 function M.toggle(onOpen)
+  local explorer = treeCore.get_explorer()
   local currentBuffer = vim.api.nvim_get_current_buf()
 
-  if treeView.is_visible() then
+  if explorer and explorer.view:is_visible() then
     -- If the tree view is visible but this is not the buffer, move focus to the buffer
-    local treeBuffer = treeView.get_bufnr()
+    local treeBuffer = explorer.view:get_bufnr("nvim-tree-vinegar.toggle")
 
     if currentBuffer == treeBuffer then
       M.closeTree()
 
       return
     else
-      treeView.focus()
+      explorer.view:focus()
     end
   else
     M.openReplacingBuffer()

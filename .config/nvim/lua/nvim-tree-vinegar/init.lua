@@ -7,10 +7,8 @@ local M = {}
 local tree = require("nvim-tree")
 local treeApi = require("nvim-tree.api")
 
-local treeActionFindFile = require("nvim-tree.actions.finders.find-file")
 local treeCore = require("nvim-tree.core")
 local treeUtils = require("nvim-tree.utils")
-local treeView = require("nvim-tree.view")
 
 local actions = require("nvim-tree-vinegar.actions")
 local open = require("nvim-tree-vinegar.open")
@@ -31,7 +29,11 @@ local function registerAutocmds()
 end
 
 function M.restoreTabState()
-  treeView.restore_tab_state()
+  local explorer = treeCore.get_explorer()
+
+  if explorer then
+    explorer.view:restore_tab_state()
+  end
 end
 
 local defaultOptions = {
@@ -51,23 +53,15 @@ local defaultOptions = {
 }
 
 function M.setup(opts)
-  local fixHeight = false
-
   opts = opts or vim.deepcopy(defaultOptions)
 
   if opts.fix_window_size then
-    fixHeight = true
+    util.setFixHeight(true)
   end
 
   opts.fix_window_size = nil
 
   tree.setup(opts)
-
-  if not fixHeight then
-    -- By removing the window width/height fixing any splits will split the current browser
-    treeView.View.winopts.winfixwidth = nil
-    treeView.View.winopts.winfixheight = nil
-  end
 
   -- TODO: Update the commands?
   -- TODO: Provide both split and non-split options?
@@ -78,8 +72,8 @@ end
 function M.findBuffer(buffer)
   local bufname = vim.api.nvim_buf_get_name(buffer)
   -- Only search for the current file if we have a saved file open
-  if bufname ~= "" and vim.loop.fs_stat(bufname) ~= nil then
-    local cwd = treeUtils.path_remove_trailing(treeCore.get_cwd())
+  if bufname ~= "" and vim.uv.fs_stat(bufname) ~= nil then
+    local cwd = treeUtils.path_remove_trailing(treeCore.get_cwd() or "")
 
     if string.find(bufname, cwd, 0, true) ~= 1 then
       -- If the buffer is above the current working directory change to it to the first common folder
@@ -88,7 +82,7 @@ function M.findBuffer(buffer)
       until string.find(bufname, cwd, 0, true) == 1
 
       -- TODO: cd vim?
-      treeCore.init(cwd)
+      treeCore.init(cwd, "nvim-tree-vinegar.findBuffer")
       util.drawTree()
     end
 

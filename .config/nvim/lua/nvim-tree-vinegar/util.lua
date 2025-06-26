@@ -1,20 +1,36 @@
-local treeView = require("nvim-tree.view")
 local treeCore = require("nvim-tree.core")
 
-local M = {}
+local M = {
+  _fixHeight = false
+}
+
+function M.setFixHeight(val)
+  M._fixHeight = val
+end
+
+function M.fixHeight()
+  local explorer = treeCore.get_explorer()
+
+  if explorer then
+    -- By removing the window width/height fixing any splits will split the current browser
+    explorer.view.winopts.winfixwidth = nil
+    explorer.view.winopts.winfixheight = nil
+  end
+end
 
 -- Local copy of nvim-tree.view.save_tab_state since it is local
 function M.saveTabState()
-  local tabpage = vim.api.nvim_get_current_tabpage()
-  local winnr = treeView.get_winnr()
+  local explorer = treeCore.get_explorer()
 
-  if winnr ~= nil then
-    treeView.View.cursors[tabpage] = vim.api.nvim_win_get_cursor(winnr)
+  if explorer then
+    explorer.view:save_tab_state()
   end
 end
 
 function M.drawTree()
   local explorer = treeCore.get_explorer()
+
+  M.fixHeight()
 
   if explorer then
     explorer.renderer:draw()
@@ -26,6 +42,14 @@ function M.get_node_at_cursor()
 
   if explorer then
     return explorer:get_node_at_cursor()
+  end
+end
+
+function M.restoreTabState()
+  local explorer = treeCore.get_explorer()
+
+  if explorer then
+    explorer.view:restore_tab_state()
   end
 end
 

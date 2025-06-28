@@ -1,5 +1,6 @@
--- Use the experimental bytecode cache
-vim.loader.enable()
+-- Do not use the experimental bytecode cache
+-- Slower with it enabled in NVIM v0.12.0-dev LuaJIT 2.1.1703358377
+vim.loader.enable(false)
 
 -- Configuration
 local indent = 4
@@ -12,6 +13,7 @@ local viewdir = XDG_DATA_HOME .. "/nvim/view//"
 -- Skip some unused built-in plugins
 vim.g.loaded_zipPlugin = true
 vim.g.loaded_tarPlugin = true
+vim.g.loaded_gzip = true
 -- We do not use netrw
 vim.g.loaded_netrw = true
 vim.g.loaded_netrwSettings = true

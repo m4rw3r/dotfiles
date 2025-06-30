@@ -104,7 +104,7 @@ function M.openReplacingBuffer()
 
   -- Reinit if the file we are opening from is not in the current directory
   if not treeCore.get_explorer() or cwd ~= treeCore.get_cwd() then
-    print("nvim-tree-vinegar.openReplacingBuffer: reinitializing explorer")
+    -- print("nvim-tree-vinegar.openReplacingBuffer: reinitializing explorer")
 
     treeCore.init(cwd, "nvim-tree-vinegar.openReplacingBuffer")
   end

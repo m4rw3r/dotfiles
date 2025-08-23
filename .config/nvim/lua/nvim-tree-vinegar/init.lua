@@ -9,6 +9,7 @@ local treeApi = require("nvim-tree.api")
 
 local treeCore = require("nvim-tree.core")
 local treeUtils = require("nvim-tree.utils")
+local treeView = require("nvim-tree.view")
 
 local actions = require("nvim-tree-vinegar.actions")
 local open = require("nvim-tree-vinegar.open")
@@ -24,16 +25,12 @@ local function registerAutocmds()
   vim.api.nvim_create_autocmd({"WinLeave"}, {
     pattern = {"NvimTree*"},
     group = group,
-    callback = util.saveTabState,
+    callback = util.save_tab_state,
   })
 end
 
 function M.restoreTabState()
-  local explorer = treeCore.get_explorer()
-
-  if explorer then
-    explorer.view:restore_tab_state()
-  end
+  treeView.restore_tab_state()
 end
 
 local defaultOptions = {

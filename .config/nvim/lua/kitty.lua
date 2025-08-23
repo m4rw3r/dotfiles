@@ -6,7 +6,7 @@
 --- * ~/.config/kitty/neighboring_window_vim.py
 --- * ~/.config/kitty/neighboring_window.py
 
----@alias KittyDirection "left"|"bottom"|"up"|"right"
+---@alias KittyDirection "left"|"bottom"|"top"|"right"
 ---@alias VimDirection "h"|"j"|"k"|"l"
 
 local M = {}

@@ -63,7 +63,7 @@ function M.changeDir(node)
   -- TODO: Maybe use local cd (:lcd) instead?
   vim.cmd("cd " .. vim.fn.fnameescape(filename))
 
-  treeCore.init(filename, "nvim-tree-vinegar.changeDir")
+  treeCore.init(filename)
   util.drawTree()
 end
 

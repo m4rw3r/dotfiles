@@ -29,10 +29,6 @@ local function registerAutocmds()
   })
 end
 
-function M.restoreTabState()
-  treeView.restore_tab_state()
-end
-
 local defaultOptions = {
   view = {
     mappings = {
@@ -79,7 +75,7 @@ function M.findBuffer(buffer)
       until string.find(bufname, cwd, 0, true) == 1
 
       -- TODO: cd vim?
-      treeCore.init(cwd, "nvim-tree-vinegar.findBuffer")
+      treeCore.init(cwd)
       util.drawTree()
     end
 

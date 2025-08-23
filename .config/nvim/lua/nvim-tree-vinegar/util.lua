@@ -15,14 +15,11 @@ function M.fixHeight()
   treeView.View.winopts.winfixheight = nil
 end
 
--- Local copy of nvim-tree.view.save_tab_state since it is local
+-- Local copy of nvim-tree.view.save_state since it is local
 function M.save_tab_state()
   local tabpage = vim.api.nvim_get_current_tabpage()
-  local winnr = treeView.get_winnr()
 
-  if winnr ~= nil then
-    treeView.View.cursors[tabpage] = vim.api.nvim_win_get_cursor(winnr)
-  end
+  treeView.View.cursors[tabpage] = vim.api.nvim_win_get_cursor(treeView.get_winnr() or 0)
 end
 
 function M.drawTree()
@@ -43,7 +40,7 @@ function M.get_node_at_cursor()
   end
 end
 
-function M.restoreTabState()
+function M.restore_tab_state()
   treeView.restore_tab_state()
 end
 

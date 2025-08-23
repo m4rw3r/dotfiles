@@ -14,6 +14,8 @@ local M = {
   },
 }
 
+--- Returns true if the current cursor position has word-characters to the left.
+---@return boolean
 local function has_words_before()
   local line, col = unpack(vim.api.nvim_win_get_cursor(0))
 
@@ -66,8 +68,9 @@ function M.config()
       },
       menu = {
         draw = {
-          -- We don't need label_description now because label and label_description are already
-          -- combined together in label by colorful-menu.nvim.
+          -- We don't need label_description now because label and
+          -- label_description are already combined together in label by
+          -- colorful-menu.nvim.
           columns = { { "kind_icon" }, { "label", gap = 1 } },
           components = {
             label = {

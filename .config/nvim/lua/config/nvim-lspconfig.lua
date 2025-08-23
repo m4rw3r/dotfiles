@@ -1,3 +1,5 @@
+---@param prefix string|nil
+---@return vim.lsp.Client[]
 local get_active_clients = function(prefix)
   return vim
     .iter(vim.lsp.get_clients())
@@ -7,6 +9,8 @@ local get_active_clients = function(prefix)
     :totable()
 end
 
+---@param prefix string|nil
+---@return string[]
 local get_active_client_names = function(prefix)
   local t = vim.tbl_map(function(client)
     return client.name
@@ -17,7 +21,9 @@ local get_active_client_names = function(prefix)
   return t
 end
 
--- Returns a list of LSP-clients which have their configuration enabled
+--- Returns a list of LSP-clients which have their configuration enabled
+--- @param prefix string|nil
+--- @return string[]
 local get_configured_client_names = function(prefix)
   local c = {};
 
@@ -32,7 +38,9 @@ local get_configured_client_names = function(prefix)
   return c
 end
 
--- Stops the given list, or all, clients, returning the stopped client instances
+--- Stops the given list, or all, clients, returning the stopped client instances
+--- @param names string[]
+--- @return vim.lsp.Client[]
 local function stop_clients(names)
   names = next(names) and names or get_active_client_names()
 

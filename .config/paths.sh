@@ -32,3 +32,11 @@ fi
 if [[ -d "$PNPM_HOME" ]]; then
 	export PATH="$PNPM_HOME:$PATH"
 fi
+# Snap
+if [[ -d "/snap/bin" ]]; then
+	export PATH="$PATH:/snap/bin"
+fi
+# Neovim via bob (https://github.com/MordechaiHadad/bob)
+if [[ -d "$HOME/.local/share/bob/nvim-bin" ]]; then
+	export PATH="$HOME/.local/share/bob/nvim-bin:$PATH"
+fi

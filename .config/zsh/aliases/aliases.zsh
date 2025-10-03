@@ -83,4 +83,3 @@ else
 	alias hibernate="sudo systemctl suspend"
 fi
 
-alias q="exit"

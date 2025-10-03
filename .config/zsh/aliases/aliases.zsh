@@ -28,6 +28,8 @@ alias light='echo "include themes/base16-tomorrow.conf" > $XDG_CONFIG_HOME/kitty
 alias dark='echo "include themes/base16-tomorrow-night.conf" > $XDG_CONFIG_HOME/kitty/current-theme.conf && kitty +runpy "from kitty.utils import *; reload_conf_in_all_kitties()"'
 # KCachegrind for visualizing profiles
 alias kcachegrind='docker run --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v "$HOME:$HOME" -w "$PWD" -e "HOME=$HOME" quetzacoalt/kcachegrind kcachegrind'
+# Dive, analyzes Docker Images
+alias dive="docker run -ti --rm  -v /var/run/docker.sock:/var/run/docker.sock docker.io/wagoodman/dive"
 # Wget does not have any configuration variable for default file location
 alias wget=wget --hsts-file="$XDG_CACHE_HOME/wget-hsts"
 # Clear with clearing scrollback as well in multiple terminals (Kitty, iTerm2, Apple Terminal)

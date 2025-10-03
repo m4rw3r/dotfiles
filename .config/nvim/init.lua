@@ -104,7 +104,6 @@ paqPlus.init(function(use)
   -- Fast completion UI
   use(require("config.blink-cmp"))
 
-
   -- Language integration
   --
   -- LSP

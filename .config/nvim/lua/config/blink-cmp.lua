@@ -8,7 +8,7 @@ nvim-cmp has some issues with old overlay integration as well as speed.
 local M = {
   "saghen/blink.cmp",
   -- We have to use a specific tag to get a precompiled rust binary
-  branch = "v1.3.1",
+  branch = "v1.7.0",
   requires = {
     "xzbdmw/colorful-menu.nvim",
   },

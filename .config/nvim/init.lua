@@ -176,19 +176,19 @@ paqPlus.init(function(use)
       })
 
       vim.cmd("colorscheme base16-tomorrow-night")
-
-      -- Shortcuts to swap the theme
-      vim.api.nvim_create_user_command(
+    end,
+    cmds = {
+      {
         "Dark",
         "colorscheme base16-tomorrow-night",
         { desc = "Switch colorscheme to dark" }
-      )
-      vim.api.nvim_create_user_command(
+      },
+      {
         "Light",
         "colorscheme base16-tomorrow",
         { desc = "Switch colorscheme to light" }
-      )
-    end
+      }
+    },
   })
 end)
 

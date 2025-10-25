@@ -38,16 +38,38 @@ function M.config()
       },
     },
     adapters = {
-      qwen3 = function()
-        return require("codecompanion.adapters").extend("ollama", {
-          name = "qwen3",
-          schema = {
-            model = {
-              default = "qwen3:32b",
+      http = {
+        devstral = function()
+          return require("codecompanion.adapters").extend("ollama", {
+            name = "devstral",
+            schema = {
+              model = {
+                default = "devstral:24b",
+              },
             },
-          },
-        })
-      end
+          })
+        end,
+        qwen3 = function()
+          return require("codecompanion.adapters").extend("ollama", {
+            name = "qwen3",
+            env = {
+              -- url = "http://4090.m4rw3r.dev:11434",
+              -- url = "http://10.42.40.167:11434",
+              url = "http://10.42.40.71:11434",
+            },
+            schema = {
+              model = {
+                -- This fits in a 4090 nicely
+                -- default = "qwen3:32b",
+                default = "qwen3-coder:30b",
+              },
+              keep_alive = {
+                default = "15m"
+              },
+            },
+          })
+        end,
+      },
     },
   })
 

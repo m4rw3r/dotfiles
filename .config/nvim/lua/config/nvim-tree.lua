@@ -42,22 +42,25 @@ local function on_attach(bufnr)
   end
 
   -- Edit in place since we use vinegar-like
-  vim.keymap.set("n", "<CR>", vinegar.actions.editInPlace, opts("Open: In Place"))
-  vim.keymap.set("n", "o", vinegar.actions.editInPlace, opts("Open: In Place"))
+
   vim.keymap.set("n", "<C-w>", vinegar.actions.closeTree, opts("Close"))
   vim.keymap.set("n", "<Leader>w", vinegar.actions.closeTree, opts("Close"))
 
-  vim.keymap.set("n", "I", api.tree.toggle_gitignore_filter, opts("Toggle Git Ignore"))
-  vim.keymap.set("n", "H", api.tree.toggle_hidden_filter, opts("Toggle Dotfiles"))
+  vim.keymap.set("n", "<CR>", vinegar.actions.editInPlace, opts("Open: In Place"))
+  vim.keymap.set("n", "o", vinegar.actions.editInPlace, opts("Open: In Place"))
   vim.keymap.set("n", "s", vinegar.actions.openFile(vinegar.open.split), opts("Open: Horizontal Split"))
   vim.keymap.set("n", "i", vinegar.actions.openFile(vinegar.open.vsplit), opts("Open: Vertical Split"))
 
+  vim.keymap.set("n", "I", api.tree.toggle_gitignore_filter, opts("Toggle Git Ignore"))
+  vim.keymap.set("n", "H", api.tree.toggle_hidden_filter, opts("Toggle Dotfiles"))
+  vim.keymap.set("n", "R", api.tree.reload, opts("Refresh"))
+
+  vim.keymap.set("n", "U", api.tree.change_root_to_parent, opts("Up"))
   vim.keymap.set("n", "K", api.node.navigate.sibling.first, opts("First Sibling"))
   vim.keymap.set("n", "J", api.node.navigate.sibling.last, opts("Last Sibling"))
-  vim.keymap.set("n", "U", api.tree.change_root_to_parent, opts("Up"))
   vim.keymap.set("n", "<", api.node.navigate.sibling.prev, opts("Previous Sibling"))
   vim.keymap.set("n", ">", api.node.navigate.sibling.next, opts("Next Sibling"))
-  vim.keymap.set("n", "R", api.tree.reload, opts("Refresh"))
+
   vim.keymap.set("n", "x", api.node.navigate.parent_close, opts("Close Directory"))
   vim.keymap.set("n", "?", api.tree.toggle_help, opts("Help"))
   vim.keymap.set("n", "C", vinegar.actions.changeDir, opts("Changes the current directory to the selected directory, or the directory of the selected file"))

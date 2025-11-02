@@ -24,7 +24,7 @@ function M.config()
   codecompanion.setup({
     strategies = {
       chat = {
-        adapter = "qwen3",
+        adapter = "llama-swap",
         keymaps = {
           -- Send prompt with Ctrl + Enter
           send = {
@@ -39,37 +39,31 @@ function M.config()
     },
     adapters = {
       http = {
-        devstral = function()
-          return require("codecompanion.adapters").extend("ollama", {
-            name = "devstral",
-            schema = {
-              model = {
-                default = "devstral:24b",
-              },
-            },
-          })
-        end,
-        qwen3 = function()
-          return require("codecompanion.adapters").extend("ollama", {
-            name = "qwen3",
+        opts = {
+          show_defaults = false,
+          show_model_choices = true,
+        },
+        ["llama-swap"] = function()
+          return require("codecompanion.adapters").extend("openai_compatible", {
+            name = "llama.cpp",
             env = {
-              -- url = "http://4090.m4rw3r.dev:11434",
-              -- url = "http://10.42.40.167:11434",
-              url = "http://10.42.40.71:11434",
+              -- Start:
+              -- G:\llaama.cpp\llama-swap.ps1
+              url = "http://10.42.40.71:8989",
             },
             schema = {
               model = {
-                -- This fits in a 4090 nicely
-                -- default = "qwen3:32b",
-                default = "qwen3-coder:30b",
-              },
-              keep_alive = {
-                default = "15m"
+                default = "Qwen3-Yoyo-MoE",
               },
             },
           })
         end,
       },
+      acp = {
+        opts = {
+          show_defaults = false,
+        },
+      }
     },
   })
 

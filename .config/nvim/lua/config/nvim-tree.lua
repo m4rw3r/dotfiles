@@ -5,7 +5,7 @@ local M = {
   "nvim-tree/nvim-tree.lua",
   branch = "master",
   requires = {
-    "kyazdani42/nvim-web-devicons",
+    "nvim-tree/nvim-web-devicons",
   },
   -- Lazy load on the custom tree-display commands
   opt = true,

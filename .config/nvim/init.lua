@@ -56,14 +56,15 @@ paqPlus.init(function(use)
   -- Automatically sets the working-directory to the detected project root if any
   use({ "ygm2/rooter.nvim" })
   -- Fuzzy finder for files, and in files
-  use(require("config.telescope"))
+  -- use(require("config.telescope"))
+  use(require("config.snacks"))
 
   -- UI
   --
   -- Status-line replacement
   use({
     "nvim-lualine/lualine.nvim",
-    requires = { "kyazdani42/nvim-web-devicons" },
+    requires = { "nvim-tree/nvim-web-devicons" },
     config = function()
       local lualine = require("lualine")
 
@@ -113,7 +114,7 @@ paqPlus.init(function(use)
   -- Language diagnostics
   use({
     "folke/trouble.nvim",
-    requires = { "kyazdani42/nvim-web-devicons" },
+    requires = { "nvim-tree/nvim-web-devicons" },
     config = function()
       require("trouble").setup({})
     end

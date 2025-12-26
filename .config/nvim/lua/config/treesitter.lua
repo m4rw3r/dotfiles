@@ -3,6 +3,8 @@ local languages = require("config.languages")
 ---@type PaqPlusPlugin
 local M = {
   "nvim-treesitter/nvim-treesitter",
+  -- Use legacy branch for now (2025)
+  branch = "master",
 }
 
 vim.api.nvim_create_user_command(

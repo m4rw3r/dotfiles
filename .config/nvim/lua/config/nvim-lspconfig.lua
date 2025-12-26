@@ -66,11 +66,10 @@ end
 local M = {
   "neovim/nvim-lspconfig",
   keys = {
-    { "n", "<leader>d", vim.lsp.buf.definition },
-    { "n", "<leader>D", vim.lsp.buf.type_definition },
-    { "n", "K", vim.lsp.buf.hover },
-    { "n", "<leader>K", vim.lsp.buf.signature_help },
-    -- { "n", "<leader>K", function() vim.lsp.buf.hover({ border = "rounded" }) end },
+    { "n", "<leader>d", vim.lsp.buf.definition, { desc = "Jump to definition" } },
+    { "n", "<leader>D", vim.lsp.buf.type_definition, { desc = "Jump to type-definition" } },
+    { "n", "K", vim.lsp.buf.hover, { desc = "Show symbol information" } },
+    { "n", "<leader>K", vim.lsp.buf.signature_help, { desc = "Displays signature help" } },
     -- { "n", "<leader>e", vim.diagnostic.open_float },
   },
   cmds = {

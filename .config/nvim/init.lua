@@ -119,34 +119,6 @@ paqPlus.init(function(use)
       require("trouble").setup({})
     end
   })
-  -- AI-assisted coding tool
-  use(require("config.codecompanion"))
-  use({
-    "MeanderingProgrammer/render-markdown.nvim",
-    requires = { "nvim-treesitter/nvim-treesitter" },
-    config = function()
-      -- FIXME: Headings need background colours
-      require('render-markdown').setup({
-        file_types = { "markdown", "codecompanion" },
-        render_modes = true,
-        overrides = {
-          buftype = {
-            -- Make sure we trim the space around code-blocks in hover
-            nofile = {
-              anti_conceal = { enabled = false },
-              code = { border = "hide", style = "normal" }
-            },
-          },
-          filetype = {
-            -- But override the filetype of codecompanion to show full code-blocks
-            codecompanion = {
-              code = { style = "full", border = "thick", sign = false },
-            },
-          }
-        },
-      })
-    end
-  })
 
   -- Colorschemes
   use({
@@ -190,6 +162,49 @@ paqPlus.init(function(use)
         { desc = "Switch colorscheme to light" }
       }
     },
+  })
+
+  -- AI-assisted coding tool
+  -- use(require("config.codecompanion"))
+  use(require("config.avante"))
+  use({
+    "MeanderingProgrammer/render-markdown.nvim",
+    requires = { "nvim-treesitter/nvim-treesitter" },
+    config = function()
+      -- FIXME: Headings need background colours
+      require('render-markdown').setup({
+        file_types = { "markdown", "codecompanion" },
+        render_modes = true,
+        overrides = {
+          buftype = {
+            -- Make sure we trim the space around code-blocks in hover
+            nofile = {
+              anti_conceal = { enabled = false },
+              code = { border = "hide", style = "normal" }
+            },
+          },
+          filetype = {
+            -- But override the filetype of codecompanion to show full code-blocks
+            codecompanion = {
+              code = { style = "full", border = "thick", sign = false },
+            },
+          }
+        },
+      })
+    end
+  })
+
+  use({
+    "folke/which-key.nvim",
+    keys = {
+      {
+        "",
+        "<leader>?",
+        function() require("which-key").show({ global = false }) end,
+        { desc = "Buffer Local Keymaps (which-key)" },
+      },
+    },
+    -- config = function() require("which-key").setup() end,
   })
 end)
 

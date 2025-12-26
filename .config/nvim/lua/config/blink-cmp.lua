@@ -9,8 +9,10 @@ local M = {
   "saghen/blink.cmp",
   -- We have to use a specific tag to get a precompiled rust binary
   branch = "v1.7.0",
+  pin = true,
   requires = {
     "xzbdmw/colorful-menu.nvim",
+    "Kaiser-Yang/blink-cmp-avante",
   },
 }
 
@@ -27,6 +29,18 @@ function M.config()
   local colorfulMenu = require("colorful-menu")
 
   blink.setup({
+    sources = {
+      default = { "avante", "lsp", "path", "snippets", "buffer", },
+      providers = {
+        avante = {
+          module = "blink-cmp-avante",
+          name = "Avante",
+          opts = {
+            -- options for blink-cmp-avante
+          }
+        }
+      },
+    },
     keymap = {
       preset = "none",
 

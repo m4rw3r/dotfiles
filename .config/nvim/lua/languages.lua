@@ -12,6 +12,16 @@ local M = {}
 
 --- Strips the trailing whitespace in the current buffer
 local function stripTrailingWhitespace()
+  -- Check if the file is too big to run on
+  local path = vim.fs.normalize(vim.api.nvim_buf_get_name(0))
+  local size = vim.fn.getfsize(path)
+
+  if not size or size > 1.5 * 1024 * 1024 then
+    print("Skipping trim due to file size > 1 MB")
+
+    return
+  end
+
   local c = vim.api.nvim_win_get_cursor(0)
 
   vim.cmd("%s/\\s\\+$//e")

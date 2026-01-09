@@ -279,18 +279,20 @@ vim.g.mapleader = " "
 vim.opt.omnifunc = "v:lua.vim.lsp.omnifunc"
 
 vim.keymap.set("i", "jj", "<Esc>", { silent = true }) -- Quick exit of insert-mode
-vim.keymap.set("i", "<Left>", "<NOP>", { silent = true }) -- Do not allow arrows while editing
+-- Do not allow arrows while editing
+vim.keymap.set("i", "<Left>", "<NOP>", { silent = true })
 vim.keymap.set("i", "<Down>", "<NOP>", { silent = true })
 vim.keymap.set("i", "<Up>", "<NOP>", { silent = true })
 vim.keymap.set("i", "<Right>", "<NOP>", { silent = true })
-vim.keymap.set("n", "j", "gj", { noremap = false, silent = true }) -- Visual navigation using hjkl even over multiple lines
+-- Visual navigation using hjkl even over multiple lines
+vim.keymap.set("n", "j", "gj", { noremap = false, silent = true })
 vim.keymap.set("n", "k", "gk", { noremap = false, silent = true })
 vim.keymap.set("v", "j", "gj", { noremap = false, silent = true })
 vim.keymap.set("v", "k", "gk", { noremap = false, silent = true })
-vim.keymap.set("n", "<F3>", "<cmd>noh<CR>", { silent = true }) -- Toggle search highlight
-vim.keymap.set("", "<Leader>j", "<cmd>bnext<CR>", { noremap = false }) -- Navigate between buffers using Leader j/k
-vim.keymap.set("", "<Leader>k", "<cmd>bprevious<CR>", { noremap = false })
-vim.keymap.set("", "<Leader>w", "<cmd>bp|bd #<CR>", { noremap = false }) -- Close the current buffer with leader w
+vim.keymap.set("n", "<F3>", "<cmd>noh<CR>", { silent = true, desc = "Toggle search highlight" })
+vim.keymap.set("", "<Leader>j", "<cmd>bnext<CR>", { noremap = false, desc = "Cycle to next buffer" })
+vim.keymap.set("", "<Leader>k", "<cmd>bprevious<CR>", { noremap = false, desc = "Cycle to previous buffer" })
+vim.keymap.set("", "<Leader>w", "<cmd>bp|bd #<CR>", { noremap = false, desc = "Close the current buffer" })
 vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, { noremap = false })
 vim.keymap.set("n", "]d", vim.diagnostic.goto_next, { noremap = false })
 vim.keymap.set("n", "<Leader>v", "<c-v>", { noremap = false }) -- Make sure we can do vertical selection in Windows Terminal
@@ -315,8 +317,8 @@ vim.keymap.set("n", "<Leader>e", function()
 
     momentary_virtual_lines_active = true
   end
-end, { desc = "Show momentary diagnostic virtual lines (current line)", remap = true })
-vim.keymap.set("n", "<Leader>E", vim.diagnostic.open_float)
+end, { desc = "Show diagnostics for current line using momentary diagnostic virtual lines", remap = true })
+vim.keymap.set("n", "<Leader>E", vim.diagnostic.open_float, { desc = "Show diagnostics for current line in floating window" })
 
 local augroup = vim.api.nvim_create_augroup("MomentaryVirtualLines", { clear = true })
 

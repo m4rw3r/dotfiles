@@ -40,3 +40,7 @@ fi
 if [[ -d "$HOME/.local/share/bob/nvim-bin" ]]; then
 	export PATH="$HOME/.local/share/bob/nvim-bin:$PATH"
 fi
+# OpenCode
+if [[ -d "$HOME/.opencode/bin" ]]; then
+	export PATH="$HOME/.opencode/bin:$PATH"
+fi

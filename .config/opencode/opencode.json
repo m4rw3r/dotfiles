@@ -1,0 +1,37 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [".cursor/rules/*.mdc", ".cursor/rules/*.md", "~/.cursor/rules/*.mdc", "~/.cursor/rules/*.md"],
+  "disabled_providers": ["opencode", "llama-swap"],
+  "provider": {
+    "llama-swap": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "llama-swap (local)",
+      "options": {
+        "baseURL": "http://10.42.40.71:8989/v1"
+      },
+      "models": {
+        "Qwen3-Coder": {
+          "name": "Qwen3-Coder: A3B-30B (local)",
+          "limit": {
+            "context": 102400,
+            "output": 65536
+          }
+        },
+        "Qwen3": {
+          "name": "Qwen3: 32B (local)",
+          "limit": {
+            "context": 102400,
+            "output": 65536
+          }
+        },
+        "Devstral-Small-2-24B": {
+          "name": "Devstral 2: Small 24B (local)",
+          "limit": {
+            "context": 102400,
+            "output": 65536
+          }
+        }
+      }
+    }
+  }
+}

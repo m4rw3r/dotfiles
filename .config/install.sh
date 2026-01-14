@@ -18,3 +18,7 @@ fi;
 
 config checkout
 config config status.showUntrackedFiles no
+
+# Cursor Agent CLI does not support XDG or other environment variable
+mkdir -p ~/.cursor
+ln -s $HOME/.config/cursor/rules $HOME/.cursor/rules

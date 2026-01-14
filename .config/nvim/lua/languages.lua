@@ -37,6 +37,12 @@ vim.api.nvim_create_user_command(
   }
 )
 
+vim.filetype.add({
+  extension = {
+    mdc = "markdown",
+  }
+})
+
 ---@param indentSettings table<string, LanguageConfigurationIndent>
 function M.registerIndentAutogroup(indentSettings)
   local indentgroup = vim.api.nvim_create_augroup("indent", {})

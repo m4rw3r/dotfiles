@@ -30,3 +30,4 @@ If I ask for adjustments to code I have provided you, do not repeat all of my co
 - Structure components for maximum reusability
 - Optimize for performance without sacrificing readability
 - Handle edge cases and errors elegantly
+- Use ConventionalCommits format for commit messages

@@ -27,6 +27,7 @@ export NODE_REPL_HISTORY="$XDG_STATE_HOME/node_repl_history"
 export PNPM_HOME="$XDG_DATA_HOME/pnpm"
 export PSQL_HISTORY="$XDG_STATE_HOME/psql_history"
 export PYTHONHISTFILE="$XDG_STATE_HOME/python_history"
+export CODEX_HOME="$XDG_CONFIG_HOME/codex"
 
 # Use this command in psql to enable less pager: \pset pager always
 export PAGER=less

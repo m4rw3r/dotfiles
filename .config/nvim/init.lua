@@ -79,11 +79,7 @@ paqPlus.init(function(use)
             { "filename", path = 1 },
           },
           lualine_x = {"encoding", "fileformat", "filetype"},
-          lualine_y = {
-            -- Codecompanion spinner which is shown while waiting on a response
-            require("codecompanion-lualine"),
-            "progress",
-          },
+          lualine_y = {"progress"},
           lualine_z = {"location"},
         },
       })
@@ -164,9 +160,6 @@ paqPlus.init(function(use)
     },
   })
 
-  -- AI-assisted coding tool
-  -- use(require("config.codecompanion"))
-  use(require("config.avante"))
   use({
     "MeanderingProgrammer/render-markdown.nvim",
     requires = { "nvim-treesitter/nvim-treesitter" },

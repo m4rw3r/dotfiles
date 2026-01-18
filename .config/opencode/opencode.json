@@ -28,6 +28,7 @@
       "grep *": "allow",
       "head *": "allow",
       "ls *": "allow",
+      "mv *": "allow",
       "nl *": "allow",
       "npm build *": "allow",
       "npm install *": "allow",

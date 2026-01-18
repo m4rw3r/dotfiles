@@ -43,49 +43,29 @@
     },
     "edit": "allow",
   },
-  "disabled_providers": ["opencode", "llama-swap"],
+  "tui": {
+    "scroll_speed": 3,
+    "scroll_acceleration": {
+      "enabled": true
+    }
+  },
+  "theme": "system",
+  "keybinds": {
+    // Some VIM-like keybinds in addition to the defaults
+    "messages_half_page_up": "ctrl+alt+u,ctrl+u",
+    "messages_half_page_down": "ctrl+alt+d,ctrl+d",
+    "messages_first": "ctrl+g,home",
+    "messages_last": "ctrl+alt+g,end",
+    // Conflicts
+    "app_exit": "ctrl+c,<leader>q", // ctrl+d removed
+    "input_delete_to_line_start": "none", // ctrl+u removed
+    "input_delete": "delete,shift+delete", // ctrl+d removed
+  },
+  "disabled_providers": ["llama-swap", "cursor"],
   "plugin": [
     "opencode-cursor-auth@1.0.16"
   ],
   "provider": {
-/*
-    // Should be fixed in https://github.com/anomalyco/opencode/commit/40836e96835862e98e042d3fc0869970eaaaedfb
-    // We need to set store: false to avoid "Item 'rs_...' of type 'reasoning' was provided without its required following item."
-    // See: https://github.com/anomalyco/opencode/issues/2941
-    "openai": {
-      "models": {
-        "gpt-5-codex": {
-          "options": {
-            "include": ["reasoning.encrypted_content"],
-            "store": false,
-          },
-        },
-        "gpt-5.1-codex": {
-          "options": {
-            "include": ["reasoning.encrypted_content"],
-            "store": false,
-          },
-        },
-        "gpt-5.1-codex-mini": {
-          "options": {
-            "include": ["reasoning.encrypted_content"],
-            "store": false,
-          },
-        },
-        "gpt-5.2": {
-          "options": {
-            "include": ["reasoning.encrypted_content"],
-            "store": false,
-          },
-        },
-        "gpt-5.2-codex": {
-          "options": {
-            "include": ["reasoning.encrypted_content"],
-            "store": false,
-          },
-        },
-      },
-    },
     "cursor": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "Cursor Agent",
@@ -104,7 +84,6 @@
         "opus-4.5-thinking": { "name": "Cursor Opus 4.5 Thinking" },
       }
     },
-*/
     "llama-swap": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "llama-swap (local)",
@@ -113,26 +92,19 @@
       },
       "models": {
         "Qwen3-Coder": {
-          "name": "Qwen3-Coder: A3B-30B (local)",
+          "name": "Qwen3-Coder: A3B-30B",
           "limit": {
             "context": 102400,
             "output": 65536
           }
         },
         "Qwen3": {
-          "name": "Qwen3: 32B (local)",
+          "name": "Qwen3: 32B",
           "limit": {
             "context": 102400,
             "output": 65536
           }
         },
-        "Devstral-Small-2-24B": {
-          "name": "Devstral 2: Small 24B (local)",
-          "limit": {
-            "context": 102400,
-            "output": 65536
-          }
-        }
       }
     }
   }

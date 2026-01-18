@@ -38,3 +38,6 @@ export EDITOR=vim
 
 # Disable AWS pager by default
 export AWS_PAGER=""
+
+# OpenCode: Do not download Language-Servers automatically
+export OPENCODE_DISABLE_LSP_DOWNLOAD="true"

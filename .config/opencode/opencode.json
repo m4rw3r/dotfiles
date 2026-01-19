@@ -38,6 +38,7 @@
       "printf *": "allow",
       "pwd": "allow",
       "rg *": "allow",
+      "sort": "allow",
       "tail *": "allow",
       "wc *": "allow",
     },
@@ -63,6 +64,7 @@
   },
   "disabled_providers": ["llama-swap", "cursor"],
   "plugin": [
+    "@mohak34/opencode-notifier@0.1.13",
     "opencode-cursor-auth@1.0.16"
   ],
   "provider": {

@@ -112,6 +112,7 @@ function M.openReplacingBuffer()
 
   treeView.open_in_win({ hijack_current_buf = false, resize = false })
   util.drawTree()
+  treeView.restore_tab_state()
 end
 
 -- Reimplementation of nvim-tree.actions.open-file.edit_in_place which saves
@@ -137,11 +138,11 @@ end
 
 -- Reimplementation of nvim-tree.view.close restoring the original
 -- buffer and window options
-function M.closeTree()
+function M.closeTree(tabpage)
   local treeWinnr = treeView.get_winnr()
 
   -- abandon_current_window does not save the tab state
-  util.save_tab_state()
+  util.save_tab_state(tabpage)
   treeView.abandon_current_window()
 
   if not prevWindow or not vim.api.nvim_buf_is_loaded(prevWindow.buffer) then
@@ -174,7 +175,7 @@ function M.toggle(onOpen)
     local treeBuffer = treeView.get_bufnr()
 
     if currentBuffer == treeBuffer then
-      M.closeTree()
+      M.closeTree(vim.api.nvim_get_current_tabpage())
 
       return
     else

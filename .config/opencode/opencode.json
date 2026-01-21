@@ -65,6 +65,9 @@
   "plugin": [
     "@mohak34/opencode-notifier@0.1.15"
   ],
+  "experimental": {
+    "disable_paste_summary": true,
+  },
   "provider": {
     "llama-swap": {
       "npm": "@ai-sdk/openai-compatible",

@@ -24,6 +24,9 @@
       "git log *": "allow",
       "git show *": "allow",
       "git status *": "allow",
+      // We're being conservative with git-branch here to avoid deleting things
+      "git branch": "allow",
+      "git branch --show-current": "allow",
       "grep *": "allow",
       "head *": "allow",
       "ls *": "allow",
@@ -61,13 +64,22 @@
     "input_delete_to_line_start": "none", // ctrl+u removed
     "input_delete": "delete,shift+delete", // ctrl+d removed
   },
-  "disabled_providers": ["llama-swap", "cursor"],
+  "command": {
+    "commit": {
+      "description": "Commit changes, multiple logical commits",
+      "template": "Commit the changes in logical commits with concise commit messages. If there are untracked files, ask which ones should be included",
+      "agent": "build",
+      // We do not want to pollute the context with the instruction to commit changes
+      "subtask": true,
+    },
+  },
   "plugin": [
     "@mohak34/opencode-notifier@0.1.15"
   ],
   "experimental": {
     "disable_paste_summary": true,
   },
+  "disabled_providers": ["llama-swap", "cursor"],
   "provider": {
     "llama-swap": {
       "npm": "@ai-sdk/openai-compatible",

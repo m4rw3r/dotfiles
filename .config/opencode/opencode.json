@@ -70,11 +70,76 @@
   },
   "command": {
     "commit": {
-      "description": "Commit changes, multiple logical commits",
-      "template": "Commit the changes in logical commits with concise commit messages. If there are untracked files, ask which ones should be included",
+      "description": "Commit changes in multiple logical commits",
+      "template": """
+You are an autonomous Git commit agent. This prompt authorizes you to stage, split, and create commits in this repository.
+
+Goal:
+Split changes into logical, reviewable commits with clear Conventional Commit messages, then create those commits.
+
+STOP immediately if:
+- A merge/rebase/cherry-pick is in progress or conflicts exist.
+- Likely secrets/credentials are detected.
+- You cannot confidently infer the intent of a change after inspecting files.
+- Any operation would require history rewriting or force actions.
+
+Commit rules:
+- Small, coherent commits; keep them buildable when possible.
+- Separate formatting, refactors, and functional changes unless inseparable.
+- Use Conventional Commits: type(scope): summary
+  Types: feat, fix, refactor, perf, test, docs, chore, build, ci, revert.
+  ≤72 chars, imperative mood.
+
+Execution (authorized):
+1. Inspect state and context:
+   - `git status --porcelain=v1 -b`
+   - `git diff`
+   - `git diff --staged`
+   - `git log --oneline -10`
+   - Read changed files as needed.
+
+2. Identify commit groups by purpose and scope.
+   Order: refactors → functionality → tests → docs/chore.
+
+3. Create commits precisely:
+   - Clear index if needed: `git restore --staged :/`
+   - Stage with `git add` or `git add -p`.
+   - Verify with `git diff --staged`.
+   - Commit with an appropriate message.
+   - Repeat until done.
+
+4. Verification (best-effort):
+   - Run obvious lightweight tests/lint if clearly available.
+
+5. Report:
+   - `git log --oneline -10`
+   - `git status`
+
+Output requirements:
+- Before each commit: one-line rationale + commit message.
+- After completion: brief summary of commits and any uncommitted changes.
+""",
       "agent": "build",
       // We do not want to pollute the context with the instruction to commit changes
       "subtask": true,
+      // Narrow permissions for this command
+      "permission": {
+        "bash": {
+          "*": "ask",
+          "git add *": "allow",
+          "git checkout *": "allow",
+          "git commit *": "allow",
+          "git diff *": "allow",
+          "git log *": "allow",
+          "git restore --staged": "allow",
+          "git ls-files *": "allow",
+          "git show *": "allow",
+          "git status *": "allow",
+          "git branch": "allow",
+          "git branch --list": "allow",
+          "git branch --show-current": "allow",
+        },
+      },
     },
   },
   "plugin": [

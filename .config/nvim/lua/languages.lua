@@ -43,6 +43,13 @@ vim.filetype.add({
   }
 })
 
+vim.filetype.add({
+  filename = {
+    ["opencode.json"] = "jsonc",
+    ["tsconfig.json"] = "jsonc",
+   }
+})
+
 ---@param indentSettings table<string, LanguageConfigurationIndent>
 function M.registerIndentAutogroup(indentSettings)
   local indentgroup = vim.api.nvim_create_augroup("indent", {})

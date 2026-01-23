@@ -8,6 +8,7 @@ local M = {
     html = { autoindent = false },
     javascript = { expandtab = true, indent = 2, trim = true, autoindent = false },
     json = { expandtab = true, indent = 2, trim = true },
+    jsonc = { expandtab = true, indent = 2, trim = true },
     lua = { indent = 2, expandtab = true, trim = true },
     markdown = { indent = 2, expandtab = true, trim = true },
     markdown_inline = { indent = 2, expandtab = true, trim = true },

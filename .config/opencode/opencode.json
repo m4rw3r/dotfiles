@@ -24,10 +24,12 @@
       "git commit *": "allow",
       "git diff *": "allow",
       "git log *": "allow",
+      "git ls-files *": "allow",
       "git show *": "allow",
       "git status *": "allow",
       // We're being conservative with git-branch here to avoid deleting things
       "git branch": "allow",
+      "git branch --list": "allow",
       "git branch --show-current": "allow",
       "grep *": "allow",
       "head *": "allow",

@@ -69,9 +69,7 @@
     "input_delete_to_line_start": "none", // ctrl+u removed
     "input_delete": "delete,shift+delete", // ctrl+d removed
   },
-  "plugin": [
-    "@mohak34/opencode-notifier@0.1.15"
-  ],
+  "plugin": [],
   "experimental": {
     "disable_paste_summary": true,
   },
@@ -97,7 +95,7 @@
             "context": 102400,
             "output": 65536
           }
-        },
+        }
       }
     }
   }

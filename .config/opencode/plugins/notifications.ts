@@ -62,9 +62,9 @@ async function kittyNotification(ctx: Context, info: Info): Promise<void> {
  */
 async function wslNotification(ctx: Context, info: Info): Promise<void> {
   try {
-    console.error(`~/.config/opencode/wsl-notify-send.exe --appId "OpenCode" --category ${info.title ?? ctx.title} ${info.body}`);
+    // console.error(`~/.config/opencode/wsl-notify-send.exe --appId "OpenCode" --category ${info.title ?? ctx.title} ${info.body}`);
     // --icon does not seem to work
-    await ctx.bunShell`~/.config/opencode/wsl-notify-send.exe --appId "OpenCode" --category ${info.title ?? ctx.title} ${info.body}`.quiet();
+    await ctx.bunShell`~/.config/opencode/wsl-notify-send.exe --appId "OpenCode" --category '${info.title ?? ctx.title}' '${info.body}'`.quiet();
   }
   catch (e) {
     console.error("Failed to run wsl-notify-send.exe", e);
@@ -87,7 +87,7 @@ async function macosNotification(ctx: Context, info: Info): Promise<void> {
 }
 
 async function onEvent(ctx: Context, event: Event): Promise<void> {
-  console.error(`event (event=${event.type})`, event)
+  // console.error(`event (event=${event.type})`, event)
 
   switch (event.type) {
     case "session.idle":
@@ -115,6 +115,7 @@ async function onEvent(ctx: Context, event: Event): Promise<void> {
       break;
     case "permission.asked":
       console.error("We got event for asked");
+
       sendNotification(ctx, {
         body: `Permission required ask`,
       });
@@ -143,7 +144,7 @@ export async function NotificationPlugin({ project, client, $, directory, worktr
     projectName,
     bunShell: $,
     client,
-    title: `OpenCode(${projectName})`,
+    title: `OpenCode: ${projectName}`,
   };
 
   return {

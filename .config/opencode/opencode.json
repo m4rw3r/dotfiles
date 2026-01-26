@@ -51,6 +51,13 @@
       "wc *": "allow",
     },
     "edit": "allow",
+    "read": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      "*.env.example": "allow",
+      "~/.cargo/registry/src": "allow",
+    },
   },
   "tui": {
     "scroll_speed": 3,

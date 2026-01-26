@@ -24,11 +24,20 @@ Commit rules:
 
 Execution (authorized):
 1. Inspect state and context:
+Current `git status --porcelain=v1 -b`:
+```
 !`git status --porcelain=v1 -b`
+```
+Current `git diff --stat`:
+```
 !`git diff --stat`
+```
+Last 10 git log messages:
+```
 !`git log --oneline -10`
+```
 
-Use `git diff`, `git diff --staged`, and read changed files as needed.
+Use `git diff`, `git diff --staged`, and read changed files selectively as needed.
 
 2. Identify commit groups by purpose and scope.
    Order: refactors → functionality → tests → docs/chore.

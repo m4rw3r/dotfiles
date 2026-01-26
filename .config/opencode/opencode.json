@@ -35,6 +35,7 @@
       "grep *": "allow",
       "head *": "allow",
       "ls *": "allow",
+      "mkdir *": "allow",
       "mv *": "allow",
       "nl *": "allow",
       "npm build *": "allow",

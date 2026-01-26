@@ -22,7 +22,10 @@ type SendNotification = (ctx: Context, info: Info) => Promise<void>;
 
 let sendNotification: SendNotification = bellNotification;
 
-if (process.env.TERM?.includes("kitty")) {
+if (process.env.OPENCODE_NOTIFY?.toLowerCase() === "false") {
+  sendNotification = async () => {};
+}
+else if (process.env.TERM?.includes("kitty")) {
   sendNotification = kittyNotification;
 }
 else if (process.platform === "linux" && os.release().includes("microsoft")) {
@@ -45,12 +48,11 @@ const KITTY_ALLOWED_CHARS = /[a-zA-Z0-9\-_\/+.,(){}[\]*&^%$#@!\`~]/;
  */
 async function kittyNotification(ctx: Context, info: Info): Promise<void> {
   const identifier = crypto.randomUUID();
-  const title = (info.title ?? ctx.title).replaceAll(KITTY_ALLOWED_CHARS, "");
-  const body = info.body.replaceAll(KITTY_ALLOWED_CHARS, "");
+  const title = info.title ?? ctx.title;
   // a=focus is default
   const props = `i=${identifier}:g=${btoa("OpenCode")}:o=unfocused`
   const titleEscape = `\x1b]99;${props}:d=0:p=title;${title}\x1b\\`;
-  const bodyEscape = `\x1b]99;${props}:d=1:p=body;${body}\x1b\\`;
+  const bodyEscape = `\x1b]99;${props}:d=1:p=body;${info.body}\x1b\\`;
 
   await Bun.write(Bun.stdout, titleEscape + bodyEscape);
 }

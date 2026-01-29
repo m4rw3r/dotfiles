@@ -1,0 +1,354 @@
+#!/bin/bash
+
+set -euo pipefail
+
+trap "exit" INT
+
+VERBOSE=0
+PROGRESS_FILE=progress.md
+MAX_ITERATIONS=10
+SPEC=
+TASK_FILE=TODO.md
+PRIORITY=first
+HARNESS="OPENCODE_NOTIFY=false opencode run --model openai/gpt-5.2-codex --variant xhigh"
+COMMIT=1
+DUMP_PROMPT=
+COLOR_HEADER="\e[94m"
+COLOR_ERROR="\e[101m"
+COLOR_WARNING="\e[33m"
+COLOR_DONE="\e[32m"
+COLOR_END="\e[0m"
+
+# TODO: Make it use the progress-file properly, ie. write to it if something goes wrong or something
+#
+#       Update AGENTS.md when learning.** If you discover something important about this task (build quirks, gotchas, patterns), add it to `{SPEC_DIR}/AGENTS.md`. Keep entries brief (1-2 lines each). This helps future iterations.
+#
+# TODO: Configurable highest or first task
+# TODO: Configurable executable harness
+# TODO: Sandboxing (bubblewrap?)
+
+_main() {
+  if [ $VERBOSE ]; then
+    echo "VERBOSE        = ${VERBOSE}"
+    echo "PROGRESS_FILE  = ${PROGRESS_FILE}"
+    echo "MAX_ITERATIONS = ${MAX_ITERATIONS}"
+    echo "DUMP_PROMPT    = ${DUMP_PROMPT}"
+    echo "TASK_FILE      = ${TASK_FILE}"
+  fi
+
+  PROMPT="$(_ralph_prompt)"
+
+  if [[ $DUMP_PROMPT ]]; then
+    echo "$PROMPT"
+    exit 1
+  fi
+
+  if [[ ! -f $TASK_FILE ]]; then
+    echo "File $TASK_FILE does not exist"
+    exit 1
+  fi
+
+  touch "$PROGRESS_FILE"
+
+  # TODO: Improve UX, color output
+  # TODO: Add more debug output
+  for i in $(seq 1 $MAX_ITERATIONS); do
+    echo ""
+    echo -e "${COLOR_HEADER}╔═════════════════════════════════╗${COLOR_END}"
+    # TODO: Pad
+    echo -e "${COLOR_HEADER}║ Iteration $i of $MAX_ITERATIONS  ║${COLOR_END}"
+    echo -e "${COLOR_HEADER}╚══════════════════════════════════╝${COLOR_END}"
+    echo ""
+
+    # Create a temp file to store raw output for exit signal detection
+    TEMP_OUTPUT=$(mktemp)
+
+    echo "$PROMPT" | eval "$HARNESS" 2>&1 | tee "$TEMP_OUTPUT" || true
+
+    # Read the output for exit signal detection
+    OUTPUT=$(cat "$TEMP_OUTPUT")
+    rm -f "$TEMP_OUTPUT"
+
+    # Check for exit signals in the output - only within the status block
+    if echo "$OUTPUT" | sed -n '/---RALPH_STATUS---/,/---END_RALPH_STATUS---/p' | grep -q 'EXIT_SIGNAL: true\|"EXIT_SIGNAL": true'; then
+      echo ""
+      echo -e "${COLOR_DONE}=========================================${COLOR_END}"
+      echo -e "${COLOR_DONE}EXIT_SIGNAL detected - Tasks complete!${COLOR_END}"
+      echo -e "${COLOR_DONE}=========================================${COLOR_END}"
+      exit 0
+    fi
+
+    sleep 2
+  done
+
+  echo ""
+  echo -e "${COLOR_DONE}Max iterations reached ($MAX_ITERATIONS)${COLOR_END}"
+  exit 1
+}
+
+_ralph_prompt() {
+  cat <<EOF
+# Ralph Development Instructions
+
+## Core Identity
+
+You are an autonomous AI agent executing tasks in a Ralph-style development loop. Your job is to complete all tasks in @$TASK_FILE by directly performing file operations.
+
+## Your Task
+
+EOF
+
+  if [[ -z $SPEC ]]; then
+    cat <<EOF
+Complete the tasks defined in @$TASK_FILE.
+
+### Workflow
+
+1. **Study Tasks**: Read the tasks in @$TASK_FILE and related files to understand the task requirements.
+EOF
+  else
+    cat <<EOF
+Complete the tasks defined in @$TASK_FILE according to the specifications in @$SPEC/.
+
+### Workflow
+
+1. **Study Specs**: Read files in @$SPEC/ to understand the task requirements
+EOF
+  fi
+
+  cat <<EOF
+2. **Check Plan**: Review @$TASK_FILE for pending tasks
+EOF
+
+  # PRIORITY
+  if [[ "$PRIORITY" = "highest" ]]; then
+    cat <<'EOF'
+3. **Execute ONE TASK**: Pick the highest-priority uncompleted task (`- [ ]` item):
+EOF
+  else
+    cat <<'EOF'
+3. **Execute ONE TASK**: Pick the FIRST uncompleted task (`- [ ]` item):
+EOF
+  fi
+
+  cat <<EOF
+   - Read any necessary files
+   - Perform the required operation
+   - Write/modify the appropriate output
+4. **Update Plan**: Mark ONLY that task as completed with \`[x]\` in @$TASK_FILE
+EOF
+
+  if [[ -z "$COMMIT" ]]; then
+    cat <<EOF
+5. **Update Progress**: Update $PROGRESS_FILE with what you did
+6. **Report Status**: Output RALPH_STATUS block at end of loop
+EOF
+  else
+    cat <<EOF
+5. **Commit**: Commit your changes, do not commit changes to $TASK_FILE or $PROGRESS_FILE
+6. **Update Progress**: Update $PROGRESS_FILE with what you did
+7. **Report Status**: Output RALPH_STATUS block at end of loop
+EOF
+  fi
+
+  cat <<EOF
+
+**IMPORTANT**: Complete only ONE TASK per iteration. Do NOT process multiple tasks in a single loop.
+
+## Iteration Scope Limits (CRITICAL)
+
+Each iteration = ONE TASK from @$TASK_FILE (a single \`- [ ]\` checkbox item).
+
+### Iteration Guidelines
+- **Research/Reading**: Read spec files as needed for the current task
+- **Implementation**: Complete the task fully before marking done
+- **Verification**: Verify the result before marking complete
+
+### Early Exit Triggers
+Stop the current iteration early ONLY if:
+- You've completed the task successfully
+- You encounter a blocking error that needs human review
+- An operation fails repeatedly (3+ attempts) with the same error
+
+### What Counts as "Done" for One Iteration
+- ONE checkbox item marked complete with \`[x]\`
+- The expected output exists and is correct
+- Status block reported
+
+Do NOT skip tasks. Do NOT mark tasks complete without verification.
+
+## Exit Criteria
+
+Exit the loop ONLY when ALL of these conditions are met:
+- All items in @$TASK_FILE are marked complete
+- All expected outputs exist with correct values
+EOF
+  if [[ -z "$SPEC" ]]; then
+    cat <<EOF
+- All tasks in @$TASK_FILE are satisfied
+EOF
+  else
+    cat <<EOF
+- All acceptance criteria from @$SPEC/ are satisfied
+EOF
+  fi
+
+  cat <<EOF
+
+## Status Reporting (CRITICAL - Ralph needs this!)
+
+At the end of each loop iteration, ALWAYS output this status block:
+
+\`\`\`
+---RALPH_STATUS---
+STATUS: IN_PROGRESS | COMPLETE | BLOCKED
+TASK_COMPLETED: <task description> | none
+TASKS_REMAINING: <number>
+FILES_MODIFIED: <number>
+ERRORS: [list or "none"]
+EXIT_SIGNAL: false | true
+RECOMMENDATION: <one line summary of what to do next>
+---END_RALPH_STATUS---
+\`\`\`
+
+### When to set EXIT_SIGNAL: true
+Set EXIT_SIGNAL to **true** when ALL of these conditions are met:
+1. All items in @$TASK_FILE are marked complete
+2. No errors in the last execution
+EOF
+
+  if [[ -z "$SPEC" ]]; then
+    cat <<EOF
+3. All requirements from @$TASK_FILE are implemented
+EOF
+  else
+    cat <<EOF
+3. All requirements from @$SPEC/ are implemented
+EOF
+  fi
+
+  cat <<'EOF'
+
+### Example: Task completed successfully
+```
+---RALPH_STATUS---
+STATUS: IN_PROGRESS
+TASK_COMPLETED: Update config.json timeout value
+TASKS_REMAINING: 3
+FILES_MODIFIED: 1
+ERRORS: none
+EXIT_SIGNAL: false
+RECOMMENDATION: Continue with next task in next iteration
+---END_RALPH_STATUS---
+```
+
+### Example: Task blocked - needs human help
+```
+---RALPH_STATUS---
+STATUS: BLOCKED
+TASK_COMPLETED: none
+TASKS_REMAINING: 4
+FILES_MODIFIED: 0
+ERRORS: Missing required file data/input.txt
+EXIT_SIGNAL: false
+RECOMMENDATION: Need human help to provide missing input file
+---END_RALPH_STATUS---
+```
+
+## Constraints
+
+- Do NOT write code or scripts unless the task explicitly requires it
+- Do NOT modify files outside the project scope
+- Do NOT skip tasks - complete all items in @$TASK_FILE
+- Do NOT exit until all tasks are complete and verified
+
+## What NOT to Do (Prevents Infinite Loops)
+
+### Iteration Violations
+- Do NOT process multiple tasks in a single iteration
+- Do NOT re-read files unnecessarily within the same iteration
+- Do NOT "clean up" or refactor beyond the current task scope
+
+### Busy Work (AVOID)
+- Do NOT continue with busy work when all tasks are complete
+- Do NOT run operations repeatedly without fixing the underlying issue
+- Do NOT refactor code that is already working fine
+- Do NOT add features not in the specifications
+
+### Required Actions
+- Do NOT forget to include the RALPH_STATUS block (Ralph depends on it!)
+- Do NOT mark tasks complete without verifying the result
+- Do NOT skip the status report even if you hit an error
+EOF
+}
+
+_help() {
+  echo "$0 [options] [TASK_FILE]"
+  echo ""
+  echo "Arguments:"
+  echo "  [TASK_FILE]             File containing tasks for Ralph to complete, default TODO.md"
+  echo ""
+  echo "Options:"
+  echo "  -i|--iterations N       Maximum number of iterations"
+  echo "  -s|--spec <SPEC>        Read specifcations from SPEC file/folder"
+  echo "  --progress-file <FILE>  Use FILE to store progress, default progress.md"
+  echo "  --no-commit             Do not commit changes between iterations"
+  echo "  --dump-prompt           Dumps the prompt instead of running ralph-loops"
+  echo "  -v|--verbose            Verbose mode"
+  echo "  -h|--help               This help"
+}
+
+# TODO First or highest priority setting
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -v|--verbose)
+      VERBOSE=1
+      shift
+      ;;
+    --spec)
+      SPEC="$2"
+      shift
+      shift
+      ;;
+    --progress-file)
+      # TODO: Check datatypes
+      PROGRESS_FILE="$2"
+      shift
+      shift
+      ;;
+    -i|--iterations)
+      # TODO: Check datatypes
+      MAX_ITERATIONS=$2
+      shift
+      shift
+      ;;
+    -d|--dump-prompt)
+      DUMP_PROMPT=1
+      shift
+      ;;
+    --no-commit)
+      COMMIT=
+      shift
+      ;;
+    -h|--help)
+      _help
+      exit 1
+      ;;
+    -*|--*)
+      echo "Unknown option $1"
+      exit 1
+      ;;
+    *)
+      TASK_FILE="$1"
+      shift
+
+      if [[ $# -gt 0 ]]; then
+        echo "Unknown parameter $1"
+        exit 1
+      fi
+      ;;
+  esac
+done
+
+_main "${POSITIONAL[@]}"

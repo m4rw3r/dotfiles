@@ -59,3 +59,5 @@ Use `git diff`, `git diff --staged`, and read changed files selectively as neede
 Output requirements:
 - Before each commit: one-line rationale + commit message.
 - After completion: brief summary of commits and any uncommitted changes.
+
+$ARGUMENTS

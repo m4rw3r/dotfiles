@@ -18,6 +18,11 @@ local util = require("nvim-tree-vinegar.util")
 M.actions = actions
 M.open = open
 
+-- By removing the window width/height fixing any splits will split the current browser
+-- We modify the template for the view here
+treeView.View.winopts.winfixwidth = nil
+treeView.View.winopts.winfixheight = nil
+
 local function registerAutocmds()
   local group = vim.api.nvim_create_augroup("NvimTree", { clear = false })
   -- Save the tab state when moving focus so we can restore it when

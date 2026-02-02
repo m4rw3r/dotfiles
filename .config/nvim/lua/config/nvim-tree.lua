@@ -42,8 +42,6 @@ local function on_attach(bufnr)
   end
 
   -- Edit in place since we use vinegar-like
-
-  vim.keymap.set("n", "<C-w>", vinegar.actions.closeTree, opts("Close"))
   vim.keymap.set("n", "<Leader>w", vinegar.actions.closeTree, opts("Close"))
 
   vim.keymap.set("n", "<CR>", vinegar.actions.editInPlace, opts("Open: In Place"))

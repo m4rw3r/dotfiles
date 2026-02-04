@@ -128,19 +128,21 @@ paqPlus.init(function(use)
         group = vim.api.nvim_create_augroup("Color", {}),
         pattern = "*",
         callback = function ()
-          hl.NormalFloat = { guifg = base16.colors.base05, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm05, ctermbg = base16.colors.cterm01 }
-          hl.FloatBorder = { guifg = base16.colors.base02, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm02, ctermbg = base16.colors.cterm01 }
+          if (vim.g.colors_name == "base16-tomorrow" or vim.g.colors_name == "base16-tomorrow-night") then
+            hl.NormalFloat = { guifg = base16.colors.base05, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm05, ctermbg = base16.colors.cterm01 }
+            hl.FloatBorder = { guifg = base16.colors.base02, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm02, ctermbg = base16.colors.cterm01 }
 
-          -- Better for markdown headings
-          hl.DiffAdd     = { guifg = base16.colors.base0B, guibg = base16.colors.base02, gui = nil, guisp = nil, ctermfg = base16.colors.cterm0B, ctermbg = base16.colors.cterm02 }
-          hl.DiffChange  = { guifg = base16.colors.base03, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm03, ctermbg = base16.colors.cterm01 }
-          hl.DiffDelete  = { guifg = base16.colors.base08, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm08, ctermbg = base16.colors.cterm01 }
-          hl.DiffText    = { guifg = base16.colors.base0D, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm0D, ctermbg = base16.colors.cterm01 }
-          hl.DiffAdded   = { guifg = base16.colors.base0B, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm0B, ctermbg = base16.colors.cterm01 }
-          hl.DiffFile    = { guifg = base16.colors.base08, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm08, ctermbg = base16.colors.cterm01 }
-          hl.DiffNewFile = { guifg = base16.colors.base0B, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm0B, ctermbg = base16.colors.cterm01 }
-          hl.DiffLine    = { guifg = base16.colors.base0D, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm0D, ctermbg = base16.colors.cterm01 }
-          hl.DiffRemoved = { guifg = base16.colors.base08, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm08, ctermbg = base16.colors.cterm01 }
+            -- Better for markdown headings
+            hl.DiffAdd     = { guifg = base16.colors.base0B, guibg = base16.colors.base02, gui = nil, guisp = nil, ctermfg = base16.colors.cterm0B, ctermbg = base16.colors.cterm02 }
+            hl.DiffChange  = { guifg = base16.colors.base03, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm03, ctermbg = base16.colors.cterm01 }
+            hl.DiffDelete  = { guifg = base16.colors.base08, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm08, ctermbg = base16.colors.cterm01 }
+            hl.DiffText    = { guifg = base16.colors.base0D, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm0D, ctermbg = base16.colors.cterm01 }
+            hl.DiffAdded   = { guifg = base16.colors.base0B, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm0B, ctermbg = base16.colors.cterm01 }
+            hl.DiffFile    = { guifg = base16.colors.base08, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm08, ctermbg = base16.colors.cterm01 }
+            hl.DiffNewFile = { guifg = base16.colors.base0B, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm0B, ctermbg = base16.colors.cterm01 }
+            hl.DiffLine    = { guifg = base16.colors.base0D, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm0D, ctermbg = base16.colors.cterm01 }
+            hl.DiffRemoved = { guifg = base16.colors.base08, guibg = base16.colors.base01, gui = nil, guisp = nil, ctermfg = base16.colors.cterm08, ctermbg = base16.colors.cterm01 }
+          end
         end
       })
 

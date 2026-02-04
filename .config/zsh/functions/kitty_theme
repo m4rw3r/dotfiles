@@ -1,0 +1,42 @@
+#!/usr/bin/env zsh
+
+KITTY_THEME_FOLDER="$XDG_CONFIG_HOME/kitty/themes"
+# File included from kitty.conf
+KITTY_THEME_SELECTOR_FILE="$XDG_CONFIG_HOME/kitty/current-theme.conf"
+
+_list_kitty_themes() {
+  ls -1 "$KITTY_THEME_FOLDER" | sed -e 's/\.conf//'
+}
+
+_apply_kitty_theme() {
+  if [[ ! -e "$KITTY_THEME_FOLDER/$1.conf" ]]; then
+    echo "Theme $1 not found"
+    return 1
+  fi
+
+  echo "include themes/$1.conf" > $KITTY_THEME_SELECTOR_FILE
+  kitty +runpy 'from kitty.utils import *; reload_conf_in_all_kitties()'
+  return 0
+}
+
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    list)
+      shift
+      echo "Available themes:"
+      echo ""
+      _list_kitty_themes
+      return $?
+      ;;
+    *)
+      if [[ $# -gt 1 ]]; then
+        echo "Unknown parameter $1"
+        return 1
+      fi
+
+      _apply_kitty_theme "$1"
+      return $?
+  esac
+done
+
+_list_kitty_themes

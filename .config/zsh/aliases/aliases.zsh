@@ -24,8 +24,10 @@ alias mysql='mysql --auto-vertical-output --show-warnings --sigint-ignore --line
 alias mysqlp='mysql --auto-vertical-output --show-warnings --sigint-ignore --pager=less --line-numbers --column-type-info'
 alias json_escape='jq -aR'
 # TODO: Inform all NeoVIM instances to also swap on this
-alias light='echo "include themes/base16-tomorrow.conf" > $XDG_CONFIG_HOME/kitty/current-theme.conf && kitty +runpy "from kitty.utils import *; reload_conf_in_all_kitties()"'
-alias dark='echo "include themes/base16-tomorrow-night.conf" > $XDG_CONFIG_HOME/kitty/current-theme.conf && kitty +runpy "from kitty.utils import *; reload_conf_in_all_kitties()"'
+#alias light='echo "include themes/base16-tomorrow.conf" > $XDG_CONFIG_HOME/kitty/current-theme.conf && kitty +runpy "from kitty.utils import *; reload_conf_in_all_kitties()"'
+#alias dark='echo "include themes/base16-tomorrow-night.conf" > $XDG_CONFIG_HOME/kitty/current-theme.conf && kitty +runpy "from kitty.utils import *; reload_conf_in_all_kitties()"'
+alias light='kitty_theme base16-tomorrow'
+alias dark='kitty_theme base16-tomorrow-night'
 # KCachegrind for visualizing profiles
 alias kcachegrind='docker run --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v "$HOME:$HOME" -w "$PWD" -e "HOME=$HOME" quetzacoalt/kcachegrind kcachegrind'
 # Dive, analyzes Docker Images

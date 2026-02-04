@@ -8,9 +8,10 @@ source "$HOME/.config/env.sh"
 
 fpath=("$ZDOTDIR/pkg" $fpath)
 fpath=("$ZDOTDIR/functions" $fpath)
+fpath=("$ZDOTDIR/completions" $fpath)
 fpath=("$ZDOTDIR/prompts" $fpath)
 autoload $ZDOTDIR/pkg/*
-#autoload $ZDOTDIR/functions/*
+autoload $ZDOTDIR/functions/*
 #autoload $ZDOTDIR/prompts/*
 
 # Smart URLs, we have to init this before F-Sy-H since otherwise zle will

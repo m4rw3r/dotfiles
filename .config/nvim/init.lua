@@ -146,7 +146,7 @@ paqPlus.init(function(use)
         end
       })
 
-      vim.cmd("colorscheme base16-tomorrow-night")
+      -- vim.cmd("colorscheme base16-tomorrow-night")
     end,
     cmds = {
       {
@@ -160,6 +160,15 @@ paqPlus.init(function(use)
         { desc = "Switch colorscheme to light" }
       }
     },
+  })
+  use({
+    "catppuccin/nvim",
+    as = "catppuccin",
+    config = function()
+      require("catppuccin")
+
+      vim.cmd("colorscheme catppuccin-mocha")
+    end
   })
 
   use({

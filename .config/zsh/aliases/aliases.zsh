@@ -14,18 +14,15 @@ alias sudo='sudo '
 # Dotfiles management alias: https://github.com/m4rw3r/dotfiles/
 alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 
-alias genuuid="uuidgen | tr '[:upper:]' '[:lower:]' | tr -d \"\\n\""
 # GitDoge
 alias such=git
 alias very=git
 alias wow='git status'
 
+alias genuuid="uuidgen | tr '[:upper:]' '[:lower:]' | tr -d \"\\n\""
 alias mysql='mysql --auto-vertical-output --show-warnings --sigint-ignore --line-numbers'
 alias mysqlp='mysql --auto-vertical-output --show-warnings --sigint-ignore --pager=less --line-numbers --column-type-info'
 alias json_escape='jq -aR'
-# TODO: Inform all NeoVIM instances to also swap on this
-#alias light='echo "include themes/base16-tomorrow.conf" > $XDG_CONFIG_HOME/kitty/current-theme.conf && kitty +runpy "from kitty.utils import *; reload_conf_in_all_kitties()"'
-#alias dark='echo "include themes/base16-tomorrow-night.conf" > $XDG_CONFIG_HOME/kitty/current-theme.conf && kitty +runpy "from kitty.utils import *; reload_conf_in_all_kitties()"'
 alias light='kitty_theme base16-tomorrow'
 alias dark='kitty_theme base16-tomorrow-night'
 # KCachegrind for visualizing profiles

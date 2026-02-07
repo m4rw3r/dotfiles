@@ -9,8 +9,8 @@ import crypto from "node:crypto";
 interface Context {
   bunShell: PluginInput["$"],
   projectName: string;
+  projectPath: string,
   client: OpencodeClient,
-  title: string,
 }
 
 interface Info {
@@ -40,6 +40,7 @@ async function bellNotification(): Promise<void> {
 }
 
 const KITTY_ALLOWED_CHARS = /[a-zA-Z0-9\-_\/+.,(){}[\]*&^%$#@!\`~]/;
+const NOTIFICATION_GROUP = "OpenCode";
 
 /**
  * Sends a desktop notification for the Kitty Terminal.
@@ -48,9 +49,9 @@ const KITTY_ALLOWED_CHARS = /[a-zA-Z0-9\-_\/+.,(){}[\]*&^%$#@!\`~]/;
  */
 async function kittyNotification(ctx: Context, info: Info): Promise<void> {
   const identifier = crypto.randomUUID();
-  const title = info.title ?? ctx.title;
+  const title = info.title ?? ctx.projectName;
   // a=focus is default
-  const props = `i=${identifier}:g=${btoa("OpenCode")}:o=unfocused`
+  const props = `i=${identifier}:g=${btoa(NOTIFICATION_GROUP)}:o=unfocused`
   const titleEscape = `\x1b]99;${props}:d=0:p=title;${title}\x1b\\`;
   const bodyEscape = `\x1b]99;${props}:d=1:p=body;${info.body}\x1b\\`;
 
@@ -61,10 +62,12 @@ async function kittyNotification(ctx: Context, info: Info): Promise<void> {
  * @see https://github.com/stuartleeks/wsl-notify-send
  */
 async function wslNotification(ctx: Context, info: Info): Promise<void> {
+  const title = info.title ?? ctx.projectName;
+
   try {
     // console.error(`~/.config/opencode/wsl-notify-send.exe --appId "OpenCode" --category ${info.title ?? ctx.title} ${info.body}`);
     // --icon does not seem to work
-    await ctx.bunShell`~/.config/opencode/wsl-notify-send.exe --appId "OpenCode" --category '${info.title ?? ctx.title}' '${info.body}'`.quiet();
+    await ctx.bunShell`~/.config/opencode/wsl-notify-send.exe --appId "${NOTIFICATION_GROUP}" --category '${title}' '${info.body}'`.quiet();
   }
   catch (e) {
     console.error("Failed to run wsl-notify-send.exe", e);
@@ -76,7 +79,7 @@ async function macosNotification(ctx: Context, info: Info): Promise<void> {
   bellNotification();
 
   try {
-    const title = (info.title ?? ctx.title).replace(/'/g, `"'"`);
+    const title = (info.title ?? ctx.projectName).replace(/'/g, `"'"`);
     const body = info.body.replace(/'/g, `"'"`);
 
     await ctx.bunShell`osascript -e 'display notification "${body}" with title "${title}"'`.quiet()
@@ -88,18 +91,21 @@ async function macosNotification(ctx: Context, info: Info): Promise<void> {
 
 async function onEvent(ctx: Context, event: Event): Promise<void> {
   // console.error(`event (event=${event.type})`, event)
+  let session;
 
   switch (event.type) {
     case "session.idle":
-      const session = await ctx.client.session.get({ path: { id: event.properties.sessionID } });
+      session = await ctx.client.session.get({ path: { id: event.properties.sessionID } });
 
       if (session.data?.parentID) {
         // Subagent
         return;
       }
 
+
       sendNotification(ctx, {
         body: "Done",
+        title: session.data?.title
       })
 
       break;
@@ -108,16 +114,26 @@ async function onEvent(ctx: Context, event: Event): Promise<void> {
         return;
       }
 
+      if (event.properties.sessionID) {
+        session = await ctx.client.session.get({ path: { id: event.properties.sessionID } });
+      }
+
       sendNotification(ctx, {
         body: "Error",
+        title: session?.data?.title,
       })
 
       break;
     case "permission.asked":
       console.error("We got event for asked");
 
+      if (event.properties.sessionID) {
+        session = await ctx.client.session.get({ path: { id: event.properties.sessionID } });
+      }
+
       sendNotification(ctx, {
         body: `Permission required ask`,
+        title: session?.data?.title,
       });
   }
 }
@@ -144,7 +160,7 @@ export async function NotificationPlugin({ project, client, $, directory, worktr
     projectName,
     bunShell: $,
     client,
-    title: `OpenCode: ${projectName}`,
+    projectPath: directory,
   };
 
   return {

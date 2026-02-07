@@ -25,6 +25,8 @@ alias mysqlp='mysql --auto-vertical-output --show-warnings --sigint-ignore --pag
 alias json_escape='jq -aR'
 alias light='kitty_theme base16-tomorrow'
 alias dark='kitty_theme base16-tomorrow-night'
+alias ccusage='npx ccusage@latest'
+alias ccusage-opencode='bunx @ccusage/opencode@latest'
 # KCachegrind for visualizing profiles
 alias kcachegrind='docker run --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v "$HOME:$HOME" -w "$PWD" -e "HOME=$HOME" quetzacoalt/kcachegrind kcachegrind'
 # Dive, analyzes Docker Images

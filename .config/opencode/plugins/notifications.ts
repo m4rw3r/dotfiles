@@ -167,19 +167,24 @@ async function onEvent(ctx: Context, event: Event): Promise<void> {
   }
 }
 
-async function onToolExecuteBefore(ctx: Context, tool: string): Promise<void> {
+async function onToolExecuteBefore(ctx: Context, { tool, sessionID }: { tool: string, sessionID: string }): Promise<void> {
   if (tool === "question") {
+    const session = await ctx.client.session.get({ path: { id: sessionID } });
+
     sendNotification(ctx, {
       body: `Input required`,
+      title: session?.data?.title,
     });
   }
 }
 
 async function onPermissionAsk(ctx: Context, input: Permission): Promise<void> {
   console.error("We ask");
+  const session = await ctx.client.session.get({ path: { id: input.sessionID } });
 
   sendNotification(ctx, {
     body: `Permission required: ${input.title}`,
+    title: session?.data?.title,
   });
 }
 
@@ -195,6 +200,6 @@ export async function NotificationPlugin({ project, client, $, directory, worktr
   return {
     event: ({ event }) => onEvent(context, event),
     "permission.ask": (input) => onPermissionAsk(context, input),
-    "tool.execute.before": ({ tool }) => onToolExecuteBefore(context, tool),
+    "tool.execute.before": (input) => onToolExecuteBefore(context, input),
   };
 }

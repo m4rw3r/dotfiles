@@ -20,19 +20,19 @@ interface Info {
 
 type SendNotification = (ctx: Context, info: Info) => Promise<void>;
 
-let sendNotification: SendNotification = bellNotification;
+let sendNotificationImpl: SendNotification = bellNotification;
 
 if (process.env.OPENCODE_NOTIFY?.toLowerCase() === "false") {
-  sendNotification = async () => {};
+  sendNotificationImpl = async () => {};
 }
 else if (process.env.TERM?.includes("kitty")) {
-  sendNotification = kittyNotification;
+  sendNotificationImpl = kittyNotification;
 }
 else if (process.platform === "linux" && os.release().includes("microsoft")) {
-  sendNotification = wslNotification;
+  sendNotificationImpl = wslNotification;
 }
 else if (process.platform === "darwin") {
-  sendNotification = macosNotification;
+  sendNotificationImpl = macosNotification;
 }
 
 async function bellNotification(): Promise<void> {
@@ -41,6 +41,24 @@ async function bellNotification(): Promise<void> {
 
 const KITTY_ALLOWED_CHARS = /[a-zA-Z0-9\-_\/+.,(){}[\]*&^%$#@!\`~]/;
 const NOTIFICATION_GROUP = "OpenCode";
+const THROTTLE_MS = 5000;
+/**
+ * Timer for already triggered notifications, to avoid spam.
+ */
+const timers: Record<string, NodeJS.Timeout> = {};
+
+async function sendNotification(ctx: Context, info: Info): Promise<void> {
+  if (timers[ctx.projectPath]) {
+    // We are throttled
+    return;
+  }
+
+  timers[ctx.projectPath] = setTimeout(() => {
+    delete timers[ctx.projectPath];
+  }, THROTTLE_MS);
+
+  await sendNotificationImpl(ctx, info);
+}
 
 /**
  * Sends a desktop notification for the Kitty Terminal.
@@ -59,6 +77,10 @@ async function kittyNotification(ctx: Context, info: Info): Promise<void> {
 }
 
 /**
+ * Uses an exe calling PowerShell from inside WSL2. Has similar drawbacks
+ * as the AppleScript solution; no clicking on notification, and no indication
+ * of which window/tab is the source.
+ *
  * @see https://github.com/stuartleeks/wsl-notify-send
  */
 async function wslNotification(ctx: Context, info: Info): Promise<void> {
@@ -74,6 +96,13 @@ async function wslNotification(ctx: Context, info: Info): Promise<void> {
   }
 }
 
+/**
+ * Uses AppleScript to trigger a notification, the biggest drawbacks here is
+ * that you cannot click the notification or figure out which window/tab it
+ * belongs to.
+ *
+ * Mainly used as a fallback in case we are not using Kitty.
+ */
 async function macosNotification(ctx: Context, info: Info): Promise<void> {
   // Also send bell to make it easier to find
   bellNotification();

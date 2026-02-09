@@ -69,6 +69,7 @@
     },
   },
   "tui": {
+    "diff_style": "stacked",
     "scroll_speed": 3,
     "scroll_acceleration": {
       "enabled": true

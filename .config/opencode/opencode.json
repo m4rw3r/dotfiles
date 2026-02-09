@@ -91,6 +91,11 @@
     "input_delete_to_line_start": "none", // ctrl+u removed
     "input_delete": "delete,shift+delete", // ctrl+d removed
   },
+  // Explicitly enable compaction
+  "compaction": {
+    "auto": true,
+    "prune": true
+  },
   "plugin": [],
   "experimental": {
     "disable_paste_summary": true,

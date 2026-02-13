@@ -67,6 +67,7 @@
       "printf *": "allow",
       "pwd": "allow",
       "rg *": "allow",
+      "rustc *": "allow",
       "sort": "allow",
       "tail *": "allow",
       "wc *": "allow",
@@ -77,6 +78,18 @@
       "*.env": "deny",
       "*.env.*": "deny",
       "*.env.example": "allow",
+      "~/.cargo/registry/src": "allow",
+    },
+    "grep": {
+      "*": "allow",
+      "~/.cargo/registry/src": "allow",
+    },
+    "glob": {
+      "*": "allow",
+      "~/.cargo/registry/src": "allow",
+    },
+    "list": {
+      "*": "allow",
       "~/.cargo/registry/src": "allow",
     },
   },

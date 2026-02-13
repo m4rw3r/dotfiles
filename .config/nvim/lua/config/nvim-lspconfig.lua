@@ -157,9 +157,6 @@ function M.config()
   configLsp("psalm", {
     cmd = {"x", "psalm", "--language-server"},
     flags = { debounce_text_changes = 150 },
-    root_dir = function()
-      return vim.fs.dirname(vim.fs.find({ "composer.json" }, { upward = true })[1])
-    end,
   })
 
   configLsp("rust_analyzer", {})

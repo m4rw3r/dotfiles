@@ -216,4 +216,17 @@ if ! command -v open &>/dev/null; then
 	}
 fi
 
+# Notify Windows Terminal of any working directory change to make tab-duplication work
+#
+# NOTE: Make sure to remove the `--cd ~` from the WSL startup command in the
+#       Windows Terminal Settings
+[[ -n "$WT_SESSION" ]] && {
+	chpwd() {
+		local win
+		win="$(wslpath -w "$PWD" | tr -d '\n')"
+		[[ "$win" != *'\' ]] && win="$win\\"
+		printf '\e]9;9;"%s"\e\\' "$win"
+	}
+}
+
 eval "$(starship init zsh)"

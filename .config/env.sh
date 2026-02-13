@@ -20,6 +20,7 @@ export NPM_CONFIG_USERCONFIG="$XDG_CONFIG_HOME/npm/config"
 export NPM_CONFIG_CACHE="$XDG_CACHE_HOME/npm"
 export NPM_CONFIG_PREFIX="$HOME/.local"
 
+export HISTFILE="$XDG_STATE_HOME/bash_history"
 export K9SCONFIG="$XDG_CONFIG_HOME/k9s"
 export KDEHOME="$XDG_CONFIG_HOME/kde"
 export MYSQL_HISTFILE="$XDG_STATE_HOME/mysql_history"
@@ -27,7 +28,11 @@ export NODE_REPL_HISTORY="$XDG_STATE_HOME/node_repl_history"
 export PNPM_HOME="$XDG_DATA_HOME/pnpm"
 export PSQL_HISTORY="$XDG_STATE_HOME/psql_history"
 export PYTHONHISTFILE="$XDG_STATE_HOME/python_history"
+export PYTHON_HISTORY="$XDG_STATE_HOME/python/history"
 export CODEX_HOME="$XDG_CONFIG_HOME/codex"
+export CLAUDE_CONFIG_DIR="$XDG_CONFIG_HOME/claude"
+export BUN_INSTALL="$XDG_DATA_HOME/bun"
+export GNUPGHOME="$XDG_DATA_HOME/gnupg"
 
 # Use this command in psql to enable less pager: \pset pager always
 export PAGER=less

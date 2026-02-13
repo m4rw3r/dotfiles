@@ -118,8 +118,15 @@ async function macosNotification(ctx: Context, info: Info): Promise<void> {
   }
 }
 
-async function onEvent(ctx: Context, event: Event): Promise<void> {
-  // console.error(`event (event=${event.type})`, event)
+// Missing event from the `Event` type
+interface EventPermissionAsk {
+  type: "permission.asked";
+  properties: {
+    sessionID: string;
+  }
+}
+
+async function onEvent(ctx: Context, event: Event | EventPermissionAsk): Promise<void> {
   let session;
 
   switch (event.type) {
@@ -130,7 +137,6 @@ async function onEvent(ctx: Context, event: Event): Promise<void> {
         // Subagent
         return;
       }
-
 
       sendNotification(ctx, {
         body: "Done",
@@ -154,8 +160,7 @@ async function onEvent(ctx: Context, event: Event): Promise<void> {
 
       break;
     case "permission.asked":
-      console.error("We got event for asked");
-
+      // This actually happens
       if (event.properties.sessionID) {
         session = await ctx.client.session.get({ path: { id: event.properties.sessionID } });
       }
@@ -179,7 +184,6 @@ async function onToolExecuteBefore(ctx: Context, { tool, sessionID }: { tool: st
 }
 
 async function onPermissionAsk(ctx: Context, input: Permission): Promise<void> {
-  console.error("We ask");
   const session = await ctx.client.session.get({ path: { id: input.sessionID } });
 
   sendNotification(ctx, {

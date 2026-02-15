@@ -6,6 +6,7 @@
   "permission": {
     "bash": {
       "*": "ask",
+      "cat *": "allow",
       "cargo build *": "allow",
       "cargo check *": "allow",
       "cargo clippy *": "allow",
@@ -32,6 +33,7 @@
       "git branch --show-current": "allow",
       "git branch": "allow",
       "git blame *": "allow",
+      "git cat-file *": "allow",
       "git check-ignore *": "allow",
       "git checkout *": "allow",
       "git commit *": "allow",

@@ -113,13 +113,19 @@
     // Some VIM-like keybinds in addition to the defaults
     "messages_half_page_up": "ctrl+alt+u,ctrl+u",
     "messages_half_page_down": "ctrl+alt+d,ctrl+d",
-    "messages_first": "ctrl+g,pageup",
-    "messages_last": "ctrl+shift+g,pagedown",
+    "messages_first": "ctrl+g,home",
+    "messages_last": "ctrl+shift+g,end",
     // We need alt+v for Windows Terminal
     "input_paste": "ctrl+v,alt+v",
+    "input_buffer_home": "pageup",
+    "input_buffer_end": "pagedown",
+    "input_line_home": "home",
+    "input_line_end": "end",
+    "input_select_line_home": "shift+home",
+    "input_select_line_end": "shift+end",
+    "input_select_buffer_home": "shift+pageup",
+    "input_select_buffer_end": "shift+pagedown",
     // Conflicts
-    "messages_page_up": "ctrl+alt+b", // pageup removed
-    "messages_page_down": "ctrl+alt+f", // pagedown removed
     "app_exit": "ctrl+c,<leader>q", // ctrl+d removed
     "input_delete_to_line_start": "none", // ctrl+u removed
     "input_delete": "delete,shift+delete", // ctrl+d removed

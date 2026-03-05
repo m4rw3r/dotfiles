@@ -1,0 +1,1 @@
+- Do not restart quickshell itself, it is already running

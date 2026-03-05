@@ -14,6 +14,7 @@ export XDG_BIN_DIR="${XDG_BIN_DIR:-"$HOME/.local/bin"}"
 # Zsh
 export ZDOTDIR="$XDG_CONFIG_HOME/zsh"
 export MODULES_DIR="$ZDOTDIR/plugins"
+export ZSH_CACHE_DIR="$XDG_CACHE_HOME/zsh/cache"
 
 # NPM XDG support
 export NPM_CONFIG_USERCONFIG="$XDG_CONFIG_HOME/npm/config"

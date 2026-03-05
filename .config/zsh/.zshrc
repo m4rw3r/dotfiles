@@ -46,11 +46,11 @@ autoload -Uz compinit promptinit
 # Load and initialize the completion system ignoring insecure directories with a
 # cache time of 20 hours, so it should almost always regenerate the first time a
 # shell is opened each day.
-_comp_files=($XDG_CACHE_HOME/zsh/zcompcache(Nm-20))
+_comp_files=($XDG_CACHE_HOME/zsh/zcompdump(Nm-20))
 if (( $#_comp_files )); then
-	compinit -i -C -d "$XDG_CACHE_HOME/zsh/zcompcache"
+	compinit -i -C -d "$XDG_CACHE_HOME/zsh/zcompdump"
 else
-	compinit -i -d "$XDG_CACHE_HOME/zsh/zcompcache"
+	compinit -i -d "$XDG_CACHE_HOME/zsh/zcompdump"
 fi
 unset _comp_files
 promptinit
@@ -125,7 +125,8 @@ setopt auto_menu
 setopt auto_list
 # If completed parameter is a directory, add a trailing slash.
 setopt auto_param_slash
-setopt complete_aliases
+# Do not set complete_aliases since that will prevent us from getting automatic completions of our aliases
+#setopt complete_aliases
 # Do not autoselect the first completion entry.
 unsetopt menu_complete
 # Disable start/stop characters in shell editor.

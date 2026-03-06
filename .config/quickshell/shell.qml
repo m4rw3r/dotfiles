@@ -11,19 +11,44 @@ ShellRoot {
   id: root
 
   property bool shadeOpen: false
+  property bool galleryOpen: false
 
   IpcHandler {
     target: "ui"
     function toggleShade() {
       root.shadeOpen = !root.shadeOpen;
+      if (root.shadeOpen) root.galleryOpen = false;
       if (root.shadeOpen) launcher.closeLauncher();
     }
     function openShade() {
       root.shadeOpen = true;
+      root.galleryOpen = false;
       launcher.closeLauncher();
     }
     function closeShade() {
       root.shadeOpen = false;
+    }
+  }
+
+  IpcHandler {
+    target: "gallery"
+
+    function toggle() {
+      root.galleryOpen = !root.galleryOpen;
+      if (root.galleryOpen) {
+        root.shadeOpen = false;
+        launcher.closeLauncher();
+      }
+    }
+
+    function open() {
+      root.galleryOpen = true;
+      root.shadeOpen = false;
+      launcher.closeLauncher();
+    }
+
+    function close() {
+      root.galleryOpen = false;
     }
   }
 
@@ -49,7 +74,10 @@ ShellRoot {
 
   Launcher {
     id: launcher
-    onLauncherOpening: root.shadeOpen = false
+    onLauncherOpening: {
+      root.shadeOpen = false;
+      root.galleryOpen = false;
+    }
   }
 
   PanelWindow {
@@ -100,6 +128,11 @@ ShellRoot {
 
       onCloseRequested: root.shadeOpen = false
     }
+  }
+
+  WidgetGalleryWindow {
+    galleryOpen: root.galleryOpen
+    onCloseRequested: root.galleryOpen = false
   }
 
 }

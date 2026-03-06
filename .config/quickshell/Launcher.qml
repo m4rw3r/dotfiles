@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -20,9 +22,50 @@ Item {
   property int launcherRows: 3
   property int launcherPageSize: launcherColumns * launcherRows
   property int launcherSelectedIndex: 0
+  property var activeScreen: null
   property var oskCommand: ["wvkbd-mobintl"]
   property int oskFallbackDelayMs: 180
   property int oskFallbackHeight: 320
+
+  function showInputMethod() {
+    const inputMethod = Qt.inputMethod;
+    if (inputMethod && inputMethod["show"]) inputMethod["show"]();
+  }
+
+  function hideInputMethod() {
+    const inputMethod = Qt.inputMethod;
+    if (inputMethod && inputMethod["hide"]) inputMethod["hide"]();
+  }
+
+  function inputMethodVisible() {
+    const inputMethod = Qt.inputMethod;
+    return Boolean(inputMethod && inputMethod["visible"]);
+  }
+
+  function inputMethodAnimating() {
+    const inputMethod = Qt.inputMethod;
+    return Boolean(inputMethod && inputMethod["animating"]);
+  }
+
+  function inputMethodHeight() {
+    const inputMethod = Qt.inputMethod;
+    const keyboardRectangle = inputMethod ? inputMethod["keyboardRectangle"] : null;
+    return keyboardRectangle ? keyboardRectangle.height : 0;
+  }
+
+  function ensureActiveScreen() {
+    const screens = Quickshell.screens;
+    if (screens.length === 0) {
+      activeScreen = null;
+      return;
+    }
+
+    for (let i = 0; i < screens.length; i += 1) {
+      if (screens[i] === activeScreen) return;
+    }
+
+    activeScreen = screens[0];
+  }
 
   function clampLauncherSelection() {
     if (launcherResults.length === 0) {
@@ -99,6 +142,7 @@ Item {
 
   function openLauncher(query) {
     launcherOpening();
+    ensureActiveScreen();
     launcherOpen = true;
     launcherQuery = query === undefined ? "" : String(query);
     launcherPage = 0;
@@ -111,7 +155,7 @@ Item {
     launcherQuery = "";
     launcherPage = 0;
     launcherSelectedIndex = 0;
-    Qt.inputMethod.hide();
+    hideInputMethod();
     refreshLauncherResults();
   }
 
@@ -137,23 +181,23 @@ Item {
   Connections {
     target: DesktopEntries
     function onApplicationsChanged() {
-      refreshLauncherResults();
+      root.refreshLauncherResults();
     }
   }
 
   IpcHandler {
     target: "launcher"
     function toggle(): void {
-      toggleLauncher();
+      root.toggleLauncher();
     }
     function open(): void {
-      openLauncher("");
+      root.openLauncher("");
     }
     function close(): void {
-      closeLauncher();
+      root.closeLauncher();
     }
     function search(query: string): void {
-      openLauncher(query);
+      root.openLauncher(query);
     }
   }
 
@@ -162,42 +206,49 @@ Item {
 
     PanelWindow {
       id: launcherWindow
+
       property var modelData
       property bool oskFromTouch: false
+      property bool isActiveWindow: root.activeScreen === null
+        ? (Quickshell.screens.length > 0 && Quickshell.screens[0] === launcherWindow.modelData)
+        : root.activeScreen === launcherWindow.modelData
       property real keyboardInset: {
         if (!oskFromTouch && !oskProcess.running) return 0;
-        const qtKeyboard = (Qt.inputMethod.visible || Qt.inputMethod.animating)
-          ? Qt.inputMethod.keyboardRectangle.height
+        const qtKeyboard = (root.inputMethodVisible() || root.inputMethodAnimating())
+          ? root.inputMethodHeight()
           : 0;
         const fallbackKeyboard = oskProcess.running ? root.oskFallbackHeight : 0;
         return Math.max(qtKeyboard, fallbackKeyboard);
       }
       screen: modelData
 
-      visible: launcherOpen
+      visible: root.launcherOpen
       anchors { left: true; right: true; top: true; bottom: true }
       exclusionMode: ExclusionMode.Ignore
       aboveWindows: true
       color: "transparent"
       WlrLayershell.layer: WlrLayer.Overlay
-      WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+      WlrLayershell.keyboardFocus: launcherWindow.isActiveWindow
+        ? WlrKeyboardFocus.OnDemand
+        : WlrKeyboardFocus.None
 
       function focusSearch(fromTouch) {
+        root.activeScreen = launcherWindow.modelData;
         oskFromTouch = fromTouch;
         searchInput.forceActiveFocus();
         if (!fromTouch) return;
-        Qt.inputMethod.show();
+        root.showInputMethod();
         oskFallbackTimer.restart();
       }
 
       function moveSelectionBy(delta) {
-        if (launcherResults.length === 0) return;
+        if (root.launcherResults.length === 0) return;
         root.setLauncherSelection(root.launcherSelectedIndex + delta);
       }
 
       function pageItemCount(page) {
         const start = page * root.launcherPageSize;
-        return Math.max(0, Math.min(root.launcherPageSize, launcherResults.length - start));
+        return Math.max(0, Math.min(root.launcherPageSize, root.launcherResults.length - start));
       }
 
       function rowItemCount(page, row) {
@@ -215,13 +266,13 @@ Item {
       }
 
       function moveHorizontal(direction) {
-        if (launcherResults.length === 0) return;
+        if (root.launcherResults.length === 0) return;
 
         const page = Math.floor(root.launcherSelectedIndex / root.launcherPageSize);
         const pageOffset = root.launcherSelectedIndex - page * root.launcherPageSize;
         const row = Math.floor(pageOffset / root.launcherColumns);
         const col = pageOffset % root.launcherColumns;
-        const maxPage = Math.max(0, Math.ceil(launcherResults.length / root.launcherPageSize) - 1);
+        const maxPage = Math.max(0, Math.ceil(root.launcherResults.length / root.launcherPageSize) - 1);
 
         if (direction > 0) {
           const currentRowCount = rowItemCount(page, row);
@@ -255,14 +306,19 @@ Item {
       }
 
       function focusGrid() {
+        root.activeScreen = launcherWindow.modelData;
         launcherContent.forceActiveFocus();
       }
 
       function stopOsk() {
         oskFallbackTimer.stop();
         if (oskProcess.running) oskProcess.running = false;
-        Qt.inputMethod.hide();
+        root.hideInputMethod();
         oskFromTouch = false;
+      }
+
+      function syncSearchInput() {
+        if (searchInput.text !== root.launcherQuery) searchInput.text = root.launcherQuery;
       }
 
       Process {
@@ -276,7 +332,7 @@ Item {
         repeat: false
         onTriggered: {
           if (!launcherWindow.oskFromTouch || !searchInput.activeFocus) return;
-          const qtKeyboardVisible = Qt.inputMethod.visible || Qt.inputMethod.keyboardRectangle.height > 0;
+          const qtKeyboardVisible = root.inputMethodVisible() || root.inputMethodHeight() > 0;
           if (!qtKeyboardVisible && !oskProcess.running) oskProcess.running = true;
         }
       }
@@ -284,7 +340,14 @@ Item {
       Connections {
         target: Qt.inputMethod
         function onVisibleChanged() {
-          if (Qt.inputMethod.visible && oskProcess.running) oskProcess.running = false;
+          if (root.inputMethodVisible() && oskProcess.running) oskProcess.running = false;
+        }
+      }
+
+      Connections {
+        target: root
+        function onLauncherQueryChanged() {
+          launcherWindow.syncSearchInput();
         }
       }
 
@@ -294,7 +357,7 @@ Item {
 
       MouseArea {
         anchors.fill: parent
-        onClicked: closeLauncher()
+        onClicked: root.closeLauncher()
       }
 
       Item {
@@ -302,7 +365,7 @@ Item {
         width: Math.min(parent.width - 36, 980)
         height: launcherColumn.implicitHeight
         anchors.horizontalCenter: parent.horizontalCenter
-        y: Math.max(20, Math.round((parent.height - keyboardInset - height) / 2))
+        y: Math.max(20, Math.round((parent.height - launcherWindow.keyboardInset - height) / 2))
         focus: launcherWindow.visible && !searchInput.activeFocus
         LayoutMirroring.enabled: false
         LayoutMirroring.childrenInherit: true
@@ -311,39 +374,39 @@ Item {
           if (searchInput.activeFocus) return;
 
           if (event.key === Qt.Key_Escape) {
-            closeLauncher();
+            root.closeLauncher();
             event.accepted = true;
             return;
           }
 
-          if (launcherResults.length > 0) {
+          if (root.launcherResults.length > 0) {
             switch (event.key) {
             case Qt.Key_Left:
-              moveHorizontal(-1);
+              launcherWindow.moveHorizontal(-1);
               event.accepted = true;
               return;
             case Qt.Key_Right:
-              moveHorizontal(1);
+              launcherWindow.moveHorizontal(1);
               event.accepted = true;
               return;
             case Qt.Key_Up:
               if ((root.launcherSelectedIndex % pagerArea.pageSize) < pagerArea.columns) {
-                focusSearch(false);
+                launcherWindow.focusSearch(false);
               } else {
-                moveSelectionBy(-pagerArea.columns);
+                launcherWindow.moveSelectionBy(-pagerArea.columns);
               }
               event.accepted = true;
               return;
             case Qt.Key_Down:
-              moveSelectionBy(pagerArea.columns);
+              launcherWindow.moveSelectionBy(pagerArea.columns);
               event.accepted = true;
               return;
             case Qt.Key_PageUp:
-              moveSelectionBy(-pagerArea.pageSize);
+              launcherWindow.moveSelectionBy(-pagerArea.pageSize);
               event.accepted = true;
               return;
             case Qt.Key_PageDown:
-              moveSelectionBy(pagerArea.pageSize);
+              launcherWindow.moveSelectionBy(pagerArea.pageSize);
               event.accepted = true;
               return;
             case Qt.Key_Home:
@@ -351,12 +414,12 @@ Item {
               event.accepted = true;
               return;
             case Qt.Key_End:
-              root.setLauncherSelection(launcherResults.length - 1);
+              root.setLauncherSelection(root.launcherResults.length - 1);
               event.accepted = true;
               return;
             case Qt.Key_Enter:
             case Qt.Key_Return:
-              launchEntry(launcherResults[root.launcherSelectedIndex]);
+              root.launchEntry(root.launcherResults[root.launcherSelectedIndex]);
               event.accepted = true;
               return;
             }
@@ -365,10 +428,10 @@ Item {
           const modifiers = event.modifiers;
           const hasMetaModifier = modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier);
           if (!hasMetaModifier && event.text && event.text.length > 0) {
-            focusSearch(false);
-            launcherQuery = event.text;
-            searchInput.text = launcherQuery;
-            searchInput.cursorPosition = launcherQuery.length;
+            launcherWindow.focusSearch(false);
+            root.launcherQuery = event.text;
+            searchInput.text = root.launcherQuery;
+            searchInput.cursorPosition = root.launcherQuery.length;
             event.accepted = true;
           }
         }
@@ -406,7 +469,7 @@ Item {
                 id: searchInput
                 anchors.fill: parent
                 anchors.leftMargin: 18
-                anchors.rightMargin: launcherQuery === "" ? 18 : 52
+                anchors.rightMargin: searchInput.text === "" ? 18 : 52
                 verticalAlignment: TextInput.AlignVCenter
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.textXl
@@ -415,22 +478,27 @@ Item {
                 selectedTextColor: Theme.textOnAccent
                 clip: true
                 selectByMouse: true
-                text: launcherQuery
-                onTextEdited: launcherQuery = text
-                onAccepted: if (launcherResults.length > 0) launchEntry(launcherResults[0])
-                Keys.onEscapePressed: closeLauncher()
+                text: root.launcherQuery
+                onTextEdited: root.launcherQuery = searchInput.text
+                onAccepted: {
+                  if (root.launcherResults.length === 0) return;
+                  root.launchEntry(root.launcherResults[root.launcherSelectedIndex]);
+                }
+                Keys.onEscapePressed: root.closeLauncher()
                 Keys.onDownPressed: launcherWindow.focusGrid()
                 onActiveFocusChanged: {
                   if (activeFocus) {
                     if (launcherWindow.oskFromTouch) {
-                      Qt.inputMethod.show();
+                      root.showInputMethod();
                       oskFallbackTimer.restart();
                     }
                   } else if (launcherWindow.oskFromTouch || oskProcess.running) {
                     launcherWindow.stopOsk();
                   }
 
-                  if (!activeFocus && launcherWindow.visible) launcherWindow.focusGrid();
+                  if (!activeFocus && launcherWindow.visible && launcherWindow.isActiveWindow) {
+                    launcherWindow.focusGrid();
+                  }
                 }
 
                 TapHandler {
@@ -443,7 +511,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.left: parent.left
                 anchors.leftMargin: 18
-                visible: launcherQuery === "" && !searchInput.activeFocus
+                visible: searchInput.text === "" && !searchInput.activeFocus
                 text: "Search apps"
                 tone: "subtle"
                 size: "lg"
@@ -456,7 +524,7 @@ Item {
                 anchors.right: parent.right
                 anchors.rightMargin: 12
                 anchors.verticalCenter: parent.verticalCenter
-                visible: launcherQuery !== ""
+                visible: searchInput.text !== ""
 
                 UiText {
                   anchors.centerIn: parent
@@ -469,7 +537,7 @@ Item {
                 MouseArea {
                   id: clearTouch
                   anchors.fill: parent
-                  onClicked: launcherQuery = ""
+                  onClicked: root.launcherQuery = ""
                 }
               }
             }
@@ -487,7 +555,7 @@ Item {
             property int arrowGutter: 76
             property real tileWidth: Math.floor((pageView.width - (columns - 1) * tileSpacing) / columns)
             property int pageSize: root.launcherPageSize
-            property int pageCount: Math.max(1, Math.ceil(launcherResults.length / pageSize))
+            property int pageCount: Math.max(1, Math.ceil(root.launcherResults.length / pageSize))
 
             function syncToPage(page, align) {
               const maxPage = Math.max(0, pageCount - 1);
@@ -506,7 +574,7 @@ Item {
             Connections {
               target: root
               function onLauncherPageChanged() {
-                syncToPage(root.launcherPage, false);
+                pagerArea.syncToPage(root.launcherPage, false);
               }
             }
 
@@ -532,9 +600,9 @@ Item {
               onCurrentIndexChanged: {
                 if (root.launcherPage !== currentIndex) root.launcherPage = currentIndex;
 
-                if (launcherResults.length === 0) return;
+                if (root.launcherResults.length === 0) return;
                 const pageStart = currentIndex * pagerArea.pageSize;
-                const pageEnd = Math.min(launcherResults.length - 1, pageStart + pagerArea.pageSize - 1);
+                const pageEnd = Math.min(root.launcherResults.length - 1, pageStart + pagerArea.pageSize - 1);
                 if (root.launcherSelectedIndex < pageStart || root.launcherSelectedIndex > pageEnd) {
                   root.setLauncherSelection(pageStart);
                 }
@@ -542,8 +610,9 @@ Item {
 
               delegate: Item {
                 id: pageDelegate
-                property int pageBase: index * pagerArea.pageSize
-                property int pageItemCount: Math.max(0, Math.min(pagerArea.pageSize, launcherResults.length - pageBase))
+                required property int index
+                property int pageBase: pageDelegate.index * pagerArea.pageSize
+                property int pageItemCount: Math.max(0, Math.min(pagerArea.pageSize, root.launcherResults.length - pageBase))
                 width: pageView.width
                 height: pageView.height
 
@@ -559,8 +628,9 @@ Item {
 
                     delegate: Item {
                       id: tile
+                      required property int index
                       property int absoluteIndex: pageDelegate.pageBase + index
-                      property var entry: launcherResults[absoluteIndex]
+                      property var entry: root.launcherResults[absoluteIndex]
                       property bool selected: root.launcherSelectedIndex === absoluteIndex
                       width: pagerArea.tileWidth
                       height: pagerArea.tileHeight
@@ -568,8 +638,11 @@ Item {
                       MouseArea {
                         id: tileTouch
                         anchors.fill: parent
-                        onPressed: root.setLauncherSelection(tile.absoluteIndex)
-                        onClicked: launchEntry(tile.entry)
+                        onPressed: {
+                          root.activeScreen = launcherWindow.modelData;
+                          root.setLauncherSelection(tile.absoluteIndex);
+                        }
+                        onClicked: root.launchEntry(tile.entry)
                       }
 
                       Column {
@@ -674,7 +747,7 @@ Item {
 
             UiText {
               anchors.centerIn: pageView
-              visible: launcherResults.length === 0
+              visible: root.launcherResults.length === 0
               text: "No matching applications"
               tone: "subtle"
               size: "xl"
@@ -683,12 +756,26 @@ Item {
         }
       }
 
-      onVisibleChanged: {
-        if (visible) {
-          focusGrid();
+      onIsActiveWindowChanged: {
+        if (!visible) return;
+
+        if (launcherWindow.isActiveWindow) {
+          launcherWindow.syncSearchInput();
+          launcherWindow.focusGrid();
           pagerArea.syncToPage(root.launcherPage, true);
+        } else {
+          launcherWindow.stopOsk();
         }
-        else stopOsk();
+      }
+
+      onVisibleChanged: {
+        if (visible && launcherWindow.isActiveWindow) {
+          launcherWindow.syncSearchInput();
+          launcherWindow.focusGrid();
+          pagerArea.syncToPage(root.launcherPage, true);
+        } else {
+          launcherWindow.stopOsk();
+        }
       }
     }
   }

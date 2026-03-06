@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -13,15 +15,15 @@ ShellRoot {
   IpcHandler {
     target: "ui"
     function toggleShade() {
-      shadeOpen = !shadeOpen;
-      if (shadeOpen) launcher.closeLauncher();
+      root.shadeOpen = !root.shadeOpen;
+      if (root.shadeOpen) launcher.closeLauncher();
     }
     function openShade() {
-      shadeOpen = true;
+      root.shadeOpen = true;
       launcher.closeLauncher();
     }
     function closeShade() {
-      shadeOpen = false;
+      root.shadeOpen = false;
     }
   }
 
@@ -51,31 +53,33 @@ ShellRoot {
   }
 
   PanelWindow {
-    visible: shadeOpen
+    visible: root.shadeOpen
     anchors { left: true; right: true; top: true; bottom: true }
     exclusionMode: ExclusionMode.Ignore
     aboveWindows: true
     color: "transparent"
-    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.layer: WlrLayer.Top
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
     UiScrim {
       anchors.fill: parent
 
       MouseArea {
         anchors.fill: parent
-        onClicked: shadeOpen = false
+        onClicked: root.shadeOpen = false
       }
     }
   }
 
   PanelWindow {
-    visible: shadeOpen
+    visible: root.shadeOpen
     anchors { left: true; right: true; top: true }
     exclusionMode: ExclusionMode.Ignore
     aboveWindows: true
     implicitHeight: 420
     color: "transparent"
-    WlrLayershell.layer: WlrLayer.Top
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
     ControlCenter {
       anchors.fill: parent

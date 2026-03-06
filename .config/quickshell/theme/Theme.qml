@@ -45,7 +45,10 @@ Singleton {
   }
 
   readonly property var themeNames: Object.keys(palettes)
-  readonly property string current: persisted.selectedTheme
+  readonly property string defaultTheme: palettes.graphite !== undefined
+    ? "graphite"
+    : (themeNames.length > 0 ? themeNames[0] : "")
+  readonly property string current: normalizeThemeName(persisted.selectedTheme)
   readonly property var palette: palettes[current] !== undefined ? palettes[current] : palettes.graphite
 
   readonly property color scrim: palette.scrim
@@ -82,10 +85,24 @@ Singleton {
 
   readonly property color selection: accent
 
+  Component.onCompleted: sanitizePersistedTheme()
+
+  function normalizeThemeName(name) {
+    const normalizedName = String(name || "");
+    return palettes[normalizedName] !== undefined ? normalizedName : defaultTheme;
+  }
+
+  function sanitizePersistedTheme() {
+    const normalizedName = normalizeThemeName(persisted.selectedTheme);
+    if (persisted.selectedTheme !== normalizedName) persisted.selectedTheme = normalizedName;
+    return normalizedName;
+  }
+
   function setTheme(name) {
-    if (palettes[name] === undefined) return false;
-    if (persisted.selectedTheme === name) return true;
-    persisted.selectedTheme = name;
+    const normalizedName = normalizeThemeName(name);
+    if (normalizedName === "") return false;
+    if (persisted.selectedTheme === normalizedName) return true;
+    persisted.selectedTheme = normalizedName;
     return true;
   }
 
@@ -93,7 +110,7 @@ Singleton {
     const names = themeNames;
     if (names.length === 0) return "";
 
-    const currentIndex = names.indexOf(persisted.selectedTheme);
+    const currentIndex = names.indexOf(current);
     const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % names.length;
     persisted.selectedTheme = names[nextIndex];
     return persisted.selectedTheme;

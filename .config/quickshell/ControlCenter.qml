@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import "theme"
 import "ui/primitives"
@@ -35,27 +37,29 @@ Item {
         model: Theme.themeNames
 
         delegate: UiSurface {
+          id: themeChip
+
           required property string modelData
 
           width: Math.max(94, themeName.implicitWidth + 26)
           height: 40
           radius: Theme.radiusSm
-          tone: Theme.current === modelData ? "accent" : "field"
-          outlined: Theme.current !== modelData
+          tone: Theme.current === themeChip.modelData ? "accent" : "field"
+          outlined: Theme.current !== themeChip.modelData
 
           UiText {
             id: themeName
 
             anchors.centerIn: parent
-            text: modelData
+            text: themeChip.modelData
             size: "sm"
-            tone: Theme.current === modelData ? "onAccent" : "primary"
+            tone: Theme.current === themeChip.modelData ? "onAccent" : "primary"
             font.weight: Font.DemiBold
           }
 
           MouseArea {
             anchors.fill: parent
-            onClicked: Theme.setTheme(modelData)
+            onClicked: Theme.setTheme(themeChip.modelData)
           }
         }
       }

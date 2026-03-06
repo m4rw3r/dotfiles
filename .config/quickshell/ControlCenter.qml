@@ -491,8 +491,6 @@ FocusScope {
     id: sessionActions
   }
 
-  component FlatButton: Controls.Button {}
-
   component StatusChip: UiSurface {
     id: chip
 
@@ -517,22 +515,6 @@ FocusScope {
       font.weight: Font.DemiBold
     }
   }
-
-  component IconButton: Controls.IconButton {}
-
-  component CircleIconButton: Controls.IconButton {
-    circular: true
-  }
-
-  component IconBadge: Controls.IconButton {
-    interactive: false
-  }
-
-  component QuickTile: Patterns.QuickTile {}
-
-  component MediaSlider: Controls.Slider {}
-
-  component MenuList: Controls.Menu {}
 
   component PopoverSurface: UiSurface {
     id: popover
@@ -563,8 +545,6 @@ FocusScope {
       spacing: 8
     }
   }
-
-  component MenuRow: Controls.MenuItem {}
 
   component BrightnessController: Item {
     id: brightnessController
@@ -1098,23 +1078,26 @@ FocusScope {
           height: parent.height
         }
 
-        CircleIconButton {
+        Controls.IconButton {
           id: sleepButton
           anchors.verticalCenter: parent.verticalCenter
+          circular: true
           iconName: "moon"
           onClicked: sessionActions.sleep()
         }
 
-        CircleIconButton {
+        Controls.IconButton {
           id: lockButton
           anchors.verticalCenter: parent.verticalCenter
+          circular: true
           iconName: "lock"
           onClicked: sessionActions.lock()
         }
 
-        CircleIconButton {
+        Controls.IconButton {
           id: powerToggleButton
           anchors.verticalCenter: parent.verticalCenter
+          circular: true
           iconName: "power"
           active: root.expandedSection === "power"
           onClicked: root.toggleSection("power")
@@ -1149,10 +1132,10 @@ FocusScope {
             font.weight: Font.DemiBold
           }
 
-          MenuList {
+          Controls.Menu {
             width: parent.width
 
-            MenuRow {
+            Controls.MenuItem {
               width: parent.width
               iconName: "lock"
               title: "Lock"
@@ -1161,7 +1144,7 @@ FocusScope {
               onClicked: sessionActions.lock()
             }
 
-            MenuRow {
+            Controls.MenuItem {
               width: parent.width
               iconName: "moon"
               title: "Suspend"
@@ -1170,7 +1153,7 @@ FocusScope {
               onClicked: sessionActions.sleep()
             }
 
-            MenuRow {
+            Controls.MenuItem {
               width: parent.width
               iconName: "restart"
               title: root.powerActionLabel("restart", "Restart")
@@ -1180,7 +1163,7 @@ FocusScope {
               onClicked: root.triggerPowerAction("restart")
             }
 
-            MenuRow {
+            Controls.MenuItem {
               width: parent.width
               iconName: "power"
               title: root.powerActionLabel("shutdown", "Power Off")
@@ -1190,7 +1173,7 @@ FocusScope {
               onClicked: root.triggerPowerAction("shutdown")
             }
 
-            MenuRow {
+            Controls.MenuItem {
               width: parent.width
               iconName: "logout"
               title: root.powerActionLabel("logout", "Log Out")
@@ -1215,7 +1198,7 @@ FocusScope {
         height: 44
         spacing: 10
 
-        IconButton {
+        Controls.IconButton {
           id: muteButton
           anchors.verticalCenter: parent.verticalCenter
           width: implicitWidth
@@ -1227,7 +1210,7 @@ FocusScope {
           }
         }
 
-        MediaSlider {
+        Controls.Slider {
           width: parent.width - muteButton.width - outputButton.width - parent.spacing * 2
           anchors.verticalCenter: parent.verticalCenter
           showIcon: false
@@ -1246,7 +1229,7 @@ FocusScope {
           }
         }
 
-        IconButton {
+        Controls.IconButton {
           id: outputButton
           anchors.verticalCenter: parent.verticalCenter
           width: implicitWidth
@@ -1283,13 +1266,13 @@ FocusScope {
             font.weight: Font.DemiBold
           }
 
-          MenuList {
+          Controls.Menu {
             width: parent.width
 
             Repeater {
               model: Pipewire.nodes
 
-              delegate: MenuRow {
+              delegate: Controls.MenuItem {
                 id: outputRow
 
                 required property var modelData
@@ -1317,13 +1300,14 @@ FocusScope {
         height: 44
         spacing: 10
 
-        IconBadge {
+        Controls.IconButton {
           id: brightnessBadge
           anchors.verticalCenter: parent.verticalCenter
+          interactive: false
           iconName: "sun"
         }
 
-        MediaSlider {
+        Controls.Slider {
           id: brightnessSlider
 
           width: parent.width - brightnessBadge.width - parent.spacing
@@ -1353,7 +1337,7 @@ FocusScope {
           width: parent.width
           spacing: 8
 
-          QuickTile {
+          Patterns.QuickTile {
             id: wifiTile
             width: Math.floor((parent.width - parent.spacing) / 2)
             iconName: "wifi"
@@ -1366,7 +1350,7 @@ FocusScope {
             onSecondaryClicked: root.toggleSection("wifi")
           }
 
-          QuickTile {
+          Patterns.QuickTile {
             id: bluetoothTile
             width: Math.floor((parent.width - parent.spacing) / 2)
             iconName: "bluetooth"
@@ -1413,14 +1397,14 @@ FocusScope {
               tone: "accent"
             }
 
-            MenuList {
+            Controls.Menu {
               width: parent.width
               visible: wifiService.enabled && wifiService.networks.length > 0
 
               Repeater {
                 model: wifiService.enabled ? Math.min(6, wifiService.networks.length) : 0
 
-                delegate: MenuRow {
+                delegate: Controls.MenuItem {
                   id: wifiRow
 
                   required property int index
@@ -1505,14 +1489,14 @@ FocusScope {
                 Row {
                   spacing: 8
 
-                  FlatButton {
+                  Controls.Button {
                     text: "Connect"
                     active: true
                     enabled: root.wifiPassword !== "" && !wifiService.busy
                     onClicked: root.submitWifiPassword()
                   }
 
-                  FlatButton {
+                  Controls.Button {
                     text: "Cancel"
                     onClicked: {
                       root.wifiPasswordTarget = "";
@@ -1542,12 +1526,12 @@ FocusScope {
               width: parent.width
               spacing: 8
 
-              FlatButton {
+              Controls.Button {
                 text: wifiService.enabled ? "Turn Off" : "Turn On"
                 onClicked: wifiService.setEnabledState(!wifiService.enabled)
               }
 
-              FlatButton {
+              Controls.Button {
                 text: wifiService.busy ? "Refreshing" : "Rescan"
                 enabled: wifiService.enabled && !wifiService.busy
                 onClicked: wifiService.scan()
@@ -1604,14 +1588,14 @@ FocusScope {
               font.weight: Font.DemiBold
             }
 
-            MenuList {
+            Controls.Menu {
               width: parent.width
               visible: root.bluetoothAdapter && root.bluetoothAdapter.enabled && root.bluetoothConnectedCount() > 0
 
               Repeater {
                 model: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? root.bluetoothAdapter.devices : null
 
-                delegate: MenuRow {
+                delegate: Controls.MenuItem {
                   id: connectedDeviceRow
 
                   required property int index
@@ -1651,14 +1635,14 @@ FocusScope {
               font.weight: Font.DemiBold
             }
 
-            MenuList {
+            Controls.Menu {
               width: parent.width
               visible: root.bluetoothAdapter && root.bluetoothAdapter.enabled && root.bluetoothAvailableCount() > 0
 
               Repeater {
                 model: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? root.bluetoothAdapter.devices : null
 
-                delegate: MenuRow {
+                delegate: Controls.MenuItem {
                   id: otherDeviceRow
 
                   required property int index
@@ -1696,13 +1680,13 @@ FocusScope {
               width: parent.width
               spacing: 8
 
-              FlatButton {
+              Controls.Button {
                 text: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? "Turn Off" : "Turn On"
                 enabled: !!root.bluetoothAdapter && root.bluetoothAdapter.state !== BluetoothAdapterState.Blocked
                 onClicked: root.toggleBluetoothEnabled()
               }
 
-              FlatButton {
+              Controls.Button {
                 text: root.bluetoothAdapter && root.bluetoothAdapter.discovering ? "Stop Scan" : "Scan"
                 enabled: !!root.bluetoothAdapter && root.bluetoothAdapter.enabled
                 onClicked: {
@@ -1723,7 +1707,7 @@ FocusScope {
             width: parent.width
             spacing: 8
 
-            QuickTile {
+            Patterns.QuickTile {
               id: profileTile
               width: brightnessService.keyboardAvailable ? Math.floor((parent.width - parent.spacing) / 2) : parent.width
               iconName: "gauge"
@@ -1736,7 +1720,7 @@ FocusScope {
               onSecondaryClicked: root.toggleSection("profile")
             }
 
-            QuickTile {
+            Patterns.QuickTile {
               id: keyboardTile
               visible: brightnessService.keyboardAvailable
               width: Math.floor((parent.width - parent.spacing) / 2)
@@ -1759,10 +1743,10 @@ FocusScope {
             y: (profileTile.height - implicitHeight) / 2
             z: 2
 
-            MenuList {
+            Controls.Menu {
               width: parent.width
 
-              MenuRow {
+              Controls.MenuItem {
                 width: parent.width
                 iconName: "gauge"
                 title: "Performance"
@@ -1774,7 +1758,7 @@ FocusScope {
                 onClicked: root.selectPowerProfile(PowerProfile.Performance)
               }
 
-              MenuRow {
+              Controls.MenuItem {
                 width: parent.width
                 iconName: "gauge"
                 title: "Balanced"
@@ -1785,7 +1769,7 @@ FocusScope {
                 onClicked: root.selectPowerProfile(PowerProfile.Balanced)
               }
 
-              MenuRow {
+              Controls.MenuItem {
                 width: parent.width
                 iconName: "gauge"
                 title: "Power Saver"
@@ -1828,10 +1812,10 @@ FocusScope {
         x: root.popupX(keyboardTile, width, true)
         y: root.popupY(keyboardTile, 8)
 
-        MenuList {
+        Controls.Menu {
           width: parent.width
 
-          MenuRow {
+          Controls.MenuItem {
             width: parent.width
             iconName: "keyboard"
             title: "Off"
@@ -1842,7 +1826,7 @@ FocusScope {
             onClicked: root.setKeyboardLevel(0)
           }
 
-          MenuRow {
+          Controls.MenuItem {
             width: parent.width
             iconName: "keyboard"
             title: "Low"
@@ -1853,7 +1837,7 @@ FocusScope {
             onClicked: root.setKeyboardLevel(1)
           }
 
-          MenuRow {
+          Controls.MenuItem {
             width: parent.width
             iconName: "keyboard"
             title: "Med"
@@ -1864,7 +1848,7 @@ FocusScope {
             onClicked: root.setKeyboardLevel(2)
           }
 
-          MenuRow {
+          Controls.MenuItem {
             width: parent.width
             iconName: "keyboard"
             title: "High"

@@ -24,6 +24,7 @@ FocusScope {
   property string wifiPassword: ""
   property real pendingAudioVolume: 0
   property real pendingScreenBrightness: 0
+  property bool panelOpen: false
   readonly property var audioSink: Pipewire.defaultAudioSink
   readonly property var audioNode: audioSink && audioSink.audio ? audioSink.audio : null
   readonly property var battery: UPower.displayDevice
@@ -102,7 +103,9 @@ FocusScope {
   function batterySummary() {
     if (!batteryAvailable) return "No battery";
 
-    const percent = `${Math.round(battery.percentage || 0)}%`;
+    const rawPercent = Number(battery.percentage || 0);
+    const scaledPercent = rawPercent <= 1.5 ? rawPercent * 100 : rawPercent;
+    const percent = `${Math.round(scaledPercent)}%`;
     const state = battery.state;
 
     if (state === UPowerDeviceState.FullyCharged) return `${percent} Full`;
@@ -251,6 +254,14 @@ FocusScope {
     return `${Math.round(audioVolumeValue() * 100)}%`;
   }
 
+  function refreshPanelData() {
+    audioService.refresh();
+    brightnessService.refresh();
+    wifiService.refresh();
+    pendingAudioVolume = audioService.volume;
+    pendingScreenBrightness = brightnessService.screenPercent;
+  }
+
   function beginWifiConnect(network) {
     if (!network) return;
 
@@ -314,14 +325,11 @@ FocusScope {
     PowerProfiles.profile = PowerProfile.PowerSaver;
   }
 
-  onVisibleChanged: {
-    if (visible) {
+  onPanelOpenChanged: {
+    if (panelOpen) {
       forceActiveFocus();
-      audioService.refresh();
-      brightnessService.refresh();
-      wifiService.refresh();
-      pendingAudioVolume = audioService.volume;
-      pendingScreenBrightness = brightnessService.screenPercent;
+      refreshPanelData();
+      panelRefreshTimer.restart();
     } else {
       expandedSection = "";
       pendingPowerAction = "";
@@ -338,6 +346,13 @@ FocusScope {
     interval: 2200
     repeat: false
     onTriggered: root.pendingPowerAction = ""
+  }
+
+  Timer {
+    id: panelRefreshTimer
+    interval: 180
+    repeat: false
+    onTriggered: root.refreshPanelData()
   }
 
   BrightnessController {
@@ -2139,6 +2154,61 @@ FocusScope {
         }
       }
 
+      UiSurface {
+        visible: root.expandedSection === "outputs"
+        width: parent.width
+        implicitHeight: outputsColumn.implicitHeight + 20
+        tone: "submenu"
+        outlined: false
+        radius: 18
+        border.width: 1
+        border.color: Theme.divider
+
+        Column {
+          id: outputsColumn
+
+          width: parent.width - 20
+          anchors.left: parent.left
+          anchors.leftMargin: 10
+          anchors.top: parent.top
+          anchors.topMargin: 10
+          spacing: 8
+
+          UiText {
+            text: "Sound Output"
+            size: "sm"
+            font.weight: Font.DemiBold
+          }
+
+          MenuList {
+            width: parent.width
+
+            Repeater {
+              model: Pipewire.nodes
+
+              delegate: MenuRow {
+                id: outputRow
+
+                required property var modelData
+                readonly property var outputNode: modelData
+                readonly property bool shown: !!(outputNode && outputNode.audio && outputNode.isSink && !outputNode.isStream)
+
+                visible: shown
+                width: parent.width
+                implicitHeight: shown ? 44 : 0
+                height: shown ? implicitHeight : 0
+                iconName: "speaker"
+                title: root.outputLabel(outputRow.outputNode)
+                trailingIconName: root.audioSink === outputRow.outputNode ? "check" : ""
+                active: root.audioSink === outputRow.outputNode
+                compact: true
+                onClicked: Pipewire.preferredDefaultAudioSink = outputRow.outputNode
+              }
+            }
+          }
+        }
+      }
+
       Row {
         width: parent.width
         height: 44
@@ -2648,46 +2718,6 @@ FocusScope {
 
       anchors.fill: parent
       z: 6
-
-      PopoverSurface {
-        visible: root.expandedSection === "outputs"
-        width: 232
-        x: root.popupX(outputButton, width, true)
-        y: root.popupY(outputButton, 8)
-
-        UiText {
-          text: "Sound Output"
-          size: "sm"
-          font.weight: Font.DemiBold
-        }
-
-        MenuList {
-          width: parent.width
-
-          Repeater {
-            model: Pipewire.nodes
-
-            delegate: MenuRow {
-              id: outputRow
-
-              required property var modelData
-              readonly property var outputNode: modelData
-              readonly property bool shown: !!(outputNode && outputNode.audio && outputNode.isSink && !outputNode.isStream)
-
-              visible: shown
-              width: parent.width
-              implicitHeight: shown ? 44 : 0
-              height: shown ? implicitHeight : 0
-              iconName: "speaker"
-              title: root.outputLabel(outputRow.outputNode)
-              trailingIconName: root.audioSink === outputRow.outputNode ? "check" : ""
-              active: root.audioSink === outputRow.outputNode
-              compact: true
-              onClicked: Pipewire.preferredDefaultAudioSink = outputRow.outputNode
-            }
-          }
-        }
-      }
 
       PopoverSurface {
         visible: root.expandedSection === "keyboard" && brightnessService.keyboardAvailable

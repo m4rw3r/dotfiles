@@ -92,6 +92,7 @@ ShellRoot {
     ControlCenter {
       id: controlCenter
 
+      panelOpen: root.shadeOpen
       anchors.top: parent.top
       anchors.right: parent.right
       anchors.topMargin: 14

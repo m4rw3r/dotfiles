@@ -73,16 +73,31 @@ ShellRoot {
 
   PanelWindow {
     visible: root.shadeOpen
-    anchors { left: true; right: true; top: true }
+    anchors { left: true; right: true; top: true; bottom: true }
     exclusionMode: ExclusionMode.Ignore
     aboveWindows: true
-    implicitHeight: 420
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+
+    onVisibleChanged: {
+      if (visible) controlCenter.forceActiveFocus();
+    }
+
+    MouseArea {
+      anchors.fill: parent
+      onClicked: root.shadeOpen = false
+    }
 
     ControlCenter {
-      anchors.fill: parent
+      id: controlCenter
+
+      anchors.top: parent.top
+      anchors.right: parent.right
+      anchors.topMargin: 14
+      anchors.rightMargin: 14
+
+      onCloseRequested: root.shadeOpen = false
     }
   }
 

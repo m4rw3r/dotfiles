@@ -26,7 +26,6 @@ FocusScope {
   property real pendingScreenBrightness: 0
   property bool panelOpen: false
   property bool hasInitialSnapshot: false
-  property bool allowFallbackPaint: false
   readonly property var audioSink: Pipewire.defaultAudioSink
   readonly property var audioNode: audioSink && audioSink.audio ? audioSink.audio : null
   readonly property var battery: UPower.displayDevice
@@ -34,6 +33,11 @@ FocusScope {
   readonly property bool batteryAvailable: battery && battery.isPresent && battery.isLaptopBattery
   readonly property bool audioReady: audioService.ready
   readonly property bool panelDataReady: audioService.ready && brightnessService.screenLoaded && wifiService.ready
+
+  Component.onCompleted: {
+    refreshPanelData();
+    panelRefreshTimer.restart();
+  }
 
   function clamp(value, minValue, maxValue) {
     return Math.max(minValue, Math.min(maxValue, value));
@@ -330,14 +334,10 @@ FocusScope {
 
   onPanelOpenChanged: {
     if (panelOpen) {
-      allowFallbackPaint = false;
       forceActiveFocus();
       refreshPanelData();
       panelRefreshTimer.restart();
-      if (!hasInitialSnapshot) initialPaintTimer.restart();
     } else {
-      initialPaintTimer.stop();
-      allowFallbackPaint = false;
       expandedSection = "";
       pendingPowerAction = "";
       wifiPasswordTarget = "";
@@ -349,8 +349,6 @@ FocusScope {
   onPanelDataReadyChanged: {
     if (!panelDataReady) return;
     hasInitialSnapshot = true;
-    allowFallbackPaint = false;
-    initialPaintTimer.stop();
   }
 
   Keys.onEscapePressed: root.closeRequested()
@@ -367,13 +365,6 @@ FocusScope {
     interval: 180
     repeat: false
     onTriggered: root.refreshPanelData()
-  }
-
-  Timer {
-    id: initialPaintTimer
-    interval: 700
-    repeat: false
-    onTriggered: root.allowFallbackPaint = true
   }
 
   BrightnessController {
@@ -573,7 +564,8 @@ FocusScope {
     implicitWidth: 20
     implicitHeight: 20
     contextType: "2d"
-    renderStrategy: Canvas.Cooperative
+    renderTarget: Canvas.Image
+    renderStrategy: Canvas.Immediate
 
     onNameChanged: requestPaint()
     onStrokeColorChanged: requestPaint()
@@ -1996,7 +1988,7 @@ FocusScope {
     Column {
       id: content
 
-      visible: !root.panelOpen || root.hasInitialSnapshot || root.panelDataReady || root.allowFallbackPaint
+      visible: !root.panelOpen || root.hasInitialSnapshot || root.panelDataReady
       width: parent.width - 28
       anchors.left: parent.left
       anchors.leftMargin: 14

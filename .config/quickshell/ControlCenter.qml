@@ -15,7 +15,7 @@ FocusScope {
 
   signal closeRequested()
 
-  implicitWidth: 432
+  implicitWidth: 332
   implicitHeight: panel.implicitHeight
 
   property string expandedSection: ""
@@ -44,6 +44,36 @@ FocusScope {
     if (expandedSection !== "power") pendingPowerAction = "";
     if (expandedSection === "wifi") wifiService.refresh();
     if (expandedSection !== "bluetooth" && bluetoothAdapter) bluetoothAdapter.discovering = false;
+  }
+
+  function popupX(anchorItem, popupWidth, alignRight) {
+    if (!anchorItem || !panel) return 0;
+    const position = anchorItem.mapToItem(panel, 0, 0);
+    const maxX = Math.max(0, panel.width - popupWidth);
+    const rawX = alignRight ? position.x + anchorItem.width - popupWidth : position.x;
+    return clamp(rawX, 0, maxX);
+  }
+
+  function popupY(anchorItem, spacing) {
+    if (!anchorItem) return 0;
+    const position = anchorItem.mapToItem(panel, 0, 0);
+    return position.y + anchorItem.height + (spacing || 8);
+  }
+
+  function popupCenteredX(anchorItem, popupWidth) {
+    if (!anchorItem || !panel) return 0;
+    const position = anchorItem.mapToItem(panel, 0, 0);
+    const maxX = Math.max(0, panel.width - popupWidth);
+    const rawX = position.x + (anchorItem.width - popupWidth) / 2;
+    return clamp(rawX, 0, maxX);
+  }
+
+  function popupAboveY(anchorItem, popupHeight, spacing) {
+    if (!anchorItem || !panel) return 0;
+    const position = anchorItem.mapToItem(panel, 0, 0);
+    const maxY = Math.max(0, panel.height - popupHeight);
+    const rawY = position.y - popupHeight - (spacing || 8);
+    return clamp(rawY, 0, maxY);
   }
 
   function profileLabel(profile) {
@@ -110,6 +140,16 @@ FocusScope {
     return count;
   }
 
+  function bluetoothAvailableCount() {
+    if (!bluetoothAdapter || !bluetoothAdapter.devices) return 0;
+    let count = 0;
+    for (let i = 0; i < bluetoothAdapter.devices.count; i += 1) {
+      const device = bluetoothAdapter.devices.get(i);
+      if (device && !device.connected) count += 1;
+    }
+    return count;
+  }
+
   function wifiTileTitle() {
     if (!wifiService.enabled || wifiService.connectedSsid === "") return "Wi-Fi";
     return wifiService.connectedSsid;
@@ -142,11 +182,54 @@ FocusScope {
   }
 
   function keyboardTileTitle() {
-    return brightnessService.keyboardAvailable ? `${brightnessService.keyboardPercent}%` : "Keyboard";
+    return keyboardLevelLabel(keyboardLevelIndex());
   }
 
   function keyboardTileSubtitle() {
-    return brightnessService.keyboardAvailable ? "Backlight" : "Unavailable";
+    return brightnessService.keyboardAvailable ? "Keyboard Backlight" : "Unavailable";
+  }
+
+  function keyboardPresetValue(index) {
+    const maximum = Math.max(1, Number(brightnessService.keyboardMax) || 1);
+    if (index <= 0) return 0;
+    if (index === 1) return Math.max(1, Math.round(maximum / 3));
+    if (index === 2) return Math.max(1, Math.round((maximum * 2) / 3));
+    return maximum;
+  }
+
+  function keyboardLevelIndex() {
+    if (!brightnessService.keyboardAvailable) return 0;
+
+    const currentValue = Math.max(0, Math.round(Number(brightnessService.keyboardValue) || 0));
+    let nearestIndex = 0;
+    let nearestDistance = Number.MAX_VALUE;
+
+    for (let index = 0; index < 4; index += 1) {
+      const distance = Math.abs(currentValue - keyboardPresetValue(index));
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = index;
+      }
+    }
+
+    return nearestIndex;
+  }
+
+  function keyboardLevelLabel(index) {
+    if (index === 3) return "High";
+    if (index === 2) return "Med";
+    if (index === 1) return "Low";
+    return "Off";
+  }
+
+  function setKeyboardLevel(index) {
+    if (!brightnessService.keyboardAvailable) return;
+    brightnessService.applyKeyboardValue(keyboardPresetValue(index));
+  }
+
+  function cycleKeyboardBacklight() {
+    if (!brightnessService.keyboardAvailable) return;
+    setKeyboardLevel((keyboardLevelIndex() + 1) % 4);
   }
 
   function outputLabel(node) {
@@ -202,6 +285,30 @@ FocusScope {
 
   function powerActionLabel(action, label) {
     return pendingPowerAction === action ? `Confirm ${label}` : label;
+  }
+
+  function toggleWifiEnabled() {
+    wifiService.setEnabledState(!wifiService.enabled);
+  }
+
+  function toggleBluetoothEnabled() {
+    if (!bluetoothAdapter || bluetoothAdapter.state === BluetoothAdapterState.Blocked) return;
+    bluetoothAdapter.enabled = !bluetoothAdapter.enabled;
+    if (!bluetoothAdapter.enabled) bluetoothAdapter.discovering = false;
+  }
+
+  function cyclePowerProfile() {
+    if (PowerProfiles.profile === PowerProfile.PowerSaver) {
+      PowerProfiles.profile = PowerProfile.Balanced;
+      return;
+    }
+
+    if (PowerProfiles.profile === PowerProfile.Balanced) {
+      PowerProfiles.profile = PowerProfiles.hasPerformanceProfile ? PowerProfile.Performance : PowerProfile.PowerSaver;
+      return;
+    }
+
+    PowerProfiles.profile = PowerProfile.PowerSaver;
   }
 
   onVisibleChanged: {
@@ -357,17 +464,21 @@ FocusScope {
 
     property string text: ""
     property bool active: false
-    property string toneName: active ? "accent" : "field"
+    property string toneName: active ? "toggleOn" : "fieldAlt"
     property bool compact: false
     signal clicked()
 
     width: implicitWidth
-    implicitWidth: Math.max(compact ? 74 : 96, buttonLabel.implicitWidth + 22)
-    implicitHeight: compact ? 32 : 38
+    implicitWidth: Math.max(compact ? 82 : 102, buttonLabel.implicitWidth + 28)
+    implicitHeight: compact ? 34 : 40
     tone: toneName
-    outlined: !active
+    outlined: false
+    radius: 18
     pressed: buttonTouch.pressed
     opacity: enabled ? 1 : 0.45
+
+    border.width: 1
+    border.color: active ? Qt.rgba(1, 1, 1, 0.08) : Theme.divider
 
     UiText {
       id: buttonLabel
@@ -393,21 +504,21 @@ FocusScope {
 
     property string text: ""
 
-    implicitWidth: chipLabel.implicitWidth + 20
-    implicitHeight: chipLabel.implicitHeight + 14
-    tone: "field"
+    implicitWidth: chipLabel.implicitWidth + 32
+    implicitHeight: 38
+    tone: "chip"
     outlined: false
-    radius: 16
+    radius: 19
 
     border.width: 1
-    border.color: Qt.rgba(1, 1, 1, 0.08)
+    border.color: Theme.divider
 
     UiText {
       id: chipLabel
 
       anchors.centerIn: parent
       text: chip.text
-      size: "xs"
+      size: "sm"
       tone: "muted"
       font.weight: Font.DemiBold
     }
@@ -418,10 +529,10 @@ FocusScope {
 
     property string name: "chevron-right"
     property color strokeColor: Theme.textMuted
-    property real stroke: 1.9
+    property real stroke: 1.75
 
-    implicitWidth: 18
-    implicitHeight: 18
+    implicitWidth: 20
+    implicitHeight: 20
     contextType: "2d"
     renderStrategy: Canvas.Cooperative
 
@@ -442,32 +553,81 @@ FocusScope {
       const w = width;
       const h = height;
 
+      function roundedRect(x, y, rectWidth, rectHeight, radius) {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + rectWidth - radius, y);
+        ctx.arcTo(x + rectWidth, y, x + rectWidth, y + radius, radius);
+        ctx.lineTo(x + rectWidth, y + rectHeight - radius);
+        ctx.arcTo(x + rectWidth, y + rectHeight, x + rectWidth - radius, y + rectHeight, radius);
+        ctx.lineTo(x + radius, y + rectHeight);
+        ctx.arcTo(x, y + rectHeight, x, y + rectHeight - radius, radius);
+        ctx.lineTo(x, y + radius);
+        ctx.arcTo(x, y, x + radius, y, radius);
+      }
+
       if (name === "chevron-right") {
         ctx.beginPath();
-        ctx.moveTo(w * 0.34, h * 0.24);
-        ctx.lineTo(w * 0.68, h * 0.5);
-        ctx.lineTo(w * 0.34, h * 0.76);
+        ctx.moveTo(w * 0.36, h * 0.24);
+        ctx.lineTo(w * 0.66, h * 0.5);
+        ctx.lineTo(w * 0.36, h * 0.76);
         ctx.stroke();
         return;
       }
 
       if (name === "chevron-down") {
         ctx.beginPath();
-        ctx.moveTo(w * 0.24, h * 0.36);
+        ctx.moveTo(w * 0.26, h * 0.38);
         ctx.lineTo(w * 0.5, h * 0.68);
-        ctx.lineTo(w * 0.76, h * 0.36);
+        ctx.lineTo(w * 0.74, h * 0.38);
+        ctx.stroke();
+        return;
+      }
+
+      if (name === "check") {
+        ctx.beginPath();
+        ctx.moveTo(w * 0.22, h * 0.54);
+        ctx.lineTo(w * 0.42, h * 0.72);
+        ctx.lineTo(w * 0.78, h * 0.28);
+        ctx.stroke();
+        return;
+      }
+
+      if (name === "restart") {
+        ctx.beginPath();
+        ctx.arc(w * 0.5, h * 0.54, h * 0.23, Math.PI * 0.12, Math.PI * 1.64, true);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(w * 0.35, h * 0.18);
+        ctx.lineTo(w * 0.58, h * 0.18);
+        ctx.lineTo(w * 0.48, h * 0.34);
+        ctx.stroke();
+        return;
+      }
+
+      if (name === "logout") {
+        roundedRect(w * 0.18, h * 0.24, w * 0.34, h * 0.52, h * 0.08);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(w * 0.42, h * 0.5);
+        ctx.lineTo(w * 0.8, h * 0.5);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(w * 0.62, h * 0.32);
+        ctx.lineTo(w * 0.8, h * 0.5);
+        ctx.lineTo(w * 0.62, h * 0.68);
         ctx.stroke();
         return;
       }
 
       if (name === "sun") {
         ctx.beginPath();
-        ctx.arc(w * 0.5, h * 0.5, h * 0.16, 0, Math.PI * 2, false);
+        ctx.arc(w * 0.5, h * 0.5, h * 0.17, 0, Math.PI * 2, false);
         ctx.stroke();
         for (let i = 0; i < 8; i += 1) {
           const angle = (Math.PI * 2 * i) / 8;
-          const inner = h * 0.28;
-          const outer = h * 0.4;
+          const inner = h * 0.3;
+          const outer = h * 0.42;
           ctx.beginPath();
           ctx.moveTo(w * 0.5 + Math.cos(angle) * inner, h * 0.5 + Math.sin(angle) * inner);
           ctx.lineTo(w * 0.5 + Math.cos(angle) * outer, h * 0.5 + Math.sin(angle) * outer);
@@ -477,45 +637,45 @@ FocusScope {
       }
 
       if (name === "lock") {
-        ctx.beginPath();
-        ctx.rect(w * 0.26, h * 0.44, w * 0.48, h * 0.34);
+        roundedRect(w * 0.26, h * 0.44, w * 0.48, h * 0.32, h * 0.06);
         ctx.stroke();
         ctx.beginPath();
-        ctx.arc(w * 0.5, h * 0.42, h * 0.15, Math.PI, 0, false);
+        ctx.arc(w * 0.5, h * 0.42, h * 0.14, Math.PI, 0, false);
         ctx.stroke();
         return;
       }
 
       if (name === "power") {
         ctx.beginPath();
-        ctx.arc(w * 0.5, h * 0.54, h * 0.22, Math.PI * 0.82, Math.PI * 2.18, false);
+        ctx.arc(w * 0.5, h * 0.55, h * 0.22, Math.PI * 0.8, Math.PI * 2.2, false);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(w * 0.5, h * 0.18);
-        ctx.lineTo(w * 0.5, h * 0.48);
+        ctx.moveTo(w * 0.5, h * 0.16);
+        ctx.lineTo(w * 0.5, h * 0.42);
         ctx.stroke();
         return;
       }
 
       if (name === "moon") {
         ctx.beginPath();
-        ctx.arc(w * 0.48, h * 0.5, h * 0.22, Math.PI * 0.28, Math.PI * 1.72, false);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(w * 0.58, h * 0.46, h * 0.2, Math.PI * 1.2, Math.PI * 0.8, true);
+        ctx.arc(w * 0.46, h * 0.5, h * 0.2, Math.PI * 0.28, Math.PI * 1.72, false);
+        ctx.arc(w * 0.56, h * 0.45, h * 0.18, Math.PI * 1.15, Math.PI * 0.82, true);
         ctx.stroke();
         return;
       }
 
       if (name === "wifi") {
         ctx.beginPath();
-        ctx.arc(w * 0.5, h * 0.62, h * 0.06, 0, Math.PI * 2, false);
+        ctx.arc(w * 0.5, h * 0.68, h * 0.03, 0, Math.PI * 2, false);
         ctx.stroke();
         ctx.beginPath();
-        ctx.arc(w * 0.5, h * 0.58, h * 0.16, Math.PI * 1.16, Math.PI * 1.84, false);
+        ctx.arc(w * 0.5, h * 0.6, h * 0.12, Math.PI * 1.18, Math.PI * 1.82, false);
         ctx.stroke();
         ctx.beginPath();
-        ctx.arc(w * 0.5, h * 0.58, h * 0.28, Math.PI * 1.16, Math.PI * 1.84, false);
+        ctx.arc(w * 0.5, h * 0.6, h * 0.22, Math.PI * 1.18, Math.PI * 1.82, false);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(w * 0.5, h * 0.6, h * 0.32, Math.PI * 1.18, Math.PI * 1.82, false);
         ctx.stroke();
         return;
       }
@@ -524,58 +684,66 @@ FocusScope {
         ctx.beginPath();
         ctx.moveTo(w * 0.5, h * 0.16);
         ctx.lineTo(w * 0.5, h * 0.84);
-        ctx.lineTo(w * 0.72, h * 0.64);
         ctx.moveTo(w * 0.5, h * 0.16);
-        ctx.lineTo(w * 0.72, h * 0.36);
+        ctx.lineTo(w * 0.69, h * 0.34);
+        ctx.lineTo(w * 0.5, h * 0.5);
+        ctx.lineTo(w * 0.69, h * 0.66);
+        ctx.lineTo(w * 0.5, h * 0.84);
         ctx.moveTo(w * 0.5, h * 0.5);
-        ctx.lineTo(w * 0.26, h * 0.28);
+        ctx.lineTo(w * 0.29, h * 0.3);
         ctx.moveTo(w * 0.5, h * 0.5);
-        ctx.lineTo(w * 0.26, h * 0.72);
+        ctx.lineTo(w * 0.29, h * 0.7);
         ctx.stroke();
         return;
       }
 
       if (name === "gauge") {
         ctx.beginPath();
-        ctx.arc(w * 0.5, h * 0.58, h * 0.24, Math.PI, Math.PI * 2, false);
+        ctx.arc(w * 0.5, h * 0.62, h * 0.22, Math.PI, Math.PI * 2, false);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(w * 0.5, h * 0.58);
-        ctx.lineTo(w * 0.66, h * 0.42);
+        ctx.moveTo(w * 0.5, h * 0.62);
+        ctx.lineTo(w * 0.67, h * 0.45);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(w * 0.5, h * 0.62, h * 0.03, 0, Math.PI * 2, false);
         ctx.stroke();
         return;
       }
 
       if (name === "keyboard") {
-        ctx.beginPath();
-        ctx.rect(w * 0.18, h * 0.34, w * 0.64, h * 0.32);
+        roundedRect(w * 0.18, h * 0.34, w * 0.64, h * 0.32, h * 0.05);
         ctx.stroke();
         for (let row = 0; row < 2; row += 1) {
-          for (let col = 0; col < 4; col += 1) {
+          for (let col = 0; col < 5; col += 1) {
             ctx.beginPath();
-            ctx.arc(w * (0.3 + col * 0.12), h * (0.46 + row * 0.1), 1, 0, Math.PI * 2, false);
+            ctx.arc(w * (0.28 + col * 0.1), h * (0.44 + row * 0.1), 0.6, 0, Math.PI * 2, false);
             ctx.stroke();
           }
         }
+        ctx.beginPath();
+        ctx.moveTo(w * 0.34, h * 0.6);
+        ctx.lineTo(w * 0.66, h * 0.6);
+        ctx.stroke();
         return;
       }
 
       ctx.beginPath();
-      ctx.moveTo(w * 0.16, h * 0.42);
-      ctx.lineTo(w * 0.33, h * 0.42);
-      ctx.lineTo(w * 0.48, h * 0.28);
-      ctx.lineTo(w * 0.48, h * 0.72);
-      ctx.lineTo(w * 0.33, h * 0.58);
-      ctx.lineTo(w * 0.16, h * 0.58);
+      ctx.moveTo(w * 0.18, h * 0.42);
+      ctx.lineTo(w * 0.34, h * 0.42);
+      ctx.lineTo(w * 0.48, h * 0.3);
+      ctx.lineTo(w * 0.48, h * 0.7);
+      ctx.lineTo(w * 0.34, h * 0.58);
+      ctx.lineTo(w * 0.18, h * 0.58);
       ctx.closePath();
       ctx.stroke();
 
       if (name === "speaker") {
         ctx.beginPath();
-        ctx.arc(w * 0.5, h * 0.5, h * 0.12, -0.85, 0.85, false);
+        ctx.arc(w * 0.48, h * 0.5, h * 0.13, -0.9, 0.9, false);
         ctx.stroke();
         ctx.beginPath();
-        ctx.arc(w * 0.5, h * 0.5, h * 0.24, -0.85, 0.85, false);
+        ctx.arc(w * 0.48, h * 0.5, h * 0.24, -0.9, 0.9, false);
         ctx.stroke();
         return;
       }
@@ -583,11 +751,11 @@ FocusScope {
       if (name === "speaker-muted") {
         ctx.beginPath();
         ctx.moveTo(w * 0.58, h * 0.34);
-        ctx.lineTo(w * 0.82, h * 0.68);
+        ctx.lineTo(w * 0.8, h * 0.66);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(w * 0.82, h * 0.34);
-        ctx.lineTo(w * 0.58, h * 0.68);
+        ctx.moveTo(w * 0.8, h * 0.34);
+        ctx.lineTo(w * 0.58, h * 0.66);
         ctx.stroke();
       }
     }
@@ -601,21 +769,21 @@ FocusScope {
     signal clicked()
 
     width: implicitWidth
-    implicitWidth: 42
-    implicitHeight: 42
-    tone: active ? "accent" : "field"
+    implicitWidth: 44
+    implicitHeight: 44
+    tone: active ? "toggleOn" : "fieldAlt"
     outlined: false
-    radius: 16
+    radius: 19
     pressed: iconTouch.pressed
     opacity: enabled ? 1 : 0.45
 
     border.width: 1
-    border.color: active ? Qt.rgba(1, 1, 1, 0.05) : Qt.rgba(1, 1, 1, 0.08)
+    border.color: active ? Qt.rgba(1, 1, 1, 0.08) : Theme.divider
 
     GlyphIcon {
       anchors.centerIn: parent
       name: iconButton.iconName
-      strokeColor: iconButton.active ? Theme.textOnAccent : Theme.textMuted
+      strokeColor: iconButton.active ? Theme.textOnAccent : Theme.iconSecondary
     }
 
     MouseArea {
@@ -636,25 +804,28 @@ FocusScope {
     signal clicked()
 
     implicitWidth: parent ? parent.width : 0
-    implicitHeight: 42
-    tone: "field"
-    outlined: true
-    radius: Theme.radiusSm
+    implicitHeight: 44
+    tone: expanded ? "submenu" : "fieldAlt"
+    outlined: false
+    radius: 19
     pressed: expandTouch.pressed
+
+    border.width: 1
+    border.color: Theme.divider
 
     Row {
       anchors.fill: parent
-      anchors.leftMargin: 12
-      anchors.rightMargin: 12
-      spacing: 8
+       anchors.leftMargin: 14
+       anchors.rightMargin: 14
+       spacing: 10
 
       UiText {
         id: expandTitle
 
         anchors.verticalCenter: parent.verticalCenter
         text: expandButton.title
-        size: "sm"
-        font.weight: Font.DemiBold
+         size: "sm"
+         font.weight: Font.DemiBold
       }
 
       Item {
@@ -679,7 +850,7 @@ FocusScope {
 
         anchors.verticalCenter: parent.verticalCenter
         name: expandButton.expanded ? "chevron-down" : "chevron-right"
-        strokeColor: Theme.textMuted
+         strokeColor: Theme.iconSecondary
       }
     }
 
@@ -698,20 +869,20 @@ FocusScope {
     property bool active: false
     signal clicked()
 
-    implicitWidth: 44
-    implicitHeight: 44
+    implicitWidth: 46
+    implicitHeight: 46
     radius: width / 2
-    tone: active ? "accent" : "field"
+    tone: active ? "toggleOn" : "fieldAlt"
     outlined: false
     pressed: circleTouch.pressed
 
     border.width: 1
-    border.color: active ? Qt.rgba(1, 1, 1, 0.06) : Qt.rgba(1, 1, 1, 0.08)
+    border.color: active ? Qt.rgba(1, 1, 1, 0.08) : Theme.divider
 
     GlyphIcon {
       anchors.centerIn: parent
       name: circleButton.iconName
-      strokeColor: circleButton.active ? Theme.textOnAccent : Theme.text
+      strokeColor: circleButton.active ? Theme.textOnAccent : Theme.iconSecondary
     }
 
     MouseArea {
@@ -727,22 +898,22 @@ FocusScope {
 
     property string iconName: "sun"
 
-    implicitWidth: 42
-    implicitHeight: 42
-    tone: "field"
+    implicitWidth: 44
+    implicitHeight: 44
+    tone: "fieldAlt"
     outlined: false
-    radius: 16
+    radius: 19
     border.width: 1
-    border.color: Qt.rgba(1, 1, 1, 0.08)
+    border.color: Theme.divider
 
     GlyphIcon {
       anchors.centerIn: parent
       name: badge.iconName
-      strokeColor: Theme.textMuted
+      strokeColor: Theme.iconSecondary
     }
   }
 
-  component QuickTile: UiSurface {
+  component QuickTile: Item {
     id: tile
 
     property string iconName: "wifi"
@@ -751,23 +922,29 @@ FocusScope {
     property bool active: false
     property bool expanded: false
     property bool expandable: true
-    signal clicked()
+    property bool highlightExpanded: false
+    signal primaryClicked()
+    signal secondaryClicked()
 
-    implicitWidth: parent ? Math.floor((parent.width - 8) / 2) : 180
-    implicitHeight: 66
-    tone: active ? "accent" : "field"
-    outlined: false
-    radius: 20
-    pressed: tileTouch.pressed
-    clip: true
+    implicitWidth: parent ? Math.floor((parent.width - 10) / 2) : 180
+    implicitHeight: 44
 
-    color: active ? Theme.accent : Theme.field
-    border.width: 1
-    border.color: active ? Qt.rgba(1, 1, 1, 0.05) : Qt.rgba(1, 1, 1, 0.08)
+    readonly property bool highlighted: active || (highlightExpanded && expanded)
+    readonly property real splitWidth: tile.expandable ? 52 : 0
+    readonly property bool pressed: primaryTouch.pressed || (tile.expandable && secondaryTouch.pressed)
+    readonly property color tileColor: highlighted
+      ? (pressed ? Theme.toggleOnStrong : Theme.toggleOn)
+      : (pressed ? Theme.fieldPressed : Theme.toggleOff)
+    readonly property color splitColor: highlighted
+      ? Theme.toggleOnStrong
+      : Theme.fieldAlt
 
-    gradient: Gradient {
-      GradientStop { position: 0; color: tile.active ? Theme.accentStrong : Theme.field }
-      GradientStop { position: 1; color: tile.active ? Theme.accent : Theme.panelRaised }
+    Rectangle {
+      anchors.fill: parent
+      radius: 19
+      color: tile.tileColor
+      border.width: 1
+      border.color: tile.highlighted ? Qt.rgba(1, 1, 1, 0.08) : Theme.divider
     }
 
     Rectangle {
@@ -775,59 +952,81 @@ FocusScope {
       anchors.bottom: parent.bottom
       anchors.right: parent.right
       width: tile.expandable ? 52 : 0
-      radius: parent.radius
-      color: tile.active ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.04)
+      radius: 19
+      color: tile.splitColor
+      visible: tile.expandable
+    }
+
+    Rectangle {
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      anchors.right: parent.right
+      anchors.rightMargin: tile.splitWidth
+      width: 1
+      color: tile.active ? Qt.rgba(1, 1, 1, 0.14) : Theme.divider
       visible: tile.expandable
     }
 
     Row {
       anchors.fill: parent
-      anchors.leftMargin: 14
-      anchors.rightMargin: 14
+      anchors.leftMargin: 16
+      anchors.rightMargin: 12
       spacing: 10
 
       GlyphIcon {
         anchors.verticalCenter: parent.verticalCenter
         name: tile.iconName
-        strokeColor: tile.active ? Theme.textOnAccent : Theme.textMuted
+        strokeColor: tile.highlighted ? Theme.textOnAccent : Theme.textMuted
       }
 
-      Column {
-        width: Math.max(0, parent.width - (tile.expandable ? 68 : 36))
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 1
+      Item {
+        width: Math.max(0, parent.width - (tile.expandable ? 78 : 34))
+        height: parent.height
 
         UiText {
+          anchors.verticalCenter: parent.verticalCenter
           text: tile.title
           size: "sm"
-          tone: tile.active ? "onAccent" : "primary"
+          tone: tile.highlighted ? "onAccent" : "primary"
           font.weight: Font.DemiBold
           elide: Text.ElideRight
         }
-
-        UiText {
-          text: tile.subtitle
-          visible: text !== ""
-          size: "xs"
-          tone: tile.active ? "onAccent" : "muted"
-          opacity: tile.active ? 0.88 : 0.92
-          elide: Text.ElideRight
-        }
       }
 
-      GlyphIcon {
-        anchors.verticalCenter: parent.verticalCenter
+      Item {
         visible: tile.expandable
-        name: tile.expanded ? "chevron-down" : "chevron-right"
-        strokeColor: tile.active ? Theme.textOnAccent : Theme.textSubtle
+        width: 40
+        height: parent.height
+
+        GlyphIcon {
+          anchors.centerIn: parent
+          visible: tile.expandable
+          name: tile.expanded ? "chevron-down" : "chevron-right"
+          strokeColor: tile.highlighted ? Theme.textOnAccent : Theme.iconSecondary
+        }
       }
     }
 
     MouseArea {
-      id: tileTouch
+      id: primaryTouch
 
-      anchors.fill: parent
-      onClicked: tile.clicked()
+      anchors.left: parent.left
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      anchors.right: parent.right
+      anchors.rightMargin: tile.splitWidth
+      onClicked: tile.primaryClicked()
+    }
+
+    MouseArea {
+      id: secondaryTouch
+
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      anchors.right: parent.right
+      width: tile.expandable ? 52 : 0
+      enabled: tile.expandable
+      onClicked: tile.secondaryClicked()
     }
   }
 
@@ -846,7 +1045,7 @@ FocusScope {
     signal valueCommitted(real value)
 
     implicitWidth: parent ? parent.width : 0
-    implicitHeight: 40
+    implicitHeight: 46
 
     onValueChanged: {
       if (!mediaControl.pressed) dragValue = value;
@@ -854,7 +1053,7 @@ FocusScope {
 
     Row {
       anchors.fill: parent
-      spacing: 8
+      spacing: 12
 
       GlyphIcon {
         id: startIcon
@@ -866,8 +1065,8 @@ FocusScope {
       }
 
       Item {
-        width: parent.width - (mediaSlider.showIcon ? startIcon.width : 0) - detailSlot.width - parent.spacing * (mediaSlider.showIcon ? 2 : 1)
-        height: parent.height
+         width: parent.width - (mediaSlider.showIcon ? startIcon.width : 0) - detailSlot.width - parent.spacing * (mediaSlider.showIcon ? 2 : 1)
+         height: parent.height
 
         Slider {
           id: mediaControl
@@ -891,29 +1090,29 @@ FocusScope {
             x: mediaControl.leftPadding
             y: mediaControl.topPadding + mediaControl.availableHeight / 2 - height / 2
             width: mediaControl.availableWidth
-            height: 4
-            radius: 3
-            color: Qt.rgba(1, 1, 1, 0.16)
+             height: 6
+             radius: 3
+             color: Theme.sliderTrack
 
-            Rectangle {
-              width: Math.max(parent.height, mediaControl.visualPosition * parent.width)
-              height: parent.height
-              radius: parent.radius
-              color: Theme.accent
-            }
-          }
+             Rectangle {
+               width: Math.max(parent.height, mediaControl.visualPosition * parent.width)
+               height: parent.height
+               radius: parent.radius
+               color: Theme.sliderFill
+             }
+           }
 
-          handle: Rectangle {
-            x: mediaControl.leftPadding + mediaControl.visualPosition * (mediaControl.availableWidth - width)
-            y: mediaControl.topPadding + mediaControl.availableHeight / 2 - height / 2
-            width: 16
-            height: 16
-            radius: 8
-            color: Theme.text
-            border.width: 1
-            border.color: Theme.panelRaised
-          }
-        }
+           handle: Rectangle {
+             x: mediaControl.leftPadding + mediaControl.visualPosition * (mediaControl.availableWidth - width)
+             y: mediaControl.topPadding + mediaControl.availableHeight / 2 - height / 2
+             width: 18
+             height: 18
+             radius: 9
+             color: Theme.text
+             border.width: 1
+             border.color: Theme.panelRaised
+           }
+         }
       }
 
       Item {
@@ -950,7 +1149,7 @@ FocusScope {
     signal valueCommitted(real value)
 
     implicitWidth: parent ? parent.width : 0
-    implicitHeight: 42
+    implicitHeight: 46
 
     onValueChanged: {
       if (!slider.pressed) dragValue = value;
@@ -958,14 +1157,14 @@ FocusScope {
 
     UiSurface {
       anchors.fill: parent
-      tone: "field"
+      tone: "submenu"
       outlined: false
-      radius: 16
+      radius: 18
       opacity: inlineSlider.enabled ? 1 : 0.45
       clip: true
 
       border.width: 1
-      border.color: Qt.rgba(1, 1, 1, 0.08)
+      border.color: Theme.divider
 
       Slider {
         id: slider
@@ -973,8 +1172,8 @@ FocusScope {
         anchors.fill: parent
         anchors.leftMargin: 8
         anchors.rightMargin: 8
-        anchors.topMargin: 5
-        anchors.bottomMargin: 5
+         anchors.topMargin: 6
+         anchors.bottomMargin: 6
         from: inlineSlider.from
         to: inlineSlider.to
         stepSize: inlineSlider.stepSize
@@ -996,28 +1195,28 @@ FocusScope {
           x: slider.leftPadding
           y: slider.topPadding + slider.availableHeight / 2 - height / 2
           width: slider.availableWidth
-          height: 5
-          radius: 3
-          color: Qt.rgba(1, 1, 1, 0.14)
+           height: 6
+           radius: 3
+           color: Theme.sliderTrack
 
-          Rectangle {
-            width: Math.max(parent.height, slider.visualPosition * parent.width)
-            height: parent.height
-            radius: parent.radius
-            color: Theme.accent
-            opacity: inlineSlider.enabled ? 0.95 : 0.45
-          }
-        }
+           Rectangle {
+             width: Math.max(parent.height, slider.visualPosition * parent.width)
+             height: parent.height
+             radius: parent.radius
+             color: Theme.sliderFill
+             opacity: inlineSlider.enabled ? 0.95 : 0.45
+           }
+         }
 
-        handle: Rectangle {
-          x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - width)
-          y: slider.topPadding + slider.availableHeight / 2 - height / 2
-          width: 14
-          height: 14
-          radius: 7
-          color: slider.enabled ? Theme.text : Theme.textSubtle
-          border.width: 1
-          border.color: Theme.panelRaised
+         handle: Rectangle {
+           x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - width)
+           y: slider.topPadding + slider.availableHeight / 2 - height / 2
+           width: 18
+           height: 18
+           radius: 9
+           color: slider.enabled ? Theme.text : Theme.textSubtle
+           border.width: 1
+           border.color: Theme.panelRaised
         }
       }
 
@@ -1056,14 +1255,15 @@ FocusScope {
 
     width: implicitWidth
     implicitWidth: 1
-    implicitHeight: 42
-    tone: active ? "accent" : "field"
+    implicitHeight: 44
+    tone: active ? "toggleOn" : "toggleOff"
     outlined: false
+    radius: 18
     pressed: actionTouch.pressed
     opacity: enabled ? 1 : 0.45
 
     border.width: 1
-    border.color: active ? Qt.rgba(1, 1, 1, 0.05) : Qt.rgba(1, 1, 1, 0.08)
+    border.color: active ? Qt.rgba(1, 1, 1, 0.08) : Theme.divider
 
     UiText {
       anchors.centerIn: parent
@@ -1079,6 +1279,174 @@ FocusScope {
       anchors.fill: parent
       enabled: actionButton.enabled
       onClicked: actionButton.clicked()
+    }
+  }
+
+  component MenuList: UiSurface {
+    id: menuList
+
+    default property alias content: listColumn.data
+
+    width: parent ? parent.width : implicitWidth
+    implicitWidth: 1
+    implicitHeight: listColumn.implicitHeight + 12
+    tone: "panelOverlay"
+    outlined: false
+    radius: 16
+
+    border.width: 1
+    border.color: Theme.border
+
+    Column {
+      id: listColumn
+
+      width: parent.width - 20
+      anchors.left: parent.left
+      anchors.leftMargin: 10
+      anchors.top: parent.top
+      anchors.topMargin: 6
+      spacing: 1
+    }
+  }
+
+  component PopoverSurface: UiSurface {
+    id: popover
+
+    default property alias content: popoverColumn.data
+    property int horizontalPadding: 10
+    property int verticalPadding: 10
+
+    width: implicitWidth
+    implicitWidth: 220
+    implicitHeight: popoverColumn.implicitHeight + verticalPadding * 2
+    tone: "submenu"
+    outlined: false
+    radius: 18
+    z: 8
+
+    border.width: 1
+    border.color: Theme.divider
+
+    Column {
+      id: popoverColumn
+
+      width: parent.width - popover.horizontalPadding * 2
+      anchors.left: parent.left
+      anchors.leftMargin: popover.horizontalPadding
+      anchors.top: parent.top
+      anchors.topMargin: popover.verticalPadding
+      spacing: 8
+    }
+  }
+
+  component MenuRow: Item {
+    id: menuRow
+
+    property string iconName: "wifi"
+    property string title: ""
+    property string subtitle: ""
+    property string actionText: ""
+    property string trailingIconName: ""
+    property bool active: false
+    property bool dividerVisible: false
+    property bool compact: false
+    signal clicked()
+
+    width: parent ? parent.width : implicitWidth
+    implicitWidth: 1
+    implicitHeight: compact || subtitle === "" ? 42 : 50
+    opacity: enabled ? 1 : 0.45
+
+    Rectangle {
+      anchors.fill: parent
+      radius: 12
+      color: menuRow.active ? Theme.toggleOn : (rowTouch.pressed ? Theme.fieldAlt : "transparent")
+      border.width: menuRow.active ? 1 : 0
+      border.color: menuRow.active ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+    }
+
+    Row {
+      anchors.fill: parent
+      anchors.leftMargin: 14
+      anchors.rightMargin: 14
+      spacing: 14
+
+      GlyphIcon {
+        anchors.verticalCenter: parent.verticalCenter
+        name: menuRow.iconName
+        strokeColor: menuRow.active ? Theme.textOnAccent : Theme.iconSecondary
+      }
+
+      Column {
+        width: Math.max(0, parent.width - trailingSlot.width - 42)
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: menuRow.compact ? 0 : 1
+
+        UiText {
+          text: menuRow.title
+          size: "sm"
+          tone: menuRow.active ? "onAccent" : "primary"
+          font.weight: Font.DemiBold
+          elide: Text.ElideRight
+        }
+
+        UiText {
+          text: menuRow.subtitle
+          visible: !menuRow.compact && text !== ""
+          size: "xs"
+          tone: menuRow.active ? "onAccent" : "muted"
+          opacity: menuRow.active ? 0.9 : 0.96
+          elide: Text.ElideRight
+        }
+      }
+
+      Item {
+        id: trailingSlot
+
+        width: actionLabel.visible || trailingGlyph.visible ? Math.max(actionLabel.implicitWidth, trailingGlyph.implicitWidth) : 0
+        height: parent.height
+
+        UiText {
+          id: actionLabel
+
+          anchors.verticalCenter: parent.verticalCenter
+          anchors.right: parent.right
+          text: menuRow.actionText
+          visible: text !== ""
+          size: "xs"
+          tone: menuRow.active ? "onAccent" : "muted"
+          font.weight: Font.DemiBold
+        }
+
+        GlyphIcon {
+          id: trailingGlyph
+
+          anchors.verticalCenter: parent.verticalCenter
+          anchors.right: parent.right
+          name: menuRow.trailingIconName
+          visible: name !== ""
+          strokeColor: menuRow.active ? Theme.textOnAccent : Theme.iconSecondary
+        }
+      }
+    }
+
+    Rectangle {
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.bottom: parent.bottom
+      anchors.leftMargin: 18
+      anchors.rightMargin: 18
+      height: 1
+      color: Theme.divider
+      visible: menuRow.dividerVisible && !menuRow.active
+    }
+
+    MouseArea {
+      id: rowTouch
+
+      anchors.fill: parent
+      enabled: menuRow.enabled
+      onClicked: menuRow.clicked()
     }
   }
 
@@ -1554,24 +1922,17 @@ FocusScope {
     onTriggered: brightnessService.applyScreenPercent(root.pendingScreenBrightness)
   }
 
-  Timer {
-    id: keyboardCommitTimer
-    interval: 90
-    repeat: false
-    onTriggered: brightnessService.applyKeyboardValue(keyboardBrightnessSlider.value)
-  }
-
   UiSurface {
     id: panel
 
     width: root.implicitWidth
-    implicitHeight: content.implicitHeight + 24
-    tone: "panel"
+    implicitHeight: content.implicitHeight + 28
+    tone: "panelOverlay"
     outlined: false
     radius: 28
 
     border.width: 1
-    border.color: Qt.rgba(1, 1, 1, 0.08)
+    border.color: Theme.divider
 
     MouseArea {
       anchors.fill: parent
@@ -1589,8 +1950,8 @@ FocusScope {
 
       Row {
         width: parent.width
-        height: 44
-        spacing: 8
+        height: 46
+        spacing: 10
 
         StatusChip {
           id: batteryChip
@@ -1600,7 +1961,7 @@ FocusScope {
         }
 
         Item {
-          width: Math.max(0, parent.width - (batteryChip.visible ? batteryChip.implicitWidth : 0) - sleepButton.implicitWidth - lockButton.implicitWidth - powerToggleButton.implicitWidth - 24)
+          width: Math.max(0, parent.width - (batteryChip.visible ? batteryChip.implicitWidth : 0) - sleepButton.implicitWidth - lockButton.implicitWidth - powerToggleButton.implicitWidth - 30)
           height: parent.height
         }
 
@@ -1627,48 +1988,104 @@ FocusScope {
         }
       }
 
-      Row {
+      UiSurface {
+        id: powerPopover
+
+        visible: root.expandedSection === "power"
         width: parent.width
-        height: 42
-        spacing: 12
+        implicitHeight: powerColumn.implicitHeight + 20
+        tone: "submenu"
+        outlined: false
+        radius: 18
+        border.width: 1
+        border.color: Theme.divider
 
-        IconBadge {
-          id: brightnessBadge
-          anchors.verticalCenter: parent.verticalCenter
-          iconName: "sun"
-        }
+        Column {
+          id: powerColumn
 
-        MediaSlider {
-          id: brightnessSlider
+          width: parent.width - 20
+          anchors.left: parent.left
+          anchors.leftMargin: 10
+          anchors.top: parent.top
+          anchors.topMargin: 10
+          spacing: 8
 
-          width: parent.width - brightnessBadge.width - 12
-          anchors.verticalCenter: parent.verticalCenter
-          showIcon: false
-          from: 0
-          to: 100
-          value: brightnessService.screenPercent
-          enabled: brightnessService.screenAvailable
-          onValueMoved: function(value) {
-            root.pendingScreenBrightness = value;
-            brightnessCommitTimer.restart();
+          UiText {
+            text: "Power"
+            size: "sm"
+            font.weight: Font.DemiBold
           }
-          onValueCommitted: function(value) {
-            root.pendingScreenBrightness = value;
-            brightnessCommitTimer.stop();
-            brightnessService.applyScreenPercent(value);
+
+          MenuList {
+            width: parent.width
+
+            MenuRow {
+              width: parent.width
+              iconName: "lock"
+              title: "Lock"
+              compact: true
+              dividerVisible: true
+              onClicked: sessionActions.lock()
+            }
+
+            MenuRow {
+              width: parent.width
+              iconName: "moon"
+              title: "Suspend"
+              compact: true
+              dividerVisible: true
+              onClicked: sessionActions.sleep()
+            }
+
+            MenuRow {
+              width: parent.width
+              iconName: "restart"
+              title: root.powerActionLabel("restart", "Restart")
+              compact: true
+              dividerVisible: true
+              active: root.pendingPowerAction === "restart"
+              onClicked: root.triggerPowerAction("restart")
+            }
+
+            MenuRow {
+              width: parent.width
+              iconName: "power"
+              title: root.powerActionLabel("shutdown", "Power Off")
+              compact: true
+              dividerVisible: true
+              active: root.pendingPowerAction === "shutdown"
+              onClicked: root.triggerPowerAction("shutdown")
+            }
+
+            MenuRow {
+              width: parent.width
+              iconName: "logout"
+              title: root.powerActionLabel("logout", "Log Out")
+              compact: true
+              active: root.pendingPowerAction === "logout"
+              onClicked: root.triggerPowerAction("logout")
+            }
+          }
+
+          UiText {
+            visible: sessionActions.lastError !== ""
+            text: sessionActions.lastError
+            size: "xs"
+            tone: "accent"
+            wrapMode: Text.WordWrap
           }
         }
       }
 
       Row {
         width: parent.width
-        height: 42
-        spacing: 12
+        height: 44
+        spacing: 10
 
         IconButton {
           id: muteButton
           anchors.verticalCenter: parent.verticalCenter
-          width: 42
+          width: implicitWidth
           iconName: root.audioReady && audioService.muted ? "speaker-muted" : "speaker"
           active: root.audioReady && audioService.muted
           enabled: root.audioReady
@@ -1678,7 +2095,7 @@ FocusScope {
         }
 
         MediaSlider {
-          width: parent.width - muteButton.width - outputButton.width - 24
+          width: parent.width - muteButton.width - outputButton.width - parent.spacing * 2
           anchors.verticalCenter: parent.verticalCenter
           showIcon: false
           value: root.pendingAudioVolume
@@ -1699,7 +2116,7 @@ FocusScope {
         IconButton {
           id: outputButton
           anchors.verticalCenter: parent.verticalCenter
-          width: 42
+          width: implicitWidth
           iconName: root.expandedSection === "outputs" ? "chevron-down" : "chevron-right"
           active: root.expandedSection === "outputs"
           enabled: Pipewire.ready
@@ -1707,32 +2124,404 @@ FocusScope {
         }
       }
 
+      Row {
+        width: parent.width
+        height: 44
+        spacing: 10
+
+        IconBadge {
+          id: brightnessBadge
+          anchors.verticalCenter: parent.verticalCenter
+          iconName: "sun"
+        }
+
+        MediaSlider {
+          id: brightnessSlider
+
+          width: parent.width - brightnessBadge.width - parent.spacing
+          anchors.verticalCenter: parent.verticalCenter
+          showIcon: false
+          from: 0
+          to: 100
+          value: brightnessService.screenPercent
+          enabled: brightnessService.screenAvailable
+          onValueMoved: function(value) {
+            root.pendingScreenBrightness = value;
+            brightnessCommitTimer.restart();
+          }
+          onValueCommitted: function(value) {
+            root.pendingScreenBrightness = value;
+            brightnessCommitTimer.stop();
+            brightnessService.applyScreenPercent(value);
+          }
+        }
+      }
+
       Column {
         width: parent.width
-        spacing: 10
+        spacing: 8
 
         Row {
           width: parent.width
           spacing: 8
 
           QuickTile {
+            id: wifiTile
             width: Math.floor((parent.width - parent.spacing) / 2)
             iconName: "wifi"
             title: root.wifiTileTitle()
             subtitle: root.wifiTileSubtitle()
-            active: root.expandedSection === "wifi" || (wifiService.enabled && wifiService.connectedSsid !== "")
+            active: wifiService.enabled
             expanded: root.expandedSection === "wifi"
-            onClicked: root.toggleSection("wifi")
+            highlightExpanded: true
+            onPrimaryClicked: root.toggleWifiEnabled()
+            onSecondaryClicked: root.toggleSection("wifi")
           }
 
           QuickTile {
+            id: bluetoothTile
             width: Math.floor((parent.width - parent.spacing) / 2)
             iconName: "bluetooth"
             title: root.bluetoothTileTitle()
             subtitle: root.bluetoothTileSubtitle()
-            active: root.expandedSection === "bluetooth" || !!(root.bluetoothAdapter && root.bluetoothAdapter.enabled)
+            active: !!(root.bluetoothAdapter && root.bluetoothAdapter.enabled)
             expanded: root.expandedSection === "bluetooth"
-            onClicked: root.toggleSection("bluetooth")
+            highlightExpanded: true
+            onPrimaryClicked: root.toggleBluetoothEnabled()
+            onSecondaryClicked: root.toggleSection("bluetooth")
+          }
+        }
+
+        UiSurface {
+          visible: root.expandedSection === "wifi"
+          width: parent.width
+          implicitHeight: wifiColumn.implicitHeight + 20
+          tone: "submenu"
+          outlined: false
+          radius: 18
+          border.width: 1
+          border.color: Theme.divider
+
+          Column {
+            id: wifiColumn
+
+            width: parent.width - 20
+            anchors.left: parent.left
+            anchors.leftMargin: 10
+            anchors.top: parent.top
+            anchors.topMargin: 10
+            spacing: 8
+
+            UiText {
+              text: "Wi-Fi"
+              size: "sm"
+              font.weight: Font.DemiBold
+            }
+
+            UiText {
+              visible: !wifiService.hardwareEnabled
+              text: "WiFi hardware is blocked."
+              size: "xs"
+              tone: "accent"
+            }
+
+            MenuList {
+              width: parent.width
+              visible: wifiService.enabled && wifiService.networks.length > 0
+
+              Repeater {
+                model: wifiService.enabled ? Math.min(6, wifiService.networks.length) : 0
+
+                delegate: MenuRow {
+                  id: wifiRow
+
+                  required property int index
+                  readonly property var network: wifiService.networks[index]
+
+                  width: parent.width
+                  implicitHeight: 52
+                  height: implicitHeight
+                  iconName: "wifi"
+                  title: wifiRow.network ? wifiRow.network.ssid : ""
+                  subtitle: wifiRow.network
+                    ? `${wifiRow.network.signal}%${wifiRow.network.security !== "" ? `, ${wifiRow.network.security}` : ", open"}${wifiRow.network.known ? ", saved" : ""}`
+                    : ""
+                  actionText: wifiRow.network && !wifiRow.network.active ? "Connect" : ""
+                  trailingIconName: wifiRow.network && wifiRow.network.active ? "check" : ""
+                  active: wifiRow.network && wifiRow.network.active
+                  dividerVisible: index < Math.min(6, wifiService.networks.length) - 1
+                  enabled: !!wifiRow.network && !wifiService.busy
+                  onClicked: root.beginWifiConnect(wifiRow.network)
+                }
+              }
+            }
+
+            UiSurface {
+              visible: root.wifiPasswordTarget !== ""
+              width: parent.width
+              implicitHeight: passwordColumn.implicitHeight + 20
+              tone: "panelOverlay"
+              outlined: false
+              radius: 16
+              border.width: 1
+              border.color: Theme.divider
+
+              Column {
+                id: passwordColumn
+
+                width: parent.width - 20
+                anchors.left: parent.left
+                anchors.leftMargin: 10
+                anchors.top: parent.top
+                anchors.topMargin: 10
+                spacing: 8
+
+                UiText {
+                  text: `Password required for ${root.wifiPasswordTarget}`
+                  size: "xs"
+                  font.weight: Font.DemiBold
+                }
+
+                TextField {
+                  id: wifiPasswordField
+
+                  width: parent.width
+                  height: 38
+                  echoMode: TextInput.Password
+                  color: Theme.text
+                  placeholderText: "Network password"
+                  placeholderTextColor: Theme.textSubtle
+                  selectionColor: Theme.selection
+                  selectedTextColor: Theme.textOnAccent
+                  font.family: Theme.fontFamily
+                  font.pixelSize: Theme.textSm
+                  onTextChanged: root.wifiPassword = text
+                  onVisibleChanged: {
+                    if (visible) {
+                      text = root.wifiPassword;
+                      forceActiveFocus();
+                    }
+                  }
+                  Binding on text {
+                    when: !wifiPasswordField.activeFocus
+                    value: root.wifiPassword
+                  }
+                  background: Rectangle {
+                    radius: 14
+                    color: Theme.fieldAlt
+                    border.width: 1
+                    border.color: Theme.divider
+                  }
+                }
+
+                Row {
+                  spacing: 8
+
+                  FlatButton {
+                    text: "Connect"
+                    active: true
+                    enabled: root.wifiPassword !== "" && !wifiService.busy
+                    onClicked: root.submitWifiPassword()
+                  }
+
+                  FlatButton {
+                    text: "Cancel"
+                    onClicked: {
+                      root.wifiPasswordTarget = "";
+                      root.wifiPassword = "";
+                    }
+                  }
+                }
+              }
+            }
+
+            UiText {
+              visible: wifiService.enabled && wifiService.networks.length === 0 && !wifiService.busy
+              text: "No networks available."
+              size: "xs"
+              tone: "subtle"
+            }
+
+            UiText {
+              visible: wifiService.lastError !== ""
+              text: wifiService.lastError
+              size: "xs"
+              tone: "accent"
+              wrapMode: Text.WordWrap
+            }
+
+            Row {
+              width: parent.width
+              spacing: 8
+
+              FlatButton {
+                text: wifiService.enabled ? "Turn Off" : "Turn On"
+                onClicked: wifiService.setEnabledState(!wifiService.enabled)
+              }
+
+              FlatButton {
+                text: wifiService.busy ? "Refreshing" : "Rescan"
+                enabled: wifiService.enabled && !wifiService.busy
+                onClicked: wifiService.scan()
+              }
+            }
+          }
+        }
+
+        UiSurface {
+          visible: root.expandedSection === "bluetooth"
+          width: parent.width
+          implicitHeight: bluetoothColumn.implicitHeight + 20
+          tone: "submenu"
+          outlined: false
+          radius: 18
+          border.width: 1
+          border.color: Theme.divider
+
+          Column {
+            id: bluetoothColumn
+
+            width: parent.width - 20
+            anchors.left: parent.left
+            anchors.leftMargin: 10
+            anchors.top: parent.top
+            anchors.topMargin: 10
+            spacing: 8
+
+            UiText {
+              text: "Bluetooth"
+              size: "sm"
+              font.weight: Font.DemiBold
+            }
+
+            UiText {
+              visible: !root.bluetoothAdapter
+              text: "No Bluetooth adapter found."
+              size: "xs"
+              tone: "accent"
+            }
+
+            UiText {
+              visible: !!root.bluetoothAdapter && root.bluetoothAdapter.state === BluetoothAdapterState.Blocked
+              text: "Bluetooth is blocked by hardware or rfkill."
+              size: "xs"
+              tone: "accent"
+            }
+
+            UiText {
+              visible: root.bluetoothAdapter && root.bluetoothAdapter.enabled && root.bluetoothConnectedCount() > 0
+              text: "Connected Devices"
+              size: "xs"
+              tone: "muted"
+              font.weight: Font.DemiBold
+            }
+
+            MenuList {
+              width: parent.width
+              visible: root.bluetoothAdapter && root.bluetoothAdapter.enabled && root.bluetoothConnectedCount() > 0
+
+              Repeater {
+                model: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? root.bluetoothAdapter.devices : null
+
+                delegate: MenuRow {
+                  id: connectedDeviceRow
+
+                  required property int index
+                  required property var modelData
+                  readonly property var device: modelData
+                  readonly property bool hasNextVisible: {
+                    if (!root.bluetoothAdapter || !root.bluetoothAdapter.devices) return false;
+                    for (let i = index + 1; i < root.bluetoothAdapter.devices.count; i += 1) {
+                      const nextDevice = root.bluetoothAdapter.devices.get(i);
+                      if (nextDevice && nextDevice.connected) return true;
+                    }
+                    return false;
+                  }
+
+                  visible: device && device.connected
+                  width: parent.width
+                  implicitHeight: visible ? 52 : 0
+                  height: visible ? implicitHeight : 0
+                  iconName: "bluetooth"
+                  title: connectedDeviceRow.device.deviceName || connectedDeviceRow.device.name || connectedDeviceRow.device.address
+                  subtitle: connectedDeviceRow.device.batteryAvailable
+                    ? `${Math.round(connectedDeviceRow.device.battery)}% battery`
+                    : "Connected"
+                  actionText: connectedDeviceRow.device.state === BluetoothDeviceState.Connecting ? "Working" : "Disconnect"
+                  active: true
+                  dividerVisible: visible && hasNextVisible
+                  onClicked: connectedDeviceRow.device.disconnect()
+                }
+              }
+            }
+
+            UiText {
+              visible: root.bluetoothAdapter && root.bluetoothAdapter.enabled && root.bluetoothAvailableCount() > 0
+              text: "Available Devices"
+              size: "xs"
+              tone: "muted"
+              font.weight: Font.DemiBold
+            }
+
+            MenuList {
+              width: parent.width
+              visible: root.bluetoothAdapter && root.bluetoothAdapter.enabled && root.bluetoothAvailableCount() > 0
+
+              Repeater {
+                model: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? root.bluetoothAdapter.devices : null
+
+                delegate: MenuRow {
+                  id: otherDeviceRow
+
+                  required property int index
+                  required property var modelData
+                  readonly property var device: modelData
+                  readonly property bool hasNextVisible: {
+                    if (!root.bluetoothAdapter || !root.bluetoothAdapter.devices) return false;
+                    for (let i = index + 1; i < root.bluetoothAdapter.devices.count; i += 1) {
+                      const nextDevice = root.bluetoothAdapter.devices.get(i);
+                      if (nextDevice && !nextDevice.connected) return true;
+                    }
+                    return false;
+                  }
+
+                  visible: device && !device.connected
+                  width: parent.width
+                  implicitHeight: visible ? 52 : 0
+                  height: visible ? implicitHeight : 0
+                  iconName: "bluetooth"
+                  title: otherDeviceRow.device.deviceName || otherDeviceRow.device.name || otherDeviceRow.device.address
+                  subtitle: otherDeviceRow.device.paired || otherDeviceRow.device.bonded ? "Paired" : "Available"
+                  actionText: otherDeviceRow.device.pairing || otherDeviceRow.device.state === BluetoothDeviceState.Connecting
+                    ? "Working"
+                    : (otherDeviceRow.device.paired || otherDeviceRow.device.bonded ? "Connect" : "Pair")
+                  dividerVisible: visible && hasNextVisible
+                  onClicked: {
+                    if (otherDeviceRow.device.paired || otherDeviceRow.device.bonded) otherDeviceRow.device.connect();
+                    else otherDeviceRow.device.pair();
+                  }
+                }
+              }
+            }
+
+            Row {
+              width: parent.width
+              spacing: 8
+
+              FlatButton {
+                text: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? "Turn Off" : "Turn On"
+                enabled: !!root.bluetoothAdapter && root.bluetoothAdapter.state !== BluetoothAdapterState.Blocked
+                onClicked: root.toggleBluetoothEnabled()
+              }
+
+              FlatButton {
+                text: root.bluetoothAdapter && root.bluetoothAdapter.discovering ? "Stop Scan" : "Scan"
+                enabled: !!root.bluetoothAdapter && root.bluetoothAdapter.enabled
+                onClicked: {
+                  if (root.bluetoothAdapter) root.bluetoothAdapter.discovering = !root.bluetoothAdapter.discovering;
+                }
+              }
+            }
           }
         }
 
@@ -1741,701 +2530,40 @@ FocusScope {
           spacing: 8
 
           QuickTile {
-            width: Math.floor((parent.width - parent.spacing) / 2)
+            id: profileTile
+            width: brightnessService.keyboardAvailable ? Math.floor((parent.width - parent.spacing) / 2) : parent.width
             iconName: "gauge"
             title: root.profileShortLabel()
-            subtitle: "Profile"
-            active: true
+            subtitle: "Power Mode"
+            active: false
             expanded: root.expandedSection === "profile"
-            onClicked: root.toggleSection("profile")
+            highlightExpanded: true
+            onPrimaryClicked: root.cyclePowerProfile()
+            onSecondaryClicked: root.toggleSection("profile")
           }
 
           QuickTile {
+            id: keyboardTile
+            visible: brightnessService.keyboardAvailable
             width: Math.floor((parent.width - parent.spacing) / 2)
-            iconName: brightnessService.keyboardAvailable ? "keyboard" : "power"
-            title: brightnessService.keyboardAvailable ? root.keyboardTileTitle() : "Power"
-            subtitle: brightnessService.keyboardAvailable ? root.keyboardTileSubtitle() : "Restart, lock"
-            active: brightnessService.keyboardAvailable ? root.expandedSection === "keyboard" : root.expandedSection === "power"
-            expanded: brightnessService.keyboardAvailable ? root.expandedSection === "keyboard" : root.expandedSection === "power"
-            onClicked: root.toggleSection(brightnessService.keyboardAvailable ? "keyboard" : "power")
-          }
-        }
-
-        QuickTile {
-          width: parent.width
-          visible: brightnessService.keyboardAvailable
-          iconName: "power"
-          title: "Power"
-          subtitle: "Restart, lock"
-          active: root.expandedSection === "power"
-          expanded: root.expandedSection === "power"
-          onClicked: root.toggleSection("power")
-        }
-      }
-
-      UiSurface {
-        visible: root.expandedSection === "keyboard" && brightnessService.keyboardAvailable
-        width: parent.width
-        implicitHeight: keyboardColumn.implicitHeight + 24
-        tone: "raised"
-        outlined: false
-        radius: 20
-        border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.08)
-
-        Column {
-          id: keyboardColumn
-
-          width: parent.width - 24
-          anchors.left: parent.left
-          anchors.leftMargin: 12
-          anchors.top: parent.top
-          anchors.topMargin: 12
-          spacing: 10
-
-          UiText {
-            text: "Keyboard Backlight"
-            size: "sm"
-            font.weight: Font.DemiBold
-          }
-
-          InlineSlider {
-            id: keyboardBrightnessSlider
-            width: parent.width
-            title: "Keyboard"
-            from: 0
-            to: Math.max(1, brightnessService.keyboardMax)
-            stepSize: 1
-            valueText: `${brightnessService.keyboardPercent}%`
-            value: brightnessService.keyboardValue
-            onValueMoved: keyboardCommitTimer.restart()
-            onValueCommitted: function(value) {
-              keyboardCommitTimer.stop();
-              brightnessService.applyKeyboardValue(value);
-            }
+            iconName: "keyboard"
+            title: root.keyboardTileTitle()
+            subtitle: root.keyboardTileSubtitle()
+            active: brightnessService.keyboardAvailable && root.keyboardLevelIndex() > 0
+            expanded: root.expandedSection === "keyboard"
+            highlightExpanded: true
+            onPrimaryClicked: root.cycleKeyboardBacklight()
+            onSecondaryClicked: root.toggleSection("keyboard")
           }
         }
       }
 
-      UiSurface {
-        visible: root.expandedSection === "profile"
-        width: parent.width
-        implicitHeight: profileColumn.implicitHeight + 24
-        tone: "raised"
-        outlined: false
-        radius: 20
-        border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.08)
-
-        Column {
-          id: profileColumn
-
-          width: parent.width - 24
-          anchors.left: parent.left
-          anchors.leftMargin: 12
-          anchors.top: parent.top
-          anchors.topMargin: 12
-          spacing: 10
-
-          UiText {
-            text: "Power Profile"
-            size: "sm"
-            font.weight: Font.DemiBold
-          }
-
-          Row {
-            width: parent.width
-            spacing: 8
-
-            FlatButton {
-              width: Math.floor((parent.width - 16) / 3)
-              text: "Saver"
-              active: PowerProfiles.profile === PowerProfile.PowerSaver
-              onClicked: PowerProfiles.profile = PowerProfile.PowerSaver
-            }
-
-            FlatButton {
-              width: Math.floor((parent.width - 16) / 3)
-              text: "Balanced"
-              active: PowerProfiles.profile === PowerProfile.Balanced
-              onClicked: PowerProfiles.profile = PowerProfile.Balanced
-            }
-
-            FlatButton {
-              width: Math.floor((parent.width - 16) / 3)
-              text: "Perf"
-              active: PowerProfiles.profile === PowerProfile.Performance
-              enabled: PowerProfiles.hasPerformanceProfile
-              onClicked: PowerProfiles.profile = PowerProfile.Performance
-            }
-          }
-        }
-      }
-
-      UiSurface {
-        visible: root.expandedSection === "outputs"
-        width: parent.width
-        implicitHeight: outputsColumn.implicitHeight + 24
-        tone: "raised"
-        outlined: false
-        radius: 20
-        border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.08)
-
-        Column {
-          id: outputsColumn
-
-          width: parent.width - 24
-          anchors.left: parent.left
-          anchors.leftMargin: 12
-          anchors.top: parent.top
-          anchors.topMargin: 12
-          spacing: 8
-
-          UiText {
-            text: "Audio Output"
-            size: "sm"
-            font.weight: Font.DemiBold
-          }
-
-          Repeater {
-            model: Pipewire.nodes
-
-            delegate: UiSurface {
-              id: outputRow
-
-              required property var modelData
-              readonly property var outputNode: modelData
-              readonly property bool shown: !!(outputNode && outputNode.audio && outputNode.isSink && !outputNode.isStream)
-
-              visible: shown
-              width: parent.width
-              implicitHeight: shown ? 40 : 0
-              height: shown ? implicitHeight : 0
-              tone: root.audioSink === outputNode ? "accent" : "panelRaised"
-              outlined: root.audioSink !== outputNode
-              radius: Theme.radiusSm
-
-              Row {
-                anchors.fill: parent
-                anchors.leftMargin: 12
-                anchors.rightMargin: 12
-                spacing: 8
-
-                GlyphIcon {
-                  anchors.verticalCenter: parent.verticalCenter
-                  name: "speaker"
-                  strokeColor: root.audioSink === outputRow.outputNode ? Theme.textOnAccent : Theme.textMuted
-                }
-
-                UiText {
-                  width: Math.max(0, parent.width - outputState.implicitWidth - 26)
-                  anchors.verticalCenter: parent.verticalCenter
-                  text: root.outputLabel(outputRow.outputNode)
-                  size: "sm"
-                  tone: root.audioSink === outputRow.outputNode ? "onAccent" : "primary"
-                  font.weight: Font.DemiBold
-                  elide: Text.ElideRight
-                }
-
-                UiText {
-                  id: outputState
-
-                  anchors.verticalCenter: parent.verticalCenter
-                  text: root.audioSink === outputRow.outputNode ? "Active" : "Use"
-                  size: "xs"
-                  tone: root.audioSink === outputRow.outputNode ? "onAccent" : "muted"
-                  font.weight: Font.DemiBold
-                }
-              }
-
-              MouseArea {
-                anchors.fill: parent
-                onClicked: Pipewire.preferredDefaultAudioSink = outputRow.outputNode
-              }
-            }
-          }
-        }
-      }
-
-      UiSurface {
-        visible: root.expandedSection === "wifi"
-        width: parent.width
-        implicitHeight: wifiColumn.implicitHeight + 24
-        tone: "raised"
-        outlined: false
-        radius: 20
-        border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.08)
-
-        Column {
-          id: wifiColumn
-
-          width: parent.width - 24
-          anchors.left: parent.left
-          anchors.leftMargin: 12
-          anchors.top: parent.top
-          anchors.topMargin: 12
-          spacing: 8
-
-          Row {
-            width: parent.width
-            spacing: 8
-
-            FlatButton {
-              text: wifiService.enabled ? "Turn Off" : "Turn On"
-              onClicked: wifiService.setEnabledState(!wifiService.enabled)
-            }
-
-            FlatButton {
-              text: wifiService.busy ? "Refreshing" : "Rescan"
-              enabled: wifiService.enabled && !wifiService.busy
-              onClicked: wifiService.scan()
-            }
-          }
-
-          UiText {
-            visible: !wifiService.hardwareEnabled
-            text: "WiFi hardware is blocked."
-            size: "xs"
-            tone: "accent"
-          }
-
-          Repeater {
-            model: wifiService.enabled ? Math.min(4, wifiService.networks.length) : 0
-
-            delegate: UiSurface {
-              id: wifiRow
-
-              required property int index
-              readonly property var network: wifiService.networks[index]
-
-              width: parent.width
-              implicitHeight: 42
-              tone: network && network.active ? "accent" : "panelRaised"
-              outlined: !network || !network.active
-              radius: Theme.radiusSm
-              pressed: wifiTouch.pressed
-
-              Row {
-                anchors.fill: parent
-                anchors.leftMargin: 12
-                anchors.rightMargin: 12
-                spacing: 8
-
-                GlyphIcon {
-                  anchors.verticalCenter: parent.verticalCenter
-                  name: "wifi"
-                  strokeColor: wifiRow.network && wifiRow.network.active ? Theme.textOnAccent : Theme.textMuted
-                }
-
-                Column {
-                  width: Math.max(0, parent.width - wifiState.implicitWidth - 26)
-                  anchors.verticalCenter: parent.verticalCenter
-                  spacing: 1
-
-                  UiText {
-                    text: wifiRow.network ? wifiRow.network.ssid : ""
-                    size: "sm"
-                    tone: wifiRow.network && wifiRow.network.active ? "onAccent" : "primary"
-                    font.weight: Font.DemiBold
-                    elide: Text.ElideRight
-                  }
-
-                  UiText {
-                    text: wifiRow.network
-                      ? `${wifiRow.network.signal}%${wifiRow.network.security !== "" ? `, ${wifiRow.network.security}` : ", open"}${wifiRow.network.known ? ", saved" : ""}`
-                      : ""
-                    size: "xs"
-                    tone: wifiRow.network && wifiRow.network.active ? "onAccent" : "subtle"
-                    elide: Text.ElideRight
-                  }
-                }
-
-                UiText {
-                  id: wifiState
-
-                  anchors.verticalCenter: parent.verticalCenter
-                  text: wifiRow.network && wifiRow.network.active ? "Connected" : "Connect"
-                  size: "xs"
-                  tone: wifiRow.network && wifiRow.network.active ? "onAccent" : "muted"
-                  font.weight: Font.DemiBold
-                }
-              }
-
-              MouseArea {
-                id: wifiTouch
-
-                anchors.fill: parent
-                enabled: !!wifiRow.network && !wifiService.busy
-                onClicked: root.beginWifiConnect(wifiRow.network)
-              }
-            }
-          }
-
-          UiSurface {
-            visible: root.wifiPasswordTarget !== ""
-            width: parent.width
-            implicitHeight: passwordColumn.implicitHeight + 20
-            tone: "panelRaised"
-            outlined: true
-            radius: Theme.radiusSm
-
-            Column {
-              id: passwordColumn
-
-              width: parent.width - 20
-              anchors.left: parent.left
-              anchors.leftMargin: 10
-              anchors.top: parent.top
-              anchors.topMargin: 10
-              spacing: 8
-
-              UiText {
-                text: `Password required for ${root.wifiPasswordTarget}`
-                size: "xs"
-                font.weight: Font.DemiBold
-              }
-
-              TextField {
-                id: wifiPasswordField
-
-                width: parent.width
-                height: 38
-                echoMode: TextInput.Password
-                color: Theme.text
-                placeholderText: "Network password"
-                placeholderTextColor: Theme.textSubtle
-                selectionColor: Theme.selection
-                selectedTextColor: Theme.textOnAccent
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.textSm
-                onTextChanged: root.wifiPassword = text
-                onVisibleChanged: {
-                  if (visible) {
-                    text = root.wifiPassword;
-                    forceActiveFocus();
-                  }
-                }
-                Binding on text {
-                  when: !wifiPasswordField.activeFocus
-                  value: root.wifiPassword
-                }
-                background: Rectangle {
-                  radius: Theme.radiusSm
-                  color: Theme.panel
-                  border.width: 1
-                  border.color: Theme.border
-                }
-              }
-
-              Row {
-                spacing: 8
-
-                FlatButton {
-                  text: "Connect"
-                  active: true
-                  enabled: root.wifiPassword !== "" && !wifiService.busy
-                  onClicked: root.submitWifiPassword()
-                }
-
-                FlatButton {
-                  text: "Cancel"
-                  onClicked: {
-                    root.wifiPasswordTarget = "";
-                    root.wifiPassword = "";
-                  }
-                }
-              }
-            }
-          }
-
-          UiText {
-            visible: wifiService.enabled && wifiService.networks.length === 0 && !wifiService.busy
-            text: "No networks available."
-            size: "xs"
-            tone: "subtle"
-          }
-
-          UiText {
-            visible: wifiService.lastError !== ""
-            text: wifiService.lastError
-            size: "xs"
-            tone: "accent"
-            wrapMode: Text.WordWrap
-          }
-        }
-      }
-
-      UiSurface {
-        visible: root.expandedSection === "bluetooth"
-        width: parent.width
-        implicitHeight: bluetoothColumn.implicitHeight + 24
-        tone: "raised"
-        outlined: false
-        radius: 20
-        border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.08)
-
-        Column {
-          id: bluetoothColumn
-
-          width: parent.width - 24
-          anchors.left: parent.left
-          anchors.leftMargin: 12
-          anchors.top: parent.top
-          anchors.topMargin: 12
-          spacing: 8
-
-          Row {
-            width: parent.width
-            spacing: 8
-
-            FlatButton {
-              text: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? "Turn Off" : "Turn On"
-              enabled: !!root.bluetoothAdapter && root.bluetoothAdapter.state !== BluetoothAdapterState.Blocked
-              onClicked: {
-                if (root.bluetoothAdapter) root.bluetoothAdapter.enabled = !root.bluetoothAdapter.enabled;
-              }
-            }
-
-            FlatButton {
-              text: root.bluetoothAdapter && root.bluetoothAdapter.discovering ? "Stop Scan" : "Scan"
-              enabled: !!root.bluetoothAdapter && root.bluetoothAdapter.enabled
-              onClicked: {
-                if (root.bluetoothAdapter) root.bluetoothAdapter.discovering = !root.bluetoothAdapter.discovering;
-              }
-            }
-          }
-
-          UiText {
-            visible: !root.bluetoothAdapter
-            text: "No Bluetooth adapter found."
-            size: "xs"
-            tone: "accent"
-          }
-
-          UiText {
-            visible: !!root.bluetoothAdapter && root.bluetoothAdapter.state === BluetoothAdapterState.Blocked
-            text: "Bluetooth is blocked by hardware or rfkill."
-            size: "xs"
-            tone: "accent"
-          }
-
-          Repeater {
-            model: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? root.bluetoothAdapter.devices : null
-
-            delegate: UiSurface {
-              id: connectedDeviceRow
-
-              required property var modelData
-              readonly property var device: modelData
-
-              visible: device && device.connected
-              width: parent.width
-              implicitHeight: visible ? 42 : 0
-              height: visible ? implicitHeight : 0
-              tone: "accent"
-              outlined: false
-              radius: Theme.radiusSm
-              clip: true
-
-              Row {
-                anchors.fill: parent
-                anchors.leftMargin: 12
-                anchors.rightMargin: 12
-                spacing: 8
-
-                GlyphIcon {
-                  anchors.verticalCenter: parent.verticalCenter
-                  name: "bluetooth"
-                  strokeColor: Theme.textOnAccent
-                }
-
-                Column {
-                  width: Math.max(0, parent.width - deviceInfo.implicitWidth - 26)
-                  anchors.verticalCenter: parent.verticalCenter
-                  spacing: 1
-
-                  UiText {
-                    text: connectedDeviceRow.device.deviceName || connectedDeviceRow.device.name || connectedDeviceRow.device.address
-                    size: "sm"
-                    tone: "onAccent"
-                    font.weight: Font.DemiBold
-                    elide: Text.ElideRight
-                  }
-
-                  UiText {
-                    text: connectedDeviceRow.device.batteryAvailable
-                      ? `${Math.round(connectedDeviceRow.device.battery)}% battery`
-                      : "Connected"
-                    size: "xs"
-                    tone: "onAccent"
-                    elide: Text.ElideRight
-                  }
-                }
-
-                UiText {
-                  id: deviceInfo
-
-                  anchors.verticalCenter: parent.verticalCenter
-                  text: connectedDeviceRow.device.state === BluetoothDeviceState.Connecting ? "Working" : "Disconnect"
-                  size: "xs"
-                  tone: "onAccent"
-                  font.weight: Font.DemiBold
-                }
-              }
-
-              MouseArea {
-                anchors.fill: parent
-                onClicked: connectedDeviceRow.device.disconnect()
-              }
-            }
-          }
-
-          Repeater {
-            model: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? root.bluetoothAdapter.devices : null
-
-            delegate: UiSurface {
-              id: otherDeviceRow
-
-              required property var modelData
-              readonly property var device: modelData
-
-              visible: device && !device.connected
-              width: parent.width
-              implicitHeight: visible ? 42 : 0
-              height: visible ? implicitHeight : 0
-              tone: "panelRaised"
-              outlined: true
-              radius: Theme.radiusSm
-              clip: true
-
-              Row {
-                anchors.fill: parent
-                anchors.leftMargin: 12
-                anchors.rightMargin: 12
-                spacing: 8
-
-                GlyphIcon {
-                  anchors.verticalCenter: parent.verticalCenter
-                  name: "bluetooth"
-                  strokeColor: Theme.textMuted
-                }
-
-                Column {
-                  width: Math.max(0, parent.width - otherInfo.implicitWidth - 26)
-                  anchors.verticalCenter: parent.verticalCenter
-                  spacing: 1
-
-                  UiText {
-                    text: otherDeviceRow.device.deviceName || otherDeviceRow.device.name || otherDeviceRow.device.address
-                    size: "sm"
-                    font.weight: Font.DemiBold
-                    elide: Text.ElideRight
-                  }
-
-                  UiText {
-                    text: otherDeviceRow.device.paired || otherDeviceRow.device.bonded ? "Paired" : "Available"
-                    size: "xs"
-                    tone: "subtle"
-                    elide: Text.ElideRight
-                  }
-                }
-
-                UiText {
-                  id: otherInfo
-
-                  anchors.verticalCenter: parent.verticalCenter
-                  text: otherDeviceRow.device.pairing || otherDeviceRow.device.state === BluetoothDeviceState.Connecting
-                    ? "Working"
-                    : (otherDeviceRow.device.paired || otherDeviceRow.device.bonded ? "Connect" : "Pair")
-                  size: "xs"
-                  tone: "muted"
-                  font.weight: Font.DemiBold
-                }
-              }
-
-              MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                  if (otherDeviceRow.device.paired || otherDeviceRow.device.bonded) otherDeviceRow.device.connect();
-                  else otherDeviceRow.device.pair();
-                }
-              }
-            }
-          }
-        }
-      }
-
-      UiSurface {
-        visible: root.expandedSection === "power"
-        width: parent.width
-        implicitHeight: powerColumn.implicitHeight + 24
-        tone: "raised"
-        outlined: false
-        radius: 20
-        border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.08)
-
-        Column {
-          id: powerColumn
-
-          width: parent.width - 24
-          anchors.left: parent.left
-          anchors.leftMargin: 12
-          anchors.top: parent.top
-          anchors.topMargin: 12
-          spacing: 8
-
-          Grid {
-            width: parent.width
-            columns: 2
-            rowSpacing: 8
-            columnSpacing: 8
-
-            ActionButton {
-              width: Math.floor((parent.width - parent.columnSpacing) / parent.columns)
-              title: "Lock"
-              onClicked: sessionActions.lock()
-            }
-
-            ActionButton {
-              width: Math.floor((parent.width - parent.columnSpacing) / parent.columns)
-              title: "Sleep"
-              onClicked: sessionActions.sleep()
-            }
-
-            ActionButton {
-              width: Math.floor((parent.width - parent.columnSpacing) / parent.columns)
-              title: root.powerActionLabel("logout", "Log Out")
-              active: root.pendingPowerAction === "logout"
-              onClicked: root.triggerPowerAction("logout")
-            }
-
-            ActionButton {
-              width: Math.floor((parent.width - parent.columnSpacing) / parent.columns)
-              title: root.powerActionLabel("restart", "Restart")
-              active: root.pendingPowerAction === "restart"
-              onClicked: root.triggerPowerAction("restart")
-            }
-
-            ActionButton {
-              width: Math.floor((parent.width - parent.columnSpacing) / parent.columns)
-              title: root.powerActionLabel("shutdown", "Shut Down")
-              active: root.pendingPowerAction === "shutdown"
-              onClicked: root.triggerPowerAction("shutdown")
-            }
-          }
-
-          UiText {
-            visible: sessionActions.lastError !== ""
-            text: sessionActions.lastError
-            size: "xs"
-            tone: "accent"
-            wrapMode: Text.WordWrap
-          }
-        }
+      UiText {
+        visible: audioService.lastError !== ""
+        text: audioService.lastError
+        size: "xs"
+        tone: "accent"
+        wrapMode: Text.WordWrap
       }
 
       UiText {
@@ -2445,6 +2573,152 @@ FocusScope {
         tone: "accent"
         wrapMode: Text.WordWrap
       }
+    }
+
+    Item {
+      id: popoverLayer
+
+      anchors.fill: parent
+      z: 6
+
+      PopoverSurface {
+        visible: root.expandedSection === "outputs"
+        width: 232
+        x: root.popupX(outputButton, width, true)
+        y: root.popupY(outputButton, 8)
+
+        UiText {
+          text: "Sound Output"
+          size: "sm"
+          font.weight: Font.DemiBold
+        }
+
+        MenuList {
+          width: parent.width
+
+          Repeater {
+            model: Pipewire.nodes
+
+            delegate: MenuRow {
+              id: outputRow
+
+              required property var modelData
+              readonly property var outputNode: modelData
+              readonly property bool shown: !!(outputNode && outputNode.audio && outputNode.isSink && !outputNode.isStream)
+
+              visible: shown
+              width: parent.width
+              implicitHeight: shown ? 44 : 0
+              height: shown ? implicitHeight : 0
+              iconName: "speaker"
+              title: root.outputLabel(outputRow.outputNode)
+              trailingIconName: root.audioSink === outputRow.outputNode ? "check" : ""
+              active: root.audioSink === outputRow.outputNode
+              compact: true
+              onClicked: Pipewire.preferredDefaultAudioSink = outputRow.outputNode
+            }
+          }
+        }
+      }
+
+      PopoverSurface {
+        visible: root.expandedSection === "profile"
+        width: Math.max(profileTile.width, 188)
+        x: root.popupCenteredX(profileTile, width)
+        y: root.popupAboveY(profileTile, height, 8)
+
+        MenuList {
+          width: parent.width
+
+          MenuRow {
+            width: parent.width
+            iconName: "gauge"
+            title: "Performance"
+            trailingIconName: PowerProfiles.profile === PowerProfile.Performance ? "check" : ""
+            active: PowerProfiles.profile === PowerProfile.Performance
+            compact: true
+            dividerVisible: true
+            enabled: PowerProfiles.hasPerformanceProfile
+            onClicked: PowerProfiles.profile = PowerProfile.Performance
+          }
+
+          MenuRow {
+            width: parent.width
+            iconName: "gauge"
+            title: "Balanced"
+            trailingIconName: PowerProfiles.profile === PowerProfile.Balanced ? "check" : ""
+            active: PowerProfiles.profile === PowerProfile.Balanced
+            compact: true
+            dividerVisible: true
+            onClicked: PowerProfiles.profile = PowerProfile.Balanced
+          }
+
+          MenuRow {
+            width: parent.width
+            iconName: "gauge"
+            title: "Power Saver"
+            trailingIconName: PowerProfiles.profile === PowerProfile.PowerSaver ? "check" : ""
+            active: PowerProfiles.profile === PowerProfile.PowerSaver
+            compact: true
+            onClicked: PowerProfiles.profile = PowerProfile.PowerSaver
+          }
+        }
+      }
+
+      PopoverSurface {
+        visible: root.expandedSection === "keyboard" && brightnessService.keyboardAvailable
+        width: keyboardTile.width
+        x: root.popupX(keyboardTile, width, true)
+        y: root.popupY(keyboardTile, 8)
+
+        MenuList {
+          width: parent.width
+
+          MenuRow {
+            width: parent.width
+            iconName: "keyboard"
+            title: "Off"
+            trailingIconName: root.keyboardLevelIndex() === 0 ? "check" : ""
+            active: root.keyboardLevelIndex() === 0
+            compact: true
+            dividerVisible: true
+            onClicked: root.setKeyboardLevel(0)
+          }
+
+          MenuRow {
+            width: parent.width
+            iconName: "keyboard"
+            title: "Low"
+            trailingIconName: root.keyboardLevelIndex() === 1 ? "check" : ""
+            active: root.keyboardLevelIndex() === 1
+            compact: true
+            dividerVisible: true
+            onClicked: root.setKeyboardLevel(1)
+          }
+
+          MenuRow {
+            width: parent.width
+            iconName: "keyboard"
+            title: "Med"
+            trailingIconName: root.keyboardLevelIndex() === 2 ? "check" : ""
+            active: root.keyboardLevelIndex() === 2
+            compact: true
+            dividerVisible: true
+            onClicked: root.setKeyboardLevel(2)
+          }
+
+          MenuRow {
+            width: parent.width
+            iconName: "keyboard"
+            title: "High"
+            trailingIconName: root.keyboardLevelIndex() === 3 ? "check" : ""
+            active: root.keyboardLevelIndex() === 3
+            compact: true
+            onClicked: root.setKeyboardLevel(3)
+          }
+        }
+      }
+
     }
   }
 }

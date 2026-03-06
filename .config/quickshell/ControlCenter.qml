@@ -1074,16 +1074,8 @@ FocusScope {
         }
 
         Item {
-          width: Math.max(0, parent.width - (batteryChip.visible ? batteryChip.implicitWidth : 0) - sleepButton.implicitWidth - lockButton.implicitWidth - powerToggleButton.implicitWidth - 30)
+          width: Math.max(0, parent.width - (batteryChip.visible ? batteryChip.implicitWidth : 0) - lockButton.implicitWidth - powerToggleButton.implicitWidth - 20)
           height: parent.height
-        }
-
-        Controls.IconButton {
-          id: sleepButton
-          anchors.verticalCenter: parent.verticalCenter
-          circular: true
-          iconName: "moon"
-          onClicked: sessionActions.sleep()
         }
 
         Controls.IconButton {

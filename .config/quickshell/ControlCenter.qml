@@ -179,6 +179,11 @@ FocusScope {
     return "Balanced";
   }
 
+  function selectPowerProfile(profile) {
+    PowerProfiles.profile = profile;
+    expandedSection = "";
+  }
+
   function keyboardTileTitle() {
     return keyboardLevelLabel(keyboardLevelIndex());
   }
@@ -1936,6 +1941,18 @@ FocusScope {
       anchors.fill: parent
     }
 
+    TapHandler {
+      enabled: root.expandedSection === "profile"
+      acceptedButtons: Qt.LeftButton
+      onTapped: function(eventPoint) {
+        const localPoint = panel.mapToItem(profilePopover, eventPoint.position.x, eventPoint.position.y);
+        if (profilePopover.contains(localPoint)) return;
+        Qt.callLater(function() {
+          if (root.expandedSection === "profile") root.expandedSection = "";
+        });
+      }
+    }
+
     Column {
       id: content
 
@@ -2581,7 +2598,7 @@ FocusScope {
                 compact: true
                 dividerVisible: true
                 enabled: PowerProfiles.hasPerformanceProfile
-                onClicked: PowerProfiles.profile = PowerProfile.Performance
+                onClicked: root.selectPowerProfile(PowerProfile.Performance)
               }
 
               MenuRow {
@@ -2592,7 +2609,7 @@ FocusScope {
                 active: PowerProfiles.profile === PowerProfile.Balanced
                 compact: true
                 dividerVisible: true
-                onClicked: PowerProfiles.profile = PowerProfile.Balanced
+                onClicked: root.selectPowerProfile(PowerProfile.Balanced)
               }
 
               MenuRow {
@@ -2602,7 +2619,7 @@ FocusScope {
                 trailingIconName: PowerProfiles.profile === PowerProfile.PowerSaver ? "check" : ""
                 active: PowerProfiles.profile === PowerProfile.PowerSaver
                 compact: true
-                onClicked: PowerProfiles.profile = PowerProfile.PowerSaver
+                onClicked: root.selectPowerProfile(PowerProfile.PowerSaver)
               }
             }
           }

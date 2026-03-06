@@ -34,7 +34,7 @@ FocusScope {
   readonly property var bluetoothAdapter: Bluetooth.defaultAdapter
   readonly property bool batteryAvailable: battery && battery.isPresent && battery.isLaptopBattery
   readonly property bool audioReady: audioService.ready
-  readonly property bool panelDataReady: audioService.ready && brightnessService.screenLoaded && wifiService.ready
+  readonly property bool panelDataReady: audioService.ready && brightnessService.settled && wifiService.ready
 
   Component.onCompleted: {
     refreshPanelData();
@@ -393,11 +393,13 @@ FocusScope {
       const clamped = Math.max(0, Math.min(1.5, Number(nextVolume)));
       volume = clamped;
       if (clamped > 0 && muted) muted = false;
+      lastError = "";
       writeProcess.exec(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", clamped.toFixed(3)]);
     }
 
     function setMuted(nextMuted) {
       muted = nextMuted;
+      lastError = "";
       muteProcess.exec(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", nextMuted ? "1" : "0"]);
     }
 
@@ -448,6 +450,11 @@ FocusScope {
       waitForEnd: true
     }
 
+    StdioCollector {
+      id: audioMuteStderr
+      waitForEnd: true
+    }
+
     Process {
       id: writeProcess
 
@@ -462,10 +469,10 @@ FocusScope {
     Process {
       id: muteProcess
 
-      stderr: audioWriteStderr
+      stderr: audioMuteStderr
 
       onExited: function(exitCode) {
-        audioService.lastError = exitCode === 0 ? "" : String(audioWriteStderr.text || "").trim();
+        audioService.lastError = exitCode === 0 ? "" : String(audioMuteStderr.text || "").trim();
         audioRefreshTimer.restart();
       }
     }
@@ -550,6 +557,7 @@ FocusScope {
     id: brightnessController
 
     property bool ready: false
+    property bool settled: false
     property bool screenLoaded: false
     property string screenDevice: ""
     property string keyboardDevice: ""
@@ -612,6 +620,8 @@ FocusScope {
 
       screenDevice = nextScreen;
       keyboardDevice = nextKeyboard;
+      screenLoaded = false;
+      settled = nextScreen === "";
       ready = true;
       refreshScreen();
       refreshKeyboard();
@@ -656,6 +666,7 @@ FocusScope {
       onExited: function(exitCode) {
         brightnessController.lastError = exitCode === 0 ? "" : String(detectStderr.text || "").trim();
         if (exitCode === 0) brightnessController.parseDeviceList(detectStdout.text);
+        else brightnessController.settled = true;
       }
     }
 
@@ -668,6 +679,7 @@ FocusScope {
       id: screenReadProcess
       stdout: screenStdout
       onExited: function(exitCode) {
+        brightnessController.settled = true;
         if (exitCode === 0) brightnessController.parseBrightness(screenStdout.text, false);
       }
     }
@@ -762,20 +774,23 @@ FocusScope {
 
     function refresh() {
       busy = true;
+      lastError = "";
       refreshProcess.exec([
         "sh",
         "-lc",
-        "nmcli -t -f WIFI,WIFI-HW general status; printf '\n@@SAVED@@\n'; nmcli -t --escape yes -f NAME,TYPE connection show; printf '\n@@WIFI@@\n'; nmcli -t --escape yes -f IN-USE,SSID,SIGNAL,SECURITY device wifi list --rescan no"
+        "set -e; nmcli -t -f WIFI,WIFI-HW general status; printf '\n@@SAVED@@\n'; nmcli -t --escape yes -f UUID,TYPE connection show | while IFS=: read -r uuid type; do [ \"$type\" = \"802-11-wireless\" ] || continue; nmcli -t --escape yes -g 802-11-wireless.ssid connection show uuid \"$uuid\"; done; printf '\n@@WIFI@@\n'; nmcli -t --escape yes -f IN-USE,BSSID,SSID,SIGNAL,SECURITY device wifi list --rescan no"
       ]);
     }
 
     function scan() {
       busy = true;
+      lastError = "";
       scanProcess.exec(["nmcli", "device", "wifi", "rescan"]);
     }
 
     function setEnabledState(nextState) {
       busy = true;
+      lastError = "";
       toggleProcess.exec(["nmcli", "radio", "wifi", nextState ? "on" : "off"]);
     }
 
@@ -786,6 +801,7 @@ FocusScope {
       if (password !== "") command.push("password", password);
 
       busy = true;
+      lastError = "";
       pendingSsid = ssid;
       connectProcess.exec(command);
     }
@@ -817,14 +833,9 @@ FocusScope {
       const known = {};
 
       for (let i = 0; i < lines.length; i += 1) {
-        const line = lines[i].trim();
-        if (line === "") continue;
-
-        const parts = splitEscaped(line);
-        if (parts.length < 2) continue;
-        if (parts[1] !== "802-11-wireless") continue;
-        if (parts[0] === "") continue;
-        known[parts[0]] = true;
+        const ssid = lines[i].trim();
+        if (ssid === "") continue;
+        known[ssid] = true;
       }
 
       savedNetworks = known;
@@ -841,17 +852,19 @@ FocusScope {
         if (line === "") continue;
 
         const parts = splitEscaped(line);
-        if (parts.length < 4) continue;
+        if (parts.length < 5) continue;
 
         const active = parts[0] === "*";
-        const ssid = parts[1];
-        const signal = parseInt(parts[2]) || 0;
-        const security = parts[3];
+        const bssid = parts[1];
+        const ssid = parts[2];
+        const signal = parseInt(parts[3]) || 0;
+        const security = parts[4];
 
         if (ssid === "") continue;
 
         const network = {
           active,
+          bssid,
           ssid,
           signal,
           security,
@@ -864,9 +877,10 @@ FocusScope {
           activeSignal = signal;
         }
 
-        const existing = deduped[ssid];
+        const networkKey = bssid !== "" ? bssid : `${ssid}\u0000${security}`;
+        const existing = deduped[networkKey];
         if (!existing || existing.signal < network.signal || (network.active && !existing.active)) {
-          deduped[ssid] = network;
+          deduped[networkKey] = network;
         }
       }
 
@@ -875,7 +889,9 @@ FocusScope {
         if (left.active !== right.active) return left.active ? -1 : 1;
         if (left.known !== right.known) return left.known ? -1 : 1;
         if (left.signal !== right.signal) return right.signal - left.signal;
-        return left.ssid.localeCompare(right.ssid);
+        const byName = left.ssid.localeCompare(right.ssid);
+        if (byName !== 0) return byName;
+        return String(left.bssid || "").localeCompare(String(right.bssid || ""));
       });
 
       connectedSsid = activeSsid;
@@ -908,33 +924,43 @@ FocusScope {
     }
 
     StdioCollector {
-      id: wifiActionStderr
+      id: wifiToggleStderr
+      waitForEnd: true
+    }
+
+    StdioCollector {
+      id: wifiScanStderr
+      waitForEnd: true
+    }
+
+    StdioCollector {
+      id: wifiConnectStderr
       waitForEnd: true
     }
 
     Process {
       id: toggleProcess
-      stderr: wifiActionStderr
+      stderr: wifiToggleStderr
       onExited: function(exitCode) {
-        wifiController.lastError = exitCode === 0 ? "" : String(wifiActionStderr.text || "").trim();
+        wifiController.lastError = exitCode === 0 ? "" : String(wifiToggleStderr.text || "").trim();
         wifiController.refresh();
       }
     }
 
     Process {
       id: scanProcess
-      stderr: wifiActionStderr
+      stderr: wifiScanStderr
       onExited: function(exitCode) {
-        wifiController.lastError = exitCode === 0 ? "" : String(wifiActionStderr.text || "").trim();
+        wifiController.lastError = exitCode === 0 ? "" : String(wifiScanStderr.text || "").trim();
         wifiRescanDelay.restart();
       }
     }
 
     Process {
       id: connectProcess
-      stderr: wifiActionStderr
+      stderr: wifiConnectStderr
       onExited: function(exitCode) {
-        wifiController.lastError = exitCode === 0 ? "" : String(wifiActionStderr.text || "").trim();
+        wifiController.lastError = exitCode === 0 ? "" : String(wifiConnectStderr.text || "").trim();
         if (exitCode !== 0) wifiController.busy = false;
         wifiController.pendingSsid = "";
         wifiRescanDelay.restart();
@@ -983,7 +1009,7 @@ FocusScope {
       runAction("logout", [
         "sh",
         "-lc",
-        "if [ -n \"$XDG_SESSION_ID\" ]; then exec loginctl terminate-session \"$XDG_SESSION_ID\"; fi; exit 1"
+        "if [ -n \"$XDG_SESSION_ID\" ]; then exec loginctl terminate-session \"$XDG_SESSION_ID\"; fi; session=\"$(loginctl show-user \"$USER\" -p Display --value 2>/dev/null)\"; if [ -n \"$session\" ]; then exec loginctl terminate-session \"$session\"; fi; printf 'Unable to determine current session.\n' >&2; exit 1"
       ]);
     }
 
@@ -1593,6 +1619,7 @@ FocusScope {
                   required property int index
                   required property var modelData
                   readonly property var device: modelData
+                  readonly property bool busyState: !!(device && (device.pairing || device.state === BluetoothDeviceState.Connecting))
                   readonly property bool hasNextVisible: {
                     if (!root.bluetoothAdapter || !root.bluetoothAdapter.devices) return false;
                     for (let i = index + 1; i < root.bluetoothAdapter.devices.count; i += 1) {
@@ -1611,10 +1638,14 @@ FocusScope {
                   subtitle: connectedDeviceRow.device.batteryAvailable
                     ? `${Math.round(connectedDeviceRow.device.battery)}% battery`
                     : "Connected"
-                  actionText: connectedDeviceRow.device.state === BluetoothDeviceState.Connecting ? "Working" : "Disconnect"
+                  actionText: connectedDeviceRow.busyState ? "Working" : "Disconnect"
                   active: true
                   dividerVisible: visible && hasNextVisible
-                  onClicked: connectedDeviceRow.device.disconnect()
+                  enabled: visible && !connectedDeviceRow.busyState
+                  onClicked: {
+                    if (connectedDeviceRow.busyState) return;
+                    connectedDeviceRow.device.disconnect();
+                  }
                 }
               }
             }
@@ -1640,6 +1671,7 @@ FocusScope {
                   required property int index
                   required property var modelData
                   readonly property var device: modelData
+                  readonly property bool busyState: !!(device && (device.pairing || device.state === BluetoothDeviceState.Connecting))
                   readonly property bool hasNextVisible: {
                     if (!root.bluetoothAdapter || !root.bluetoothAdapter.devices) return false;
                     for (let i = index + 1; i < root.bluetoothAdapter.devices.count; i += 1) {
@@ -1656,11 +1688,13 @@ FocusScope {
                   iconName: "bluetooth"
                   title: otherDeviceRow.device.deviceName || otherDeviceRow.device.name || otherDeviceRow.device.address
                   subtitle: otherDeviceRow.device.paired || otherDeviceRow.device.bonded ? "Paired" : "Available"
-                  actionText: otherDeviceRow.device.pairing || otherDeviceRow.device.state === BluetoothDeviceState.Connecting
+                  actionText: otherDeviceRow.busyState
                     ? "Working"
                     : (otherDeviceRow.device.paired || otherDeviceRow.device.bonded ? "Connect" : "Pair")
                   dividerVisible: visible && hasNextVisible
+                  enabled: visible && !otherDeviceRow.busyState
                   onClicked: {
+                    if (otherDeviceRow.busyState) return;
                     if (otherDeviceRow.device.paired || otherDeviceRow.device.bonded) otherDeviceRow.device.connect();
                     else otherDeviceRow.device.pair();
                   }

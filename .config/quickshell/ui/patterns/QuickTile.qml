@@ -16,7 +16,7 @@ Item {
   signal secondaryClicked()
 
   implicitWidth: parent ? Math.floor((parent.width - 10) / 2) : 180
-  implicitHeight: 44
+  implicitHeight: root.subtitle === "" ? 44 : 58
 
   readonly property bool highlighted: active || (highlightExpanded && expanded)
   readonly property real splitWidth: expandable ? 52 : 0
@@ -66,16 +66,27 @@ Item {
       strokeColor: root.highlighted ? Theme.textOnAccent : Theme.textMuted
     }
 
-    Item {
+    Column {
       width: Math.max(0, parent.width - (root.expandable ? 78 : 34))
-      height: parent.height
+      anchors.verticalCenter: parent.verticalCenter
+      spacing: root.subtitle === "" ? 0 : 2
 
       Ui.UiText {
-        anchors.verticalCenter: parent.verticalCenter
+        width: parent.width
         text: root.title
         size: "sm"
         tone: root.highlighted ? "onAccent" : "primary"
         font.weight: Font.DemiBold
+        elide: Text.ElideRight
+      }
+
+      Ui.UiText {
+        width: parent.width
+        visible: root.subtitle !== ""
+        text: root.subtitle
+        size: "xs"
+        tone: root.highlighted ? "onAccent" : "muted"
+        opacity: root.highlighted ? 0.88 : 0.96
         elide: Text.ElideRight
       }
     }

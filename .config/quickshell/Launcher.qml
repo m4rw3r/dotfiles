@@ -201,6 +201,7 @@ Item {
 
       property var modelData
       property bool oskFromTouch: false
+      property bool refocusSearch: false
       property bool isActiveWindow: root.activeScreen === null
         ? (Quickshell.screens.length > 0 && Quickshell.screens[0] === launcherWindow.modelData)
         : root.activeScreen === launcherWindow.modelData
@@ -295,6 +296,48 @@ Item {
         root.setLauncherSelection(targetIndex);
       }
 
+      function moveVertical(direction) {
+        if (root.launcherResults.length === 0) return;
+
+        const page = Math.floor(root.launcherSelectedIndex / root.launcherPageSize);
+        const pageOffset = root.launcherSelectedIndex - page * root.launcherPageSize;
+        const row = Math.floor(pageOffset / root.launcherColumns);
+        const col = pageOffset % root.launcherColumns;
+        const maxPage = Math.max(0, Math.ceil(root.launcherResults.length / root.launcherPageSize) - 1);
+
+        if (direction < 0) {
+          if (row <= 0) {
+            launcherWindow.focusSearch(false);
+            return;
+          }
+
+          const targetRow = row - 1;
+          const targetCol = Math.min(col, rowItemCount(page, targetRow) - 1);
+          const targetIndex = page * root.launcherPageSize + targetRow * root.launcherColumns + targetCol;
+          root.setLauncherSelection(targetIndex);
+          return;
+        }
+
+        const nextRow = row + 1;
+        const nextRowCount = rowItemCount(page, nextRow);
+        if (nextRowCount > 0) {
+          const targetCol = Math.min(col, nextRowCount - 1);
+          const targetIndex = page * root.launcherPageSize + nextRow * root.launcherColumns + targetCol;
+          root.setLauncherSelection(targetIndex);
+          return;
+        }
+
+        if (page >= maxPage) return;
+
+        const targetPage = page + 1;
+        const targetRowCount = rowItemCount(targetPage, 0);
+        if (targetRowCount <= 0) return;
+
+        const targetCol = Math.min(col, targetRowCount - 1);
+        const targetIndex = targetPage * root.launcherPageSize + targetCol;
+        root.setLauncherSelection(targetIndex);
+      }
+
       function focusGrid() {
         root.activeScreen = launcherWindow.modelData;
         launcherContent.forceActiveFocus();
@@ -359,6 +402,7 @@ Item {
         focus: launcherWindow.visible && !searchInput.activeFocus
         LayoutMirroring.enabled: false
         LayoutMirroring.childrenInherit: true
+        Keys.forwardTo: searchInput.activeFocus ? [] : [searchInput]
 
         Keys.onPressed: function(event) {
           if (!launcherWindow.visible || searchInput.activeFocus) return;
@@ -380,15 +424,11 @@ Item {
               event.accepted = true;
               return;
             case Qt.Key_Up:
-              if ((root.launcherSelectedIndex % pagerArea.pageSize) < pagerArea.columns) {
-                launcherWindow.focusSearch(false);
-              } else {
-                launcherWindow.moveSelectionBy(-pagerArea.columns);
-              }
+              launcherWindow.moveVertical(-1);
               event.accepted = true;
               return;
             case Qt.Key_Down:
-              launcherWindow.moveSelectionBy(pagerArea.columns);
+              launcherWindow.moveVertical(1);
               event.accepted = true;
               return;
             case Qt.Key_PageUp:
@@ -417,13 +457,7 @@ Item {
 
           const modifiers = event.modifiers;
           const hasMetaModifier = modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier);
-          if (!hasMetaModifier && event.text && event.text.length > 0) {
-            launcherWindow.focusSearch(false);
-            root.launcherQuery = event.text;
-            searchInput.text = root.launcherQuery;
-            searchInput.cursorPosition = root.launcherQuery.length;
-            event.accepted = true;
-          }
+          if (!hasMetaModifier && event.text && event.text.length > 0) launcherWindow.focusSearch(false);
         }
 
         Behavior on y {
@@ -468,7 +502,10 @@ Item {
                 selectedTextColor: Theme.textOnAccent
                 clip: true
                 selectByMouse: true
-                onTextEdited: root.launcherQuery = searchInput.text
+                onTextEdited: {
+                  if (!activeFocus) launcherWindow.focusSearch(false);
+                  root.launcherQuery = searchInput.text;
+                }
                 Keys.priority: Keys.BeforeItem
                 Keys.onPressed: function(event) {
                   if (event.key !== Qt.Key_Enter && event.key !== Qt.Key_Return) return;
@@ -485,6 +522,16 @@ Item {
                       root.showInputPanel();
                       oskFallbackTimer.restart();
                     }
+                  } else if (launcherWindow.refocusSearch) {
+                    Qt.callLater(function() {
+                      launcherWindow.refocusSearch = false;
+                      searchInput.forceActiveFocus();
+                      if (launcherWindow.oskFromTouch) {
+                        root.showInputPanel();
+                        oskFallbackTimer.restart();
+                      }
+                    });
+                    return;
                   } else if (launcherWindow.oskFromTouch || oskProcess.running) {
                     launcherWindow.stopOsk();
                   }
@@ -535,7 +582,15 @@ Item {
                 MouseArea {
                   id: clearTouch
                   anchors.fill: parent
-                  onClicked: root.launcherQuery = ""
+                  onPressed: launcherWindow.refocusSearch = true
+                  onCanceled: launcherWindow.refocusSearch = false
+                  onClicked: {
+                    root.launcherQuery = "";
+                    searchInput.text = "";
+                    searchInput.cursorPosition = 0;
+                    searchInput.forceActiveFocus();
+                    launcherWindow.refocusSearch = false;
+                  }
                 }
               }
             }

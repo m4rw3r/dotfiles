@@ -71,9 +71,7 @@ FocusScope {
   function popupAboveY(anchorItem, popupHeight, spacing) {
     if (!anchorItem || !panel) return 0;
     const position = anchorItem.mapToItem(panel, 0, 0);
-    const maxY = Math.max(0, panel.height - popupHeight);
-    const rawY = position.y - popupHeight - (spacing || 8);
-    return clamp(rawY, 0, maxY);
+    return position.y + (anchorItem.height - popupHeight) / 2 - (spacing || 0);
   }
 
   function profileLabel(profile) {
@@ -2525,35 +2523,88 @@ FocusScope {
           }
         }
 
-        Row {
+        Item {
           width: parent.width
-          spacing: 8
+          height: profileRow.height
 
-          QuickTile {
-            id: profileTile
-            width: brightnessService.keyboardAvailable ? Math.floor((parent.width - parent.spacing) / 2) : parent.width
-            iconName: "gauge"
-            title: root.profileShortLabel()
-            subtitle: "Power Mode"
-            active: false
-            expanded: root.expandedSection === "profile"
-            highlightExpanded: true
-            onPrimaryClicked: root.cyclePowerProfile()
-            onSecondaryClicked: root.toggleSection("profile")
+          Row {
+            id: profileRow
+
+            width: parent.width
+            spacing: 8
+
+            QuickTile {
+              id: profileTile
+              width: brightnessService.keyboardAvailable ? Math.floor((parent.width - parent.spacing) / 2) : parent.width
+              iconName: "gauge"
+              title: root.profileShortLabel()
+              subtitle: "Power Mode"
+              active: false
+              expanded: root.expandedSection === "profile"
+              highlightExpanded: true
+              onPrimaryClicked: root.cyclePowerProfile()
+              onSecondaryClicked: root.toggleSection("profile")
+            }
+
+            QuickTile {
+              id: keyboardTile
+              visible: brightnessService.keyboardAvailable
+              width: Math.floor((parent.width - parent.spacing) / 2)
+              iconName: "keyboard"
+              title: root.keyboardTileTitle()
+              subtitle: root.keyboardTileSubtitle()
+              active: brightnessService.keyboardAvailable && root.keyboardLevelIndex() > 0
+              expanded: root.expandedSection === "keyboard"
+              highlightExpanded: true
+              onPrimaryClicked: root.cycleKeyboardBacklight()
+              onSecondaryClicked: root.toggleSection("keyboard")
+            }
           }
 
-          QuickTile {
-            id: keyboardTile
-            visible: brightnessService.keyboardAvailable
-            width: Math.floor((parent.width - parent.spacing) / 2)
-            iconName: "keyboard"
-            title: root.keyboardTileTitle()
-            subtitle: root.keyboardTileSubtitle()
-            active: brightnessService.keyboardAvailable && root.keyboardLevelIndex() > 0
-            expanded: root.expandedSection === "keyboard"
-            highlightExpanded: true
-            onPrimaryClicked: root.cycleKeyboardBacklight()
-            onSecondaryClicked: root.toggleSection("keyboard")
+          PopoverSurface {
+            id: profilePopover
+            visible: root.expandedSection === "profile"
+            width: Math.max(profileTile.width, 188)
+            x: root.clamp(profileTile.x + (profileTile.width - width) / 2, 0, profileRow.width - width)
+            y: (profileTile.height - implicitHeight) / 2
+            z: 2
+
+            MenuList {
+              width: parent.width
+
+              MenuRow {
+                width: parent.width
+                iconName: "gauge"
+                title: "Performance"
+                trailingIconName: PowerProfiles.profile === PowerProfile.Performance ? "check" : ""
+                active: PowerProfiles.profile === PowerProfile.Performance
+                compact: true
+                dividerVisible: true
+                enabled: PowerProfiles.hasPerformanceProfile
+                onClicked: PowerProfiles.profile = PowerProfile.Performance
+              }
+
+              MenuRow {
+                width: parent.width
+                iconName: "gauge"
+                title: "Balanced"
+                trailingIconName: PowerProfiles.profile === PowerProfile.Balanced ? "check" : ""
+                active: PowerProfiles.profile === PowerProfile.Balanced
+                compact: true
+                dividerVisible: true
+                onClicked: PowerProfiles.profile = PowerProfile.Balanced
+              }
+
+              MenuRow {
+                width: parent.width
+                iconName: "gauge"
+                title: "Power Saver"
+                trailingIconName: PowerProfiles.profile === PowerProfile.PowerSaver ? "check" : ""
+                active: PowerProfiles.profile === PowerProfile.PowerSaver
+                compact: true
+                onClicked: PowerProfiles.profile = PowerProfile.PowerSaver
+              }
+            }
           }
         }
       }
@@ -2617,50 +2668,6 @@ FocusScope {
               compact: true
               onClicked: Pipewire.preferredDefaultAudioSink = outputRow.outputNode
             }
-          }
-        }
-      }
-
-      PopoverSurface {
-        visible: root.expandedSection === "profile"
-        width: Math.max(profileTile.width, 188)
-        x: root.popupCenteredX(profileTile, width)
-        y: root.popupAboveY(profileTile, height, 8)
-
-        MenuList {
-          width: parent.width
-
-          MenuRow {
-            width: parent.width
-            iconName: "gauge"
-            title: "Performance"
-            trailingIconName: PowerProfiles.profile === PowerProfile.Performance ? "check" : ""
-            active: PowerProfiles.profile === PowerProfile.Performance
-            compact: true
-            dividerVisible: true
-            enabled: PowerProfiles.hasPerformanceProfile
-            onClicked: PowerProfiles.profile = PowerProfile.Performance
-          }
-
-          MenuRow {
-            width: parent.width
-            iconName: "gauge"
-            title: "Balanced"
-            trailingIconName: PowerProfiles.profile === PowerProfile.Balanced ? "check" : ""
-            active: PowerProfiles.profile === PowerProfile.Balanced
-            compact: true
-            dividerVisible: true
-            onClicked: PowerProfiles.profile = PowerProfile.Balanced
-          }
-
-          MenuRow {
-            width: parent.width
-            iconName: "gauge"
-            title: "Power Saver"
-            trailingIconName: PowerProfiles.profile === PowerProfile.PowerSaver ? "check" : ""
-            active: PowerProfiles.profile === PowerProfile.PowerSaver
-            compact: true
-            onClicked: PowerProfiles.profile = PowerProfile.PowerSaver
           }
         }
       }

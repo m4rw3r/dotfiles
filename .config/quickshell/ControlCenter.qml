@@ -22,13 +22,14 @@ FocusScope {
   property string pendingPowerAction: ""
   property string wifiPasswordTarget: ""
   property string wifiPassword: ""
+  property real pendingAudioVolume: 0
   property real pendingScreenBrightness: 0
   readonly property var audioSink: Pipewire.defaultAudioSink
   readonly property var audioNode: audioSink && audioSink.audio ? audioSink.audio : null
   readonly property var battery: UPower.displayDevice
   readonly property var bluetoothAdapter: Bluetooth.defaultAdapter
   readonly property bool batteryAvailable: battery && battery.isPresent && battery.isLaptopBattery
-  readonly property bool audioReady: Pipewire.ready && audioSink !== null && audioNode !== null
+  readonly property bool audioReady: audioService.ready
 
   function clamp(value, minValue, maxValue) {
     return Math.max(minValue, Math.min(maxValue, value));
@@ -155,12 +156,12 @@ FocusScope {
 
   function audioVolumeValue() {
     if (!audioReady) return 0;
-    return clamp(Number(audioNode.volume), 0, 1);
+    return clamp(Number(audioService.volume), 0, 1);
   }
 
   function audioVolumePercentText() {
     if (!audioReady) return "Unavailable";
-    if (audioNode.muted) return "Muted";
+    if (audioService.muted) return "Muted";
     return `${Math.round(audioVolumeValue() * 100)}%`;
   }
 
@@ -206,8 +207,10 @@ FocusScope {
   onVisibleChanged: {
     if (visible) {
       forceActiveFocus();
+      audioService.refresh();
       brightnessService.refresh();
       wifiService.refresh();
+      pendingAudioVolume = audioService.volume;
       pendingScreenBrightness = brightnessService.screenPercent;
     } else {
       expandedSection = "";
@@ -232,6 +235,107 @@ FocusScope {
 
     onScreenPercentChanged: {
       if (!brightnessCommitTimer.running) root.pendingScreenBrightness = screenPercent;
+    }
+  }
+
+  Item {
+    id: audioService
+
+    property real volume: 0
+    property bool muted: false
+    property bool ready: false
+    property string lastError: ""
+
+    function refresh() {
+      readProcess.exec(["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"]);
+    }
+
+    function setVolume(nextVolume) {
+      const clamped = Math.max(0, Math.min(1.5, Number(nextVolume)));
+      volume = clamped;
+      if (clamped > 0 && muted) muted = false;
+      writeProcess.exec(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", clamped.toFixed(3)]);
+    }
+
+    function setMuted(nextMuted) {
+      muted = nextMuted;
+      muteProcess.exec(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", nextMuted ? "1" : "0"]);
+    }
+
+    function toggleMuted() {
+      setMuted(!muted);
+    }
+
+    function parseState(text) {
+      const match = String(text || "").match(/Volume:\s+([0-9.]+)(?:\s+\[(MUTED)\])?/i);
+      if (!match) {
+        ready = false;
+        return;
+      }
+
+      volume = Math.max(0, Math.min(1.5, Number(match[1]) || 0));
+      muted = match[2] === "MUTED";
+      ready = true;
+    }
+
+    onVolumeChanged: {
+      if (!audioCommitTimer.running) root.pendingAudioVolume = volume;
+    }
+
+    StdioCollector {
+      id: audioReadStdout
+      waitForEnd: true
+    }
+
+    StdioCollector {
+      id: audioReadStderr
+      waitForEnd: true
+    }
+
+    Process {
+      id: readProcess
+
+      stdout: audioReadStdout
+      stderr: audioReadStderr
+
+      onExited: function(exitCode) {
+        audioService.lastError = exitCode === 0 ? "" : String(audioReadStderr.text || "").trim();
+        if (exitCode === 0) audioService.parseState(audioReadStdout.text);
+      }
+    }
+
+    StdioCollector {
+      id: audioWriteStderr
+      waitForEnd: true
+    }
+
+    Process {
+      id: writeProcess
+
+      stderr: audioWriteStderr
+
+      onExited: function(exitCode) {
+        audioService.lastError = exitCode === 0 ? "" : String(audioWriteStderr.text || "").trim();
+        audioRefreshTimer.restart();
+      }
+    }
+
+    Process {
+      id: muteProcess
+
+      stderr: audioWriteStderr
+
+      onExited: function(exitCode) {
+        audioService.lastError = exitCode === 0 ? "" : String(audioWriteStderr.text || "").trim();
+        audioRefreshTimer.restart();
+      }
+    }
+
+    Timer {
+      id: audioRefreshTimer
+      interval: 150
+      repeat: false
+      onTriggered: audioService.refresh()
     }
   }
 
@@ -735,6 +839,7 @@ FocusScope {
     property real from: 0
     property real to: 1
     property real value: 0
+    property real dragValue: value
     property string valueText: ""
     property bool showValueText: false
     signal valueMoved(real value)
@@ -742,6 +847,10 @@ FocusScope {
 
     implicitWidth: parent ? parent.width : 0
     implicitHeight: 40
+
+    onValueChanged: {
+      if (!mediaControl.pressed) dragValue = value;
+    }
 
     Row {
       anchors.fill: parent
@@ -766,18 +875,16 @@ FocusScope {
           anchors.fill: parent
           from: mediaSlider.from
           to: mediaSlider.to
+          value: mediaSlider.dragValue
           enabled: mediaSlider.enabled
 
-          Binding on value {
-            when: !mediaControl.pressed
-            value: mediaSlider.value
-          }
-
-          onMoved: function() {
-            mediaSlider.valueMoved(mediaControl.value);
+          onValueChanged: {
+            if (!pressed) return;
+            mediaSlider.dragValue = value;
+            mediaSlider.valueMoved(value);
           }
           onPressedChanged: {
-            if (!pressed) mediaSlider.valueCommitted(mediaControl.value);
+            if (!pressed) mediaSlider.valueCommitted(mediaSlider.dragValue);
           }
 
           background: Rectangle {
@@ -838,11 +945,16 @@ FocusScope {
     property real to: 100
     property real stepSize: 0
     property real value: 0
+    property real dragValue: value
     signal valueMoved(real value)
     signal valueCommitted(real value)
 
     implicitWidth: parent ? parent.width : 0
     implicitHeight: 42
+
+    onValueChanged: {
+      if (!slider.pressed) dragValue = value;
+    }
 
     UiSurface {
       anchors.fill: parent
@@ -866,20 +978,18 @@ FocusScope {
         from: inlineSlider.from
         to: inlineSlider.to
         stepSize: inlineSlider.stepSize
+        value: inlineSlider.dragValue
         enabled: inlineSlider.enabled
         leftPadding: titleLabel.implicitWidth + 28
         rightPadding: valueLabel.implicitWidth + 28
 
-        Binding on value {
-          when: !slider.pressed
-          value: inlineSlider.value
-        }
-
-        onMoved: function() {
-          inlineSlider.valueMoved(slider.value);
+        onValueChanged: {
+          if (!pressed) return;
+          inlineSlider.dragValue = value;
+          inlineSlider.valueMoved(value);
         }
         onPressedChanged: {
-          if (!pressed) inlineSlider.valueCommitted(slider.value);
+          if (!pressed) inlineSlider.valueCommitted(inlineSlider.dragValue);
         }
 
         background: Rectangle {
@@ -1431,6 +1541,13 @@ FocusScope {
   }
 
   Timer {
+    id: audioCommitTimer
+    interval: 75
+    repeat: false
+    onTriggered: audioService.setVolume(root.pendingAudioVolume)
+  }
+
+  Timer {
     id: brightnessCommitTimer
     interval: 90
     repeat: false
@@ -1552,11 +1669,11 @@ FocusScope {
           id: muteButton
           anchors.verticalCenter: parent.verticalCenter
           width: 42
-          iconName: root.audioReady && root.audioNode.muted ? "speaker-muted" : "speaker"
-          active: root.audioReady && root.audioNode.muted
+          iconName: root.audioReady && audioService.muted ? "speaker-muted" : "speaker"
+          active: root.audioReady && audioService.muted
           enabled: root.audioReady
           onClicked: {
-            if (root.audioReady) root.audioNode.muted = !root.audioNode.muted;
+            if (root.audioReady) audioService.toggleMuted();
           }
         }
 
@@ -1564,13 +1681,18 @@ FocusScope {
           width: parent.width - muteButton.width - outputButton.width - 24
           anchors.verticalCenter: parent.verticalCenter
           showIcon: false
-          value: root.audioVolumeValue()
+          value: root.pendingAudioVolume
           enabled: root.audioReady
           onValueMoved: function(value) {
-            if (root.audioReady) root.audioNode.volume = value;
+            if (!root.audioReady) return;
+            root.pendingAudioVolume = value;
+            audioCommitTimer.restart();
           }
           onValueCommitted: function(value) {
-            if (root.audioReady) root.audioNode.volume = value;
+            if (!root.audioReady) return;
+            root.pendingAudioVolume = value;
+            audioCommitTimer.stop();
+            audioService.setVolume(value);
           }
         }
 

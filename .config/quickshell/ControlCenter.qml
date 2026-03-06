@@ -25,12 +25,15 @@ FocusScope {
   property real pendingAudioVolume: 0
   property real pendingScreenBrightness: 0
   property bool panelOpen: false
+  property bool hasInitialSnapshot: false
+  property bool allowFallbackPaint: false
   readonly property var audioSink: Pipewire.defaultAudioSink
   readonly property var audioNode: audioSink && audioSink.audio ? audioSink.audio : null
   readonly property var battery: UPower.displayDevice
   readonly property var bluetoothAdapter: Bluetooth.defaultAdapter
   readonly property bool batteryAvailable: battery && battery.isPresent && battery.isLaptopBattery
   readonly property bool audioReady: audioService.ready
+  readonly property bool panelDataReady: audioService.ready && brightnessService.screenLoaded && wifiService.ready
 
   function clamp(value, minValue, maxValue) {
     return Math.max(minValue, Math.min(maxValue, value));
@@ -327,16 +330,27 @@ FocusScope {
 
   onPanelOpenChanged: {
     if (panelOpen) {
+      allowFallbackPaint = false;
       forceActiveFocus();
       refreshPanelData();
       panelRefreshTimer.restart();
+      if (!hasInitialSnapshot) initialPaintTimer.restart();
     } else {
+      initialPaintTimer.stop();
+      allowFallbackPaint = false;
       expandedSection = "";
       pendingPowerAction = "";
       wifiPasswordTarget = "";
       wifiPassword = "";
       if (bluetoothAdapter) bluetoothAdapter.discovering = false;
     }
+  }
+
+  onPanelDataReadyChanged: {
+    if (!panelDataReady) return;
+    hasInitialSnapshot = true;
+    allowFallbackPaint = false;
+    initialPaintTimer.stop();
   }
 
   Keys.onEscapePressed: root.closeRequested()
@@ -353,6 +367,13 @@ FocusScope {
     interval: 180
     repeat: false
     onTriggered: root.refreshPanelData()
+  }
+
+  Timer {
+    id: initialPaintTimer
+    interval: 700
+    repeat: false
+    onTriggered: root.allowFallbackPaint = true
   }
 
   BrightnessController {
@@ -1472,6 +1493,7 @@ FocusScope {
     id: brightnessController
 
     property bool ready: false
+    property bool screenLoaded: false
     property string screenDevice: ""
     property string keyboardDevice: ""
     property int screenPercent: 0
@@ -1553,6 +1575,7 @@ FocusScope {
         keyboardValue = parseInt(parts[2]) || 0;
         keyboardMax = parseInt(parts[4]) || 0;
       } else {
+        screenLoaded = true;
         screenPercent = percent;
       }
     }
@@ -1637,6 +1660,7 @@ FocusScope {
   component WifiController: Item {
     id: wifiController
 
+    property bool ready: false
     property bool enabled: false
     property bool hardwareEnabled: true
     property bool busy: false
@@ -1820,6 +1844,7 @@ FocusScope {
 
       onExited: function(exitCode) {
         wifiController.busy = false;
+        wifiController.ready = true;
         wifiController.lastError = exitCode === 0 ? "" : String(wifiRefreshStderr.text || "").trim();
         if (exitCode === 0) wifiController.parseRefresh(wifiRefreshStdout.text);
       }
@@ -1971,6 +1996,7 @@ FocusScope {
     Column {
       id: content
 
+      visible: !root.panelOpen || root.hasInitialSnapshot || root.panelDataReady || root.allowFallbackPaint
       width: parent.width - 28
       anchors.left: parent.left
       anchors.leftMargin: 14

@@ -9,31 +9,53 @@ Singleton {
   readonly property var palettes: ({
     graphite: {
       scrim: "#8211181f",
-      panel: "#20262f",
-      panelRaised: "#273241",
-      field: "#2b3745",
-      fieldPressed: "#334153",
-      border: "#334457",
-      text: "#edf3f8",
-      textMuted: "#c4d7e5",
-      textSubtle: "#91a5b6",
+      panel: "#1f232a",
+      panelOverlay: "#161b22",
+      panelRaised: "#29303a",
+      submenu: "#2e3643",
+      field: "#313943",
+      fieldAlt: "#3a4351",
+      fieldPressed: "#465161",
+      border: "#3b4556",
+      divider: "#4a5568",
+      text: "#f3f5f7",
+      textMuted: "#d0d4d8",
+      textSubtle: "#a1a8b0",
+      iconSecondary: "#cdd2d8",
       textOnAccent: "#ffffff",
-      accent: "#5f91bf",
-      accentStrong: "#7badde"
+      accent: "#3d7fdb",
+      accentStrong: "#6aa3f2",
+      toggleOn: "#3d7fdb",
+      toggleOnStrong: "#6aa3f2",
+      toggleOff: "#3a3f46",
+      sliderTrack: "#696e76",
+      sliderFill: "#6aa3f2",
+      chip: "#333b46"
     },
     dawn: {
       scrim: "#6f12151a",
-      panel: "#f2ece4",
+      panel: "#f1ebe3",
+      panelOverlay: "#ece4da",
       panelRaised: "#ffffff",
-      field: "#e9dfd2",
-      fieldPressed: "#deceb9",
+      submenu: "#faf6f1",
+      field: "#e8ddd0",
+      fieldAlt: "#dfd0bf",
+      fieldPressed: "#d4c0aa",
       border: "#c8b39a",
+      divider: "#b8a48f",
       text: "#2f2a24",
       textMuted: "#55493c",
       textSubtle: "#716152",
+      iconSecondary: "#55493c",
       textOnAccent: "#ffffff",
       accent: "#c06f39",
-      accentStrong: "#d48a56"
+      accentStrong: "#d48a56",
+      toggleOn: "#c06f39",
+      toggleOnStrong: "#d48a56",
+      toggleOff: "#d2c1ae",
+      sliderTrack: "#bba996",
+      sliderFill: "#d48a56",
+      chip: "#dfd0bf"
     }
   })
 
@@ -53,24 +75,35 @@ Singleton {
 
   readonly property color scrim: palette.scrim
   readonly property color panel: palette.panel
+  readonly property color panelOverlay: palette.panelOverlay
   readonly property color panelRaised: palette.panelRaised
+  readonly property color submenu: palette.submenu
   readonly property color field: palette.field
+  readonly property color fieldAlt: palette.fieldAlt
   readonly property color fieldPressed: palette.fieldPressed
   readonly property color border: palette.border
+  readonly property color divider: palette.divider
   readonly property color text: palette.text
   readonly property color textMuted: palette.textMuted
   readonly property color textSubtle: palette.textSubtle
+  readonly property color iconSecondary: palette.iconSecondary
   readonly property color textOnAccent: palette.textOnAccent
   readonly property color accent: palette.accent
   readonly property color accentStrong: palette.accentStrong
+  readonly property color toggleOn: palette.toggleOn
+  readonly property color toggleOnStrong: palette.toggleOnStrong
+  readonly property color toggleOff: palette.toggleOff
+  readonly property color sliderTrack: palette.sliderTrack
+  readonly property color sliderFill: palette.sliderFill
+  readonly property color chip: palette.chip
 
-  readonly property int radiusSm: 10
-  readonly property int radiusMd: 16
-  readonly property int radiusLg: 24
+  readonly property int radiusSm: 12
+  readonly property int radiusMd: 18
+  readonly property int radiusLg: 22
 
-  readonly property int textXs: 13
+  readonly property int textXs: 12
   readonly property int textSm: 14
-  readonly property int textMd: 17
+  readonly property int textMd: 16
   readonly property int textLg: 22
   readonly property int textXl: 24
 
@@ -81,7 +114,7 @@ Singleton {
   readonly property int motionBase: 170
   readonly property int motionSlow: 220
 
-  readonly property string fontFamily: "Noto Sans"
+  readonly property string fontFamily: "Cantarell"
 
   readonly property color selection: accent
 

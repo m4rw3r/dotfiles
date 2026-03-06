@@ -2,7 +2,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
-
+import "theme"
+import "ui/primitives"
 
 ShellRoot {
   id: root
@@ -24,6 +25,26 @@ ShellRoot {
     }
   }
 
+  IpcHandler {
+    target: "theme"
+
+    function current() {
+      return Theme.current;
+    }
+
+    function list() {
+      return Theme.themeNames;
+    }
+
+    function set(name: string): void {
+      Theme.setTheme(String(name));
+    }
+
+    function toggle() {
+      return Theme.toggleTheme();
+    }
+  }
+
   Launcher {
     id: launcher
     onLauncherOpening: root.shadeOpen = false
@@ -37,9 +58,8 @@ ShellRoot {
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
 
-    Rectangle {
+    UiScrim {
       anchors.fill: parent
-      color: "#80000000"
 
       MouseArea {
         anchors.fill: parent
@@ -57,17 +77,8 @@ ShellRoot {
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Top
 
-    Rectangle {
+    ControlCenter {
       anchors.fill: parent
-      radius: 24
-      color: "#202020"
-
-      Text {
-        anchors.centerIn: parent
-        text: "Shade (placeholder) - next: battery/perf/volume/brightness/etc."
-        color: "white"
-        font.pixelSize: 22
-      }
     }
   }
 

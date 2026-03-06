@@ -3,6 +3,8 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Widgets
+import "theme"
+import "ui/primitives"
 
 Item {
   id: root
@@ -286,9 +288,8 @@ Item {
         }
       }
 
-      Rectangle {
+      UiScrim {
         anchors.fill: parent
-        color: "#b8141b22"
       }
 
       MouseArea {
@@ -374,7 +375,7 @@ Item {
 
         Behavior on y {
           NumberAnimation {
-            duration: 170
+            duration: Theme.motionBase
             easing.type: Easing.OutCubic
           }
         }
@@ -392,13 +393,14 @@ Item {
             width: parent.width
             height: 64
 
-            Rectangle {
+            UiSurface {
               id: searchBar
               width: Math.max(0, parent.width - pagerArea.arrowGutter * 2)
               height: parent.height
               anchors.horizontalCenter: parent.horizontalCenter
-              radius: 16
-              color: "#b3262c33"
+              tone: "field"
+              outlined: true
+              radius: Theme.radiusMd
 
               TextInput {
                 id: searchInput
@@ -406,10 +408,11 @@ Item {
                 anchors.leftMargin: 18
                 anchors.rightMargin: launcherQuery === "" ? 18 : 52
                 verticalAlignment: TextInput.AlignVCenter
-                font.pixelSize: 24
-                color: "#edf3f8"
-                selectionColor: "#5f91bf"
-                selectedTextColor: "#ffffff"
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textXl
+                color: Theme.text
+                selectionColor: Theme.selection
+                selectedTextColor: Theme.textOnAccent
                 clip: true
                 selectByMouse: true
                 text: launcherQuery
@@ -436,14 +439,14 @@ Item {
                 }
               }
 
-              Text {
+              UiText {
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.left: parent.left
                 anchors.leftMargin: 18
                 visible: launcherQuery === "" && !searchInput.activeFocus
                 text: "Search apps"
-                color: "#88a3b6"
-                font.pixelSize: 22
+                tone: "subtle"
+                size: "lg"
               }
 
               Item {
@@ -455,11 +458,11 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: launcherQuery !== ""
 
-                Text {
+                UiText {
                   anchors.centerIn: parent
                   text: "x"
-                  color: clearTouch.pressed ? "#9fb2c3" : "#d7e2eb"
-                  font.pixelSize: 27
+                  color: clearTouch.pressed ? Theme.textSubtle : Theme.textMuted
+                  size: "xl"
                   font.weight: Font.DemiBold
                 }
 
@@ -519,7 +522,7 @@ Item {
               spacing: pagerArea.pageGap
               snapMode: ListView.SnapOneItem
               boundsBehavior: Flickable.StopAtBounds
-              highlightMoveDuration: 220
+              highlightMoveDuration: Theme.motionSlow
               interactive: pagerArea.pageCount > 1
 
               Component.onCompleted: {
@@ -578,39 +581,39 @@ Item {
 
                         Behavior on scale {
                           NumberAnimation {
-                            duration: 120
+                            duration: Theme.motionFast
                             easing.type: Easing.OutCubic
                           }
                         }
 
                         IconImage {
                           anchors.horizontalCenter: parent.horizontalCenter
-                          implicitSize: tile.selected ? 46 : 42
+                          implicitSize: tile.selected ? Theme.iconMd : Theme.iconSm
                           asynchronous: true
                           mipmap: true
                           source: tile.entry.icon !== "" ? `image://icon/${tile.entry.icon}` : "image://icon/application-x-executable"
                         }
 
-                        Text {
+                        UiText {
                           width: parent.width
                           horizontalAlignment: Text.AlignHCenter
                           wrapMode: Text.WordWrap
                           maximumLineCount: 2
                           elide: Text.ElideRight
                           text: tile.entry.name
-                          color: tile.selected ? "#ffffff" : "#eef4f9"
-                          font.pixelSize: 17
+                          color: tile.selected ? Theme.textOnAccent : Theme.text
+                          size: "md"
                           font.weight: Font.DemiBold
                         }
 
-                        Text {
+                        UiText {
                           width: parent.width
                           horizontalAlignment: Text.AlignHCenter
                           elide: Text.ElideRight
                           visible: tile.entry.genericName !== ""
                           text: tile.entry.genericName
-                          color: tile.selected ? "#c4d7e5" : "#9eb2c3"
-                          font.pixelSize: 14
+                          color: tile.selected ? Theme.textMuted : Theme.textSubtle
+                          size: "sm"
                         }
                       }
                     }
@@ -629,11 +632,12 @@ Item {
               visible: pagerArea.pageCount > 1
               opacity: root.launcherPage > 0 ? 0.95 : 0.28
 
-              Text {
+              UiText {
                 anchors.centerIn: parent
                 text: "<"
-                color: "#e7eef5"
+                color: Theme.text
                 font.pixelSize: 32
+                font.weight: Font.DemiBold
               }
 
               MouseArea {
@@ -653,11 +657,12 @@ Item {
               visible: pagerArea.pageCount > 1
               opacity: root.launcherPage < pagerArea.pageCount - 1 ? 0.95 : 0.28
 
-              Text {
+              UiText {
                 anchors.centerIn: parent
                 text: ">"
-                color: "#e7eef5"
+                color: Theme.text
                 font.pixelSize: 32
+                font.weight: Font.DemiBold
               }
 
               MouseArea {
@@ -667,12 +672,12 @@ Item {
               }
             }
 
-            Text {
+            UiText {
               anchors.centerIn: pageView
               visible: launcherResults.length === 0
               text: "No matching applications"
-              color: "#91a5b6"
-              font.pixelSize: 24
+              tone: "subtle"
+              size: "xl"
             }
           }
         }

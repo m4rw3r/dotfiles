@@ -361,7 +361,7 @@ Item {
         LayoutMirroring.childrenInherit: true
 
         Keys.onPressed: function(event) {
-          if (searchInput.activeFocus) return;
+          if (!launcherWindow.visible || searchInput.activeFocus) return;
 
           if (event.key === Qt.Key_Escape) {
             root.closeLauncher();
@@ -469,7 +469,11 @@ Item {
                 clip: true
                 selectByMouse: true
                 onTextEdited: root.launcherQuery = searchInput.text
-                onAccepted: {
+                Keys.priority: Keys.BeforeItem
+                Keys.onPressed: function(event) {
+                  if (event.key !== Qt.Key_Enter && event.key !== Qt.Key_Return) return;
+
+                  event.accepted = true;
                   if (!root.selectedLauncherEntry) return;
                   root.launchEntry(root.selectedLauncherEntry);
                 }

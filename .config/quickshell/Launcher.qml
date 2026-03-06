@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 
+import QtQml
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -23,34 +24,25 @@ Item {
   property int launcherPageSize: launcherColumns * launcherRows
   property int launcherSelectedIndex: 0
   property var activeScreen: null
+  readonly property var inputMethod: Qt.inputMethod
+  readonly property real inputMethodHeight: inputMethod ? inputMethod.keyboardRectangle.height : 0
+  readonly property bool inputMethodVisible: inputMethod
+    ? inputMethod.visible || inputMethod.animating || inputMethodHeight > 0
+    : false
+  readonly property bool hasLauncherResults: launcherResults.length > 0
+  readonly property var selectedLauncherEntry: hasLauncherResults
+    ? launcherResults[launcherSelectedIndex]
+    : null
   property var oskCommand: ["wvkbd-mobintl"]
   property int oskFallbackDelayMs: 180
   property int oskFallbackHeight: 320
 
-  function showInputMethod() {
-    const inputMethod = Qt.inputMethod;
-    if (inputMethod && inputMethod["show"]) inputMethod["show"]();
+  function showInputPanel() {
+    if (inputMethod) inputMethod.show();
   }
 
-  function hideInputMethod() {
-    const inputMethod = Qt.inputMethod;
-    if (inputMethod && inputMethod["hide"]) inputMethod["hide"]();
-  }
-
-  function inputMethodVisible() {
-    const inputMethod = Qt.inputMethod;
-    return Boolean(inputMethod && inputMethod["visible"]);
-  }
-
-  function inputMethodAnimating() {
-    const inputMethod = Qt.inputMethod;
-    return Boolean(inputMethod && inputMethod["animating"]);
-  }
-
-  function inputMethodHeight() {
-    const inputMethod = Qt.inputMethod;
-    const keyboardRectangle = inputMethod ? inputMethod["keyboardRectangle"] : null;
-    return keyboardRectangle ? keyboardRectangle.height : 0;
+  function hideInputPanel() {
+    if (inputMethod) inputMethod.hide();
   }
 
   function ensureActiveScreen() {
@@ -155,7 +147,7 @@ Item {
     launcherQuery = "";
     launcherPage = 0;
     launcherSelectedIndex = 0;
-    hideInputMethod();
+    hideInputPanel();
     refreshLauncherResults();
   }
 
@@ -214,9 +206,7 @@ Item {
         : root.activeScreen === launcherWindow.modelData
       property real keyboardInset: {
         if (!oskFromTouch && !oskProcess.running) return 0;
-        const qtKeyboard = (root.inputMethodVisible() || root.inputMethodAnimating())
-          ? root.inputMethodHeight()
-          : 0;
+        const qtKeyboard = root.inputMethodVisible ? root.inputMethodHeight : 0;
         const fallbackKeyboard = oskProcess.running ? root.oskFallbackHeight : 0;
         return Math.max(qtKeyboard, fallbackKeyboard);
       }
@@ -237,7 +227,7 @@ Item {
         oskFromTouch = fromTouch;
         searchInput.forceActiveFocus();
         if (!fromTouch) return;
-        root.showInputMethod();
+        root.showInputPanel();
         oskFallbackTimer.restart();
       }
 
@@ -313,12 +303,20 @@ Item {
       function stopOsk() {
         oskFallbackTimer.stop();
         if (oskProcess.running) oskProcess.running = false;
-        root.hideInputMethod();
+        root.hideInputPanel();
         oskFromTouch = false;
       }
 
-      function syncSearchInput() {
-        if (searchInput.text !== root.launcherQuery) searchInput.text = root.launcherQuery;
+      function syncWindowState() {
+        if (!launcherWindow.visible) {
+          launcherWindow.stopOsk();
+          return;
+        }
+
+        pagerArea.setPage(root.launcherPage);
+
+        if (launcherWindow.isActiveWindow) launcherContent.forceActiveFocus();
+        else launcherWindow.stopOsk();
       }
 
       Process {
@@ -332,22 +330,14 @@ Item {
         repeat: false
         onTriggered: {
           if (!launcherWindow.oskFromTouch || !searchInput.activeFocus) return;
-          const qtKeyboardVisible = root.inputMethodVisible() || root.inputMethodHeight() > 0;
-          if (!qtKeyboardVisible && !oskProcess.running) oskProcess.running = true;
+          if (!root.inputMethodVisible && !oskProcess.running) oskProcess.running = true;
         }
       }
 
       Connections {
-        target: Qt.inputMethod
+        target: root.inputMethod
         function onVisibleChanged() {
-          if (root.inputMethodVisible() && oskProcess.running) oskProcess.running = false;
-        }
-      }
-
-      Connections {
-        target: root
-        function onLauncherQueryChanged() {
-          launcherWindow.syncSearchInput();
+          if (root.inputMethodVisible && oskProcess.running) oskProcess.running = false;
         }
       }
 
@@ -379,7 +369,7 @@ Item {
             return;
           }
 
-          if (root.launcherResults.length > 0) {
+          if (root.hasLauncherResults) {
             switch (event.key) {
             case Qt.Key_Left:
               launcherWindow.moveHorizontal(-1);
@@ -419,7 +409,7 @@ Item {
               return;
             case Qt.Key_Enter:
             case Qt.Key_Return:
-              root.launchEntry(root.launcherResults[root.launcherSelectedIndex]);
+              root.launchEntry(root.selectedLauncherEntry);
               event.accepted = true;
               return;
             }
@@ -478,18 +468,17 @@ Item {
                 selectedTextColor: Theme.textOnAccent
                 clip: true
                 selectByMouse: true
-                text: root.launcherQuery
                 onTextEdited: root.launcherQuery = searchInput.text
                 onAccepted: {
-                  if (root.launcherResults.length === 0) return;
-                  root.launchEntry(root.launcherResults[root.launcherSelectedIndex]);
+                  if (!root.selectedLauncherEntry) return;
+                  root.launchEntry(root.selectedLauncherEntry);
                 }
                 Keys.onEscapePressed: root.closeLauncher()
                 Keys.onDownPressed: launcherWindow.focusGrid()
                 onActiveFocusChanged: {
                   if (activeFocus) {
                     if (launcherWindow.oskFromTouch) {
-                      root.showInputMethod();
+                      root.showInputPanel();
                       oskFallbackTimer.restart();
                     }
                   } else if (launcherWindow.oskFromTouch || oskProcess.running) {
@@ -504,6 +493,11 @@ Item {
                 TapHandler {
                   acceptedDevices: PointerDevice.TouchScreen
                   onTapped: launcherWindow.focusSearch(true)
+                }
+
+                Binding on text {
+                  when: !searchInput.activeFocus || !launcherWindow.isActiveWindow
+                  value: root.launcherQuery
                 }
               }
 
@@ -551,71 +545,44 @@ Item {
             property int rows: root.launcherRows
             property int tileHeight: 122
             property int tileSpacing: 14
-            property int pageGap: 20
             property int arrowGutter: 76
-            property real tileWidth: Math.floor((pageView.width - (columns - 1) * tileSpacing) / columns)
+            property real tileWidth: Math.floor((pageFrame.width - (columns - 1) * tileSpacing) / columns)
             property int pageSize: root.launcherPageSize
             property int pageCount: Math.max(1, Math.ceil(root.launcherResults.length / pageSize))
+            property int currentPageBase: root.launcherPage * pageSize
+            property int currentPageItemCount: Math.max(0, Math.min(pageSize, root.launcherResults.length - currentPageBase))
 
-            function syncToPage(page, align) {
+            function setPage(page) {
               const maxPage = Math.max(0, pageCount - 1);
               const clampedPage = Math.max(0, Math.min(page, maxPage));
               if (root.launcherPage !== clampedPage) root.launcherPage = clampedPage;
-              const indexChanged = pageView.currentIndex !== clampedPage;
-              if (indexChanged) pageView.currentIndex = clampedPage;
-              if ((align || indexChanged) && pageView.count > 0)
-                pageView.positionViewAtIndex(clampedPage, ListView.Beginning);
+
+              if (!root.hasLauncherResults) return;
+
+              const pageStart = clampedPage * pageSize;
+              const pageEnd = Math.min(root.launcherResults.length - 1, pageStart + pageSize - 1);
+              if (root.launcherSelectedIndex < pageStart || root.launcherSelectedIndex > pageEnd) {
+                root.setLauncherSelection(pageStart);
+              }
             }
 
             onPageCountChanged: {
-              syncToPage(root.launcherPage, true);
+              setPage(root.launcherPage);
             }
 
             Connections {
               target: root
               function onLauncherPageChanged() {
-                pagerArea.syncToPage(root.launcherPage, false);
+                pagerArea.setPage(root.launcherPage);
               }
             }
 
-            ListView {
-              id: pageView
+            Item {
+              id: pageFrame
               anchors.fill: parent
               anchors.leftMargin: pagerArea.arrowGutter
               anchors.rightMargin: pagerArea.arrowGutter
               clip: true
-              orientation: ListView.Horizontal
-              layoutDirection: Qt.LeftToRight
-              model: pagerArea.pageCount
-              spacing: pagerArea.pageGap
-              snapMode: ListView.SnapOneItem
-              boundsBehavior: Flickable.StopAtBounds
-              highlightMoveDuration: Theme.motionSlow
-              interactive: pagerArea.pageCount > 1
-
-              Component.onCompleted: {
-                pagerArea.syncToPage(root.launcherPage, true);
-              }
-
-              onCurrentIndexChanged: {
-                if (root.launcherPage !== currentIndex) root.launcherPage = currentIndex;
-
-                if (root.launcherResults.length === 0) return;
-                const pageStart = currentIndex * pagerArea.pageSize;
-                const pageEnd = Math.min(root.launcherResults.length - 1, pageStart + pagerArea.pageSize - 1);
-                if (root.launcherSelectedIndex < pageStart || root.launcherSelectedIndex > pageEnd) {
-                  root.setLauncherSelection(pageStart);
-                }
-              }
-
-              delegate: Item {
-                id: pageDelegate
-                required property int index
-                property int pageBase: pageDelegate.index * pagerArea.pageSize
-                property int pageItemCount: Math.max(0, Math.min(pagerArea.pageSize, root.launcherResults.length - pageBase))
-                width: pageView.width
-                height: pageView.height
-
                 Grid {
                   columns: pagerArea.columns
                   rows: pagerArea.rows
@@ -624,12 +591,12 @@ Item {
                   anchors.centerIn: parent
 
                   Repeater {
-                    model: pageDelegate.pageItemCount
+                    model: pagerArea.currentPageItemCount
 
                     delegate: Item {
                       id: tile
                       required property int index
-                      property int absoluteIndex: pageDelegate.pageBase + index
+                      property int absoluteIndex: pagerArea.currentPageBase + index
                       property var entry: root.launcherResults[absoluteIndex]
                       property bool selected: root.launcherSelectedIndex === absoluteIndex
                       width: pagerArea.tileWidth
@@ -692,15 +659,14 @@ Item {
                     }
                   }
                 }
-              }
             }
 
             Item {
               id: prevPageButton
               width: 64
               height: pagerArea.tileHeight
-              x: pageView.x - width - 6
-              y: Math.round(pageView.y + (pageView.height - height) / 2)
+              x: pageFrame.x - width - 6
+              y: Math.round(pageFrame.y + (pageFrame.height - height) / 2)
               z: 2
               visible: pagerArea.pageCount > 1
               opacity: root.launcherPage > 0 ? 0.95 : 0.28
@@ -716,7 +682,7 @@ Item {
               MouseArea {
                 anchors.fill: parent
                 enabled: root.launcherPage > 0
-                onClicked: pagerArea.syncToPage(root.launcherPage - 1, true)
+                onClicked: pagerArea.setPage(root.launcherPage - 1)
               }
             }
 
@@ -724,8 +690,8 @@ Item {
               id: nextPageButton
               width: 64
               height: pagerArea.tileHeight
-              x: pageView.x + pageView.width + 6
-              y: Math.round(pageView.y + (pageView.height - height) / 2)
+              x: pageFrame.x + pageFrame.width + 6
+              y: Math.round(pageFrame.y + (pageFrame.height - height) / 2)
               z: 2
               visible: pagerArea.pageCount > 1
               opacity: root.launcherPage < pagerArea.pageCount - 1 ? 0.95 : 0.28
@@ -741,13 +707,13 @@ Item {
               MouseArea {
                 anchors.fill: parent
                 enabled: root.launcherPage < pagerArea.pageCount - 1
-                onClicked: pagerArea.syncToPage(root.launcherPage + 1, true)
+                onClicked: pagerArea.setPage(root.launcherPage + 1)
               }
             }
 
             UiText {
-              anchors.centerIn: pageView
-              visible: root.launcherResults.length === 0
+              anchors.centerIn: pageFrame
+              visible: !root.hasLauncherResults
               text: "No matching applications"
               tone: "subtle"
               size: "xl"
@@ -758,24 +724,11 @@ Item {
 
       onIsActiveWindowChanged: {
         if (!visible) return;
-
-        if (launcherWindow.isActiveWindow) {
-          launcherWindow.syncSearchInput();
-          launcherWindow.focusGrid();
-          pagerArea.syncToPage(root.launcherPage, true);
-        } else {
-          launcherWindow.stopOsk();
-        }
+        launcherWindow.syncWindowState();
       }
 
       onVisibleChanged: {
-        if (visible && launcherWindow.isActiveWindow) {
-          launcherWindow.syncSearchInput();
-          launcherWindow.focusGrid();
-          pagerArea.syncToPage(root.launcherPage, true);
-        } else {
-          launcherWindow.stopOsk();
-        }
+        launcherWindow.syncWindowState();
       }
     }
   }

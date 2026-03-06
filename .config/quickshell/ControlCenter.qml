@@ -15,19 +15,20 @@ FocusScope {
 
   signal closeRequested()
 
-  implicitWidth: 448
+  implicitWidth: 432
   implicitHeight: panel.implicitHeight
 
   property string expandedSection: ""
   property string pendingPowerAction: ""
   property string wifiPasswordTarget: ""
   property string wifiPassword: ""
+  property real pendingScreenBrightness: 0
   readonly property var audioSink: Pipewire.defaultAudioSink
   readonly property var audioNode: audioSink && audioSink.audio ? audioSink.audio : null
   readonly property var battery: UPower.displayDevice
   readonly property var bluetoothAdapter: Bluetooth.defaultAdapter
   readonly property bool batteryAvailable: battery && battery.isPresent && battery.isLaptopBattery
-  readonly property bool audioReady: audioSink && audioSink.ready && audioNode !== null && Number.isFinite(Number(audioNode.volume))
+  readonly property bool audioReady: Pipewire.ready && audioSink !== null && audioNode !== null
 
   function clamp(value, minValue, maxValue) {
     return Math.max(minValue, Math.min(maxValue, value));
@@ -116,7 +117,7 @@ FocusScope {
   function wifiTileSubtitle() {
     if (!wifiService.hardwareEnabled) return "Blocked";
     if (!wifiService.enabled) return "Off";
-    if (wifiService.connectedSsid !== "") return `${wifiService.connectedSignal}% signal`;
+    if (wifiService.connectedSsid !== "") return `${wifiService.connectedSignal}%`;
     return wifiService.networks.length > 0 ? `${wifiService.networks.length} networks` : "Available";
   }
 
@@ -207,6 +208,7 @@ FocusScope {
       forceActiveFocus();
       brightnessService.refresh();
       wifiService.refresh();
+      pendingScreenBrightness = brightnessService.screenPercent;
     } else {
       expandedSection = "";
       pendingPowerAction = "";
@@ -227,6 +229,10 @@ FocusScope {
 
   BrightnessController {
     id: brightnessService
+
+    onScreenPercentChanged: {
+      if (!brightnessCommitTimer.running) root.pendingScreenBrightness = screenPercent;
+    }
   }
 
   WifiController {
@@ -283,11 +289,14 @@ FocusScope {
 
     property string text: ""
 
-    implicitWidth: chipLabel.implicitWidth + 18
-    implicitHeight: chipLabel.implicitHeight + 12
+    implicitWidth: chipLabel.implicitWidth + 20
+    implicitHeight: chipLabel.implicitHeight + 14
     tone: "field"
-    outlined: true
-    radius: Theme.radiusSm
+    outlined: false
+    radius: 16
+
+    border.width: 1
+    border.color: Qt.rgba(1, 1, 1, 0.08)
 
     UiText {
       id: chipLabel
@@ -491,10 +500,13 @@ FocusScope {
     implicitWidth: 42
     implicitHeight: 42
     tone: active ? "accent" : "field"
-    outlined: !active
-    radius: Theme.radiusSm
+    outlined: false
+    radius: 16
     pressed: iconTouch.pressed
     opacity: enabled ? 1 : 0.45
+
+    border.width: 1
+    border.color: active ? Qt.rgba(1, 1, 1, 0.05) : Qt.rgba(1, 1, 1, 0.08)
 
     GlyphIcon {
       anchors.centerIn: parent
@@ -582,12 +594,15 @@ FocusScope {
     property bool active: false
     signal clicked()
 
-    implicitWidth: 46
-    implicitHeight: 46
+    implicitWidth: 44
+    implicitHeight: 44
     radius: width / 2
     tone: active ? "accent" : "field"
-    outlined: !active
+    outlined: false
     pressed: circleTouch.pressed
+
+    border.width: 1
+    border.color: active ? Qt.rgba(1, 1, 1, 0.06) : Qt.rgba(1, 1, 1, 0.08)
 
     GlyphIcon {
       anchors.centerIn: parent
@@ -603,6 +618,26 @@ FocusScope {
     }
   }
 
+  component IconBadge: UiSurface {
+    id: badge
+
+    property string iconName: "sun"
+
+    implicitWidth: 42
+    implicitHeight: 42
+    tone: "field"
+    outlined: false
+    radius: 16
+    border.width: 1
+    border.color: Qt.rgba(1, 1, 1, 0.08)
+
+    GlyphIcon {
+      anchors.centerIn: parent
+      name: badge.iconName
+      strokeColor: Theme.textMuted
+    }
+  }
+
   component QuickTile: UiSurface {
     id: tile
 
@@ -614,21 +649,30 @@ FocusScope {
     property bool expandable: true
     signal clicked()
 
-    implicitWidth: parent ? Math.floor((parent.width - 10) / 2) : 180
-    implicitHeight: 68
+    implicitWidth: parent ? Math.floor((parent.width - 8) / 2) : 180
+    implicitHeight: 66
     tone: active ? "accent" : "field"
-    outlined: !active
-    radius: 22
+    outlined: false
+    radius: 20
     pressed: tileTouch.pressed
     clip: true
+
+    color: active ? Theme.accent : Theme.field
+    border.width: 1
+    border.color: active ? Qt.rgba(1, 1, 1, 0.05) : Qt.rgba(1, 1, 1, 0.08)
+
+    gradient: Gradient {
+      GradientStop { position: 0; color: tile.active ? Theme.accentStrong : Theme.field }
+      GradientStop { position: 1; color: tile.active ? Theme.accent : Theme.panelRaised }
+    }
 
     Rectangle {
       anchors.top: parent.top
       anchors.bottom: parent.bottom
       anchors.right: parent.right
-      width: tile.expandable ? 54 : 0
+      width: tile.expandable ? 52 : 0
       radius: parent.radius
-      color: tile.active ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.03)
+      color: tile.active ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.04)
       visible: tile.expandable
     }
 
@@ -645,9 +689,9 @@ FocusScope {
       }
 
       Column {
-        width: Math.max(0, parent.width - (tile.expandable ? 70 : 36))
+        width: Math.max(0, parent.width - (tile.expandable ? 68 : 36))
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 2
+        spacing: 1
 
         UiText {
           text: tile.title
@@ -661,7 +705,8 @@ FocusScope {
           text: tile.subtitle
           visible: text !== ""
           size: "xs"
-          tone: tile.active ? "onAccent" : "subtle"
+          tone: tile.active ? "onAccent" : "muted"
+          opacity: tile.active ? 0.88 : 0.92
           elide: Text.ElideRight
         }
       }
@@ -670,7 +715,7 @@ FocusScope {
         anchors.verticalCenter: parent.verticalCenter
         visible: tile.expandable
         name: tile.expanded ? "chevron-down" : "chevron-right"
-        strokeColor: tile.active ? Theme.textOnAccent : Theme.textMuted
+        strokeColor: tile.active ? Theme.textOnAccent : Theme.textSubtle
       }
     }
 
@@ -696,11 +741,11 @@ FocusScope {
     signal valueCommitted(real value)
 
     implicitWidth: parent ? parent.width : 0
-    implicitHeight: 42
+    implicitHeight: 40
 
     Row {
       anchors.fill: parent
-      spacing: 10
+      spacing: 8
 
       GlyphIcon {
         id: startIcon
@@ -718,26 +763,30 @@ FocusScope {
         Slider {
           id: mediaControl
 
-          anchors.left: parent.left
-          anchors.right: parent.right
-          anchors.verticalCenter: parent.verticalCenter
+          anchors.fill: parent
           from: mediaSlider.from
           to: mediaSlider.to
-          value: mediaSlider.value
           enabled: mediaSlider.enabled
 
-          onMoved: mediaSlider.valueMoved(value)
+          Binding on value {
+            when: !mediaControl.pressed
+            value: mediaSlider.value
+          }
+
+          onMoved: function() {
+            mediaSlider.valueMoved(mediaControl.value);
+          }
           onPressedChanged: {
-            if (!pressed) mediaSlider.valueCommitted(value);
+            if (!pressed) mediaSlider.valueCommitted(mediaControl.value);
           }
 
           background: Rectangle {
             x: mediaControl.leftPadding
             y: mediaControl.topPadding + mediaControl.availableHeight / 2 - height / 2
             width: mediaControl.availableWidth
-            height: 5
+            height: 4
             radius: 3
-            color: Qt.rgba(1, 1, 1, 0.14)
+            color: Qt.rgba(1, 1, 1, 0.16)
 
             Rectangle {
               width: Math.max(parent.height, mediaControl.visualPosition * parent.width)
@@ -750,9 +799,9 @@ FocusScope {
           handle: Rectangle {
             x: mediaControl.leftPadding + mediaControl.visualPosition * (mediaControl.availableWidth - width)
             y: mediaControl.topPadding + mediaControl.availableHeight / 2 - height / 2
-            width: 18
-            height: 18
-            radius: 9
+            width: 16
+            height: 16
+            radius: 8
             color: Theme.text
             border.width: 1
             border.color: Theme.panelRaised
@@ -798,10 +847,13 @@ FocusScope {
     UiSurface {
       anchors.fill: parent
       tone: "field"
-      outlined: true
-      radius: Theme.radiusSm
+      outlined: false
+      radius: 16
       opacity: inlineSlider.enabled ? 1 : 0.45
       clip: true
+
+      border.width: 1
+      border.color: Qt.rgba(1, 1, 1, 0.08)
 
       Slider {
         id: slider
@@ -814,23 +866,29 @@ FocusScope {
         from: inlineSlider.from
         to: inlineSlider.to
         stepSize: inlineSlider.stepSize
-        value: inlineSlider.value
         enabled: inlineSlider.enabled
         leftPadding: titleLabel.implicitWidth + 28
         rightPadding: valueLabel.implicitWidth + 28
 
-        onMoved: inlineSlider.valueMoved(value)
+        Binding on value {
+          when: !slider.pressed
+          value: inlineSlider.value
+        }
+
+        onMoved: function() {
+          inlineSlider.valueMoved(slider.value);
+        }
         onPressedChanged: {
-          if (!pressed) inlineSlider.valueCommitted(value);
+          if (!pressed) inlineSlider.valueCommitted(slider.value);
         }
 
         background: Rectangle {
           x: slider.leftPadding
           y: slider.topPadding + slider.availableHeight / 2 - height / 2
           width: slider.availableWidth
-          height: 6
+          height: 5
           radius: 3
-          color: Qt.rgba(1, 1, 1, 0.08)
+          color: Qt.rgba(1, 1, 1, 0.14)
 
           Rectangle {
             width: Math.max(parent.height, slider.visualPosition * parent.width)
@@ -844,9 +902,9 @@ FocusScope {
         handle: Rectangle {
           x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - width)
           y: slider.topPadding + slider.availableHeight / 2 - height / 2
-          width: 16
-          height: 16
-          radius: 8
+          width: 14
+          height: 14
+          radius: 7
           color: slider.enabled ? Theme.text : Theme.textSubtle
           border.width: 1
           border.color: Theme.panelRaised
@@ -888,11 +946,14 @@ FocusScope {
 
     width: implicitWidth
     implicitWidth: 1
-    implicitHeight: 44
+    implicitHeight: 42
     tone: active ? "accent" : "field"
-    outlined: !active
+    outlined: false
     pressed: actionTouch.pressed
     opacity: enabled ? 1 : 0.45
+
+    border.width: 1
+    border.color: active ? Qt.rgba(1, 1, 1, 0.05) : Qt.rgba(1, 1, 1, 0.08)
 
     UiText {
       anchors.centerIn: parent
@@ -1373,7 +1434,7 @@ FocusScope {
     id: brightnessCommitTimer
     interval: 90
     repeat: false
-    onTriggered: brightnessService.applyScreenPercent(screenBrightnessSlider.value)
+    onTriggered: brightnessService.applyScreenPercent(root.pendingScreenBrightness)
   }
 
   Timer {
@@ -1388,9 +1449,12 @@ FocusScope {
 
     width: root.implicitWidth
     implicitHeight: content.implicitHeight + 24
-    tone: "raised"
-    outlined: true
-    radius: Theme.radiusLg
+    tone: "panel"
+    outlined: false
+    radius: 28
+
+    border.width: 1
+    border.color: Qt.rgba(1, 1, 1, 0.08)
 
     MouseArea {
       anchors.fill: parent
@@ -1404,12 +1468,12 @@ FocusScope {
       anchors.leftMargin: 14
       anchors.top: parent.top
       anchors.topMargin: 14
-      spacing: 12
+      spacing: 10
 
       Row {
         width: parent.width
-        height: 48
-        spacing: 10
+        height: 44
+        spacing: 8
 
         StatusChip {
           id: batteryChip
@@ -1419,7 +1483,7 @@ FocusScope {
         }
 
         Item {
-          width: Math.max(0, parent.width - (batteryChip.visible ? batteryChip.implicitWidth : 0) - sleepButton.implicitWidth - lockButton.implicitWidth - powerToggleButton.implicitWidth - 30)
+          width: Math.max(0, parent.width - (batteryChip.visible ? batteryChip.implicitWidth : 0) - sleepButton.implicitWidth - lockButton.implicitWidth - powerToggleButton.implicitWidth - 24)
           height: parent.height
         }
 
@@ -1451,11 +1515,45 @@ FocusScope {
         height: 42
         spacing: 12
 
+        IconBadge {
+          id: brightnessBadge
+          anchors.verticalCenter: parent.verticalCenter
+          iconName: "sun"
+        }
+
+        MediaSlider {
+          id: brightnessSlider
+
+          width: parent.width - brightnessBadge.width - 12
+          anchors.verticalCenter: parent.verticalCenter
+          showIcon: false
+          from: 0
+          to: 100
+          value: brightnessService.screenPercent
+          enabled: brightnessService.screenAvailable
+          onValueMoved: function(value) {
+            root.pendingScreenBrightness = value;
+            brightnessCommitTimer.restart();
+          }
+          onValueCommitted: function(value) {
+            root.pendingScreenBrightness = value;
+            brightnessCommitTimer.stop();
+            brightnessService.applyScreenPercent(value);
+          }
+        }
+      }
+
+      Row {
+        width: parent.width
+        height: 42
+        spacing: 12
+
         IconButton {
           id: muteButton
           anchors.verticalCenter: parent.verticalCenter
           width: 42
           iconName: root.audioReady && root.audioNode.muted ? "speaker-muted" : "speaker"
+          active: root.audioReady && root.audioNode.muted
           enabled: root.audioReady
           onClicked: {
             if (root.audioReady) root.audioNode.muted = !root.audioNode.muted;
@@ -1481,6 +1579,7 @@ FocusScope {
           anchors.verticalCenter: parent.verticalCenter
           width: 42
           iconName: root.expandedSection === "outputs" ? "chevron-down" : "chevron-right"
+          active: root.expandedSection === "outputs"
           enabled: Pipewire.ready
           onClicked: root.toggleSection("outputs")
         }
@@ -1492,7 +1591,7 @@ FocusScope {
 
         Row {
           width: parent.width
-          spacing: 10
+          spacing: 8
 
           QuickTile {
             width: Math.floor((parent.width - parent.spacing) / 2)
@@ -1506,50 +1605,25 @@ FocusScope {
 
           QuickTile {
             width: Math.floor((parent.width - parent.spacing) / 2)
-            iconName: root.audioReady && root.audioNode.muted ? "speaker-muted" : "speaker"
-            title: root.outputLabel(root.audioSink)
-            subtitle: root.audioVolumePercentText()
-            active: root.expandedSection === "outputs" || root.audioReady
-            expanded: root.expandedSection === "outputs"
-            onClicked: root.toggleSection("outputs")
-          }
-        }
-
-        Row {
-          width: parent.width
-          spacing: 10
-
-          QuickTile {
-            width: Math.floor((parent.width - parent.spacing) / 2)
             iconName: "bluetooth"
             title: root.bluetoothTileTitle()
             subtitle: root.bluetoothTileSubtitle()
-            active: root.expandedSection === "bluetooth" || (root.bluetoothAdapter && root.bluetoothAdapter.enabled)
+            active: root.expandedSection === "bluetooth" || !!(root.bluetoothAdapter && root.bluetoothAdapter.enabled)
             expanded: root.expandedSection === "bluetooth"
             onClicked: root.toggleSection("bluetooth")
-          }
-
-          QuickTile {
-            width: Math.floor((parent.width - parent.spacing) / 2)
-            iconName: "sun"
-            title: brightnessService.screenAvailable ? `${brightnessService.screenPercent}%` : "Brightness"
-            subtitle: brightnessService.screenAvailable ? "Screen" : "Unavailable"
-            active: root.expandedSection === "brightness"
-            expanded: root.expandedSection === "brightness"
-            onClicked: root.toggleSection("brightness")
           }
         }
 
         Row {
           width: parent.width
-          spacing: 10
+          spacing: 8
 
           QuickTile {
             width: Math.floor((parent.width - parent.spacing) / 2)
             iconName: "gauge"
             title: root.profileShortLabel()
-            subtitle: "Power Profile"
-            active: root.expandedSection === "profile"
+            subtitle: "Profile"
+            active: true
             expanded: root.expandedSection === "profile"
             onClicked: root.toggleSection("profile")
           }
@@ -1558,7 +1632,7 @@ FocusScope {
             width: Math.floor((parent.width - parent.spacing) / 2)
             iconName: brightnessService.keyboardAvailable ? "keyboard" : "power"
             title: brightnessService.keyboardAvailable ? root.keyboardTileTitle() : "Power"
-            subtitle: brightnessService.keyboardAvailable ? root.keyboardTileSubtitle() : "Actions"
+            subtitle: brightnessService.keyboardAvailable ? root.keyboardTileSubtitle() : "Restart, lock"
             active: brightnessService.keyboardAvailable ? root.expandedSection === "keyboard" : root.expandedSection === "power"
             expanded: brightnessService.keyboardAvailable ? root.expandedSection === "keyboard" : root.expandedSection === "power"
             onClicked: root.toggleSection(brightnessService.keyboardAvailable ? "keyboard" : "power")
@@ -1570,7 +1644,7 @@ FocusScope {
           visible: brightnessService.keyboardAvailable
           iconName: "power"
           title: "Power"
-          subtitle: "Lock, sleep, restart"
+          subtitle: "Restart, lock"
           active: root.expandedSection === "power"
           expanded: root.expandedSection === "power"
           onClicked: root.toggleSection("power")
@@ -1578,52 +1652,14 @@ FocusScope {
       }
 
       UiSurface {
-        visible: root.expandedSection === "brightness"
-        width: parent.width
-        implicitHeight: brightnessColumn.implicitHeight + 24
-        tone: "field"
-        outlined: true
-        radius: 22
-
-        Column {
-          id: brightnessColumn
-
-          width: parent.width - 24
-          anchors.left: parent.left
-          anchors.leftMargin: 12
-          anchors.top: parent.top
-          anchors.topMargin: 12
-          spacing: 10
-
-          UiText {
-            text: "Screen Brightness"
-            size: "sm"
-            font.weight: Font.DemiBold
-          }
-
-          InlineSlider {
-            id: screenBrightnessSlider
-            width: parent.width
-            title: "Brightness"
-            valueText: brightnessService.screenAvailable ? `${Math.round(value)}%` : "Unavailable"
-            value: brightnessService.screenPercent
-            enabled: brightnessService.screenAvailable
-            onValueMoved: brightnessCommitTimer.restart()
-            onValueCommitted: function(value) {
-              brightnessCommitTimer.stop();
-              brightnessService.applyScreenPercent(value);
-            }
-          }
-        }
-      }
-
-      UiSurface {
         visible: root.expandedSection === "keyboard" && brightnessService.keyboardAvailable
         width: parent.width
         implicitHeight: keyboardColumn.implicitHeight + 24
-        tone: "field"
-        outlined: true
-        radius: 22
+        tone: "raised"
+        outlined: false
+        radius: 20
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.08)
 
         Column {
           id: keyboardColumn
@@ -1663,9 +1699,11 @@ FocusScope {
         visible: root.expandedSection === "profile"
         width: parent.width
         implicitHeight: profileColumn.implicitHeight + 24
-        tone: "field"
-        outlined: true
-        radius: 22
+        tone: "raised"
+        outlined: false
+        radius: 20
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.08)
 
         Column {
           id: profileColumn
@@ -1716,9 +1754,11 @@ FocusScope {
         visible: root.expandedSection === "outputs"
         width: parent.width
         implicitHeight: outputsColumn.implicitHeight + 24
-        tone: "field"
-        outlined: true
-        radius: 22
+        tone: "raised"
+        outlined: false
+        radius: 20
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.08)
 
         Column {
           id: outputsColumn
@@ -1744,7 +1784,7 @@ FocusScope {
 
               required property var modelData
               readonly property var outputNode: modelData
-              readonly property bool shown: outputNode && outputNode.audio && outputNode.isSink && !outputNode.isStream
+              readonly property bool shown: !!(outputNode && outputNode.audio && outputNode.isSink && !outputNode.isStream)
 
               visible: shown
               width: parent.width
@@ -1800,9 +1840,11 @@ FocusScope {
         visible: root.expandedSection === "wifi"
         width: parent.width
         implicitHeight: wifiColumn.implicitHeight + 24
-        tone: "field"
-        outlined: true
-        radius: 22
+        tone: "raised"
+        outlined: false
+        radius: 20
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.08)
 
         Column {
           id: wifiColumn
@@ -1903,7 +1945,7 @@ FocusScope {
                 id: wifiTouch
 
                 anchors.fill: parent
-                enabled: wifiRow.network && !wifiService.busy
+                enabled: !!wifiRow.network && !wifiService.busy
                 onClicked: root.beginWifiConnect(wifiRow.network)
               }
             }
@@ -2007,9 +2049,11 @@ FocusScope {
         visible: root.expandedSection === "bluetooth"
         width: parent.width
         implicitHeight: bluetoothColumn.implicitHeight + 24
-        tone: "field"
-        outlined: true
-        radius: 22
+        tone: "raised"
+        outlined: false
+        radius: 20
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.08)
 
         Column {
           id: bluetoothColumn
@@ -2027,7 +2071,7 @@ FocusScope {
 
             FlatButton {
               text: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? "Turn Off" : "Turn On"
-              enabled: root.bluetoothAdapter && root.bluetoothAdapter.state !== BluetoothAdapterState.Blocked
+              enabled: !!root.bluetoothAdapter && root.bluetoothAdapter.state !== BluetoothAdapterState.Blocked
               onClicked: {
                 if (root.bluetoothAdapter) root.bluetoothAdapter.enabled = !root.bluetoothAdapter.enabled;
               }
@@ -2035,7 +2079,7 @@ FocusScope {
 
             FlatButton {
               text: root.bluetoothAdapter && root.bluetoothAdapter.discovering ? "Stop Scan" : "Scan"
-              enabled: root.bluetoothAdapter && root.bluetoothAdapter.enabled
+              enabled: !!root.bluetoothAdapter && root.bluetoothAdapter.enabled
               onClicked: {
                 if (root.bluetoothAdapter) root.bluetoothAdapter.discovering = !root.bluetoothAdapter.discovering;
               }
@@ -2050,7 +2094,7 @@ FocusScope {
           }
 
           UiText {
-            visible: root.bluetoothAdapter && root.bluetoothAdapter.state === BluetoothAdapterState.Blocked
+            visible: !!root.bluetoothAdapter && root.bluetoothAdapter.state === BluetoothAdapterState.Blocked
             text: "Bluetooth is blocked by hardware or rfkill."
             size: "xs"
             tone: "accent"
@@ -2206,9 +2250,11 @@ FocusScope {
         visible: root.expandedSection === "power"
         width: parent.width
         implicitHeight: powerColumn.implicitHeight + 24
-        tone: "field"
-        outlined: true
-        radius: 22
+        tone: "raised"
+        outlined: false
+        radius: 20
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.08)
 
         Column {
           id: powerColumn

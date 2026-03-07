@@ -218,6 +218,22 @@ FocusScope {
     return wifiService.networks.length > 0 ? `${wifiService.networks.length} networks` : "Available";
   }
 
+  function wifiHeroTitle() {
+    if (!wifiService.ready) return "Wi-Fi";
+    if (!wifiService.enabled || wifiService.connectedSsid === "") return "Wi-Fi";
+    return wifiService.connectedSsid;
+  }
+
+  function wifiHeroHint() {
+    if (!wifiService.ready) return initialLoadDeadlineElapsed ? "Loading Wi-Fi..." : "";
+    if (wifiService.lastError !== "") return "Unavailable";
+    if (!wifiService.hardwareEnabled) return "Wi-Fi hardware is blocked.";
+    if (!wifiService.enabled) return "Wi-Fi is off";
+    if (wifiService.connectedSsid !== "") return `${wifiService.connectedSignal}% signal`;
+    if (wifiService.networks.length > 0) return `${wifiService.networks.length} networks available`;
+    return "No networks available";
+  }
+
   function bluetoothTileTitle() {
     const count = bluetoothConnectedCount();
     if (count > 0) return count === 1 ? "1 Device" : `${count} Devices`;
@@ -1585,27 +1601,64 @@ FocusScope {
         UiSurface {
           visible: root.expandedSection === "wifi"
           width: parent.width
-          implicitHeight: wifiColumn.implicitHeight + 20
+          implicitHeight: wifiColumn.implicitHeight + 28
           tone: "submenu"
           outlined: false
-          radius: 18
+          radius: 24
+          color: Qt.darker(Theme.submenu, 1.06)
           border.width: 1
-          border.color: Theme.divider
+          border.color: Qt.rgba(1, 1, 1, 0.08)
 
           Column {
             id: wifiColumn
 
-            width: parent.width - 20
+            width: parent.width - 32
             anchors.left: parent.left
-            anchors.leftMargin: 10
+            anchors.leftMargin: 16
             anchors.top: parent.top
-            anchors.topMargin: 10
-            spacing: 8
+            anchors.topMargin: 16
+            spacing: 14
 
-            UiText {
-              text: "Wi-Fi"
-              size: "sm"
-              font.weight: Font.DemiBold
+            Row {
+              width: parent.width
+              spacing: 12
+
+              Rectangle {
+                width: 52
+                height: 52
+                radius: 26
+                color: "#f2f4f7"
+
+                UiIcon {
+                  anchors.centerIn: parent
+                  name: "wifi"
+                  strokeColor: Theme.panelOverlay
+                  stroke: 2.1
+                }
+              }
+
+              Column {
+                width: Math.max(0, parent.width - 64)
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 2
+
+                UiText {
+                  width: parent.width
+                  text: root.wifiHeroTitle()
+                  size: "lg"
+                  font.weight: Font.Bold
+                  elide: Text.ElideRight
+                }
+
+                UiText {
+                  width: parent.width
+                  visible: root.wifiHeroHint() !== ""
+                  text: root.wifiHeroHint()
+                  size: "xs"
+                  tone: "subtle"
+                  wrapMode: Text.WordWrap
+                }
+              }
             }
 
             UiText {
@@ -1622,9 +1675,12 @@ FocusScope {
               tone: "accent"
             }
 
-            Controls.Menu {
+            Column {
+              id: wifiNetworksColumn
+
               width: parent.width
               visible: wifiService.ready && wifiService.enabled && wifiService.networks.length > 0
+              spacing: 2
 
               Repeater {
                 model: wifiService.enabled ? Math.min(6, wifiService.networks.length) : 0
@@ -1635,7 +1691,7 @@ FocusScope {
                   required property int index
                   readonly property var network: wifiService.networks[index]
 
-                  width: parent.width
+                  width: wifiNetworksColumn.width
                   implicitHeight: 52
                   height: implicitHeight
                   iconName: "wifi"
@@ -1646,7 +1702,7 @@ FocusScope {
                   actionText: wifiRow.network && !wifiRow.network.active ? "Connect" : ""
                   trailingIconName: wifiRow.network && wifiRow.network.active ? "check" : ""
                   active: wifiRow.network && wifiRow.network.active
-                  dividerVisible: index < Math.min(6, wifiService.networks.length) - 1
+                  activeStyle: "subtle"
                   enabled: !!wifiRow.network && !wifiService.busy
                   onClicked: root.beginWifiConnect(wifiRow.network)
                 }

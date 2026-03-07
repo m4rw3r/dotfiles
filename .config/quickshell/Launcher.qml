@@ -576,6 +576,7 @@ Item {
 
                 Binding on text {
                   when: !searchInput.activeFocus || !launcherWindow.isActiveWindow
+                  restoreMode: Binding.RestoreNone
                   value: root.launcherQuery
                 }
               }

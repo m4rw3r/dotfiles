@@ -19,6 +19,9 @@ fi
 if [[ -d /usr/local/mysql/bin ]]; then
 	export PATH="/usr/local/mysql/bin:$PATH"
 fi
+if [[ -d "/usr/lib64/qt6/bin" ]]; then
+	export PATH="/usr/lib64/qt6/bin:$PATH"
+fi
 
 # Rustup
 if [[ -f $HOME/.cargo/env ]]; then
@@ -48,3 +51,4 @@ fi
 if [[ -d "$BUN_INSTALL" ]]; then
 	export PATH="$BUN_INSTALL/bin:$PATH"
 fi
+

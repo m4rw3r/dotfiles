@@ -91,4 +91,3 @@ else
 	alias reboot="sudo systemctl reboot"
 	alias hibernate="sudo systemctl suspend"
 fi
-

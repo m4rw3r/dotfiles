@@ -30,9 +30,10 @@ FocusScope {
   property bool initialLoadDeadlineElapsed: false
   property int initialLoadDeadlineMs: 50
   readonly property bool powerMenuOpen: expandedSection === "power"
+  readonly property bool outputMenuOpen: expandedSection === "outputs"
   readonly property bool selectorPopoverOpen: expandedSection === "profile" || (expandedSection === "keyboard" && brightnessService.keyboardAvailable)
   readonly property bool tileMenuOpen: expandedSection === "wifi" || expandedSection === "bluetooth"
-  readonly property bool overlayDismissActive: selectorPopoverOpen || tileMenuOpen || powerMenuOpen
+  readonly property bool overlayDismissActive: selectorPopoverOpen || tileMenuOpen || powerMenuOpen || outputMenuOpen
   readonly property var audioSink: Pipewire.defaultAudioSink
   readonly property var audioNode: audioSink && audioSink.audio ? audioSink.audio : null
   readonly property var battery: UPower.displayDevice
@@ -1280,59 +1281,11 @@ FocusScope {
         wrapMode: Text.WordWrap
       }
 
-      UiSurface {
-        visible: root.expandedSection === "outputs"
+      Item {
+        id: outputsPopoverSpacer
+
         width: parent.width
-        implicitHeight: outputsColumn.implicitHeight + 20
-        tone: "submenu"
-        outlined: false
-        radius: 18
-        border.width: 1
-        border.color: Theme.divider
-
-        Column {
-          id: outputsColumn
-
-          width: parent.width - 20
-          anchors.left: parent.left
-          anchors.leftMargin: 10
-          anchors.top: parent.top
-          anchors.topMargin: 10
-          spacing: 8
-
-          UiText {
-            text: "Sound Output"
-            size: "sm"
-            font.weight: Font.DemiBold
-          }
-
-          Controls.Menu {
-            width: parent.width
-
-            Repeater {
-              model: Pipewire.nodes
-
-              delegate: Controls.MenuItem {
-                id: outputRow
-
-                required property var modelData
-                readonly property var outputNode: modelData
-                readonly property bool shown: !!(outputNode && outputNode.audio && outputNode.isSink && !outputNode.isStream)
-
-                visible: shown
-                width: parent.width
-                implicitHeight: shown ? 44 : 0
-                height: shown ? implicitHeight : 0
-                iconName: "speaker"
-                title: root.outputLabel(outputRow.outputNode)
-                trailingIconName: root.audioSink === outputRow.outputNode ? "check" : ""
-                active: root.audioSink === outputRow.outputNode
-                compact: true
-                onClicked: Pipewire.preferredDefaultAudioSink = outputRow.outputNode
-              }
-            }
-          }
-        }
+        height: root.outputMenuOpen ? outputsPopover.implicitHeight : 0
       }
 
       Row {
@@ -1486,19 +1439,79 @@ FocusScope {
       id: tileMenuOverlay
 
       anchors.fill: parent
-      visible: root.tileMenuOpen || root.powerMenuOpen
+      visible: root.tileMenuOpen || root.powerMenuOpen || root.outputMenuOpen
       z: 4
 
       UiScrim {
         anchors.fill: parent
         radius: panel.radius
-        visible: root.tileMenuOpen || root.powerMenuOpen
+        visible: root.tileMenuOpen || root.powerMenuOpen || root.outputMenuOpen
       }
 
       MouseArea {
         anchors.fill: parent
-        enabled: root.tileMenuOpen || root.powerMenuOpen
+        enabled: root.tileMenuOpen || root.powerMenuOpen || root.outputMenuOpen
         onClicked: root.dismissOverlaySection()
+      }
+
+      UiSurface {
+        id: outputsPopover
+
+        visible: root.outputMenuOpen
+        width: content.width
+        x: content.x
+        y: content.y + outputsPopoverSpacer.y
+        z: 1
+        implicitHeight: outputsColumn.implicitHeight + 20
+        tone: "submenu"
+        outlined: false
+        radius: 18
+        border.width: 1
+        border.color: Theme.divider
+
+        Column {
+          id: outputsColumn
+
+          width: parent.width - 20
+          anchors.left: parent.left
+          anchors.leftMargin: 10
+          anchors.top: parent.top
+          anchors.topMargin: 10
+          spacing: 8
+
+          UiText {
+            text: "Sound Output"
+            size: "sm"
+            font.weight: Font.DemiBold
+          }
+
+          Controls.Menu {
+            width: parent.width
+
+            Repeater {
+              model: Pipewire.nodes
+
+              delegate: Controls.MenuItem {
+                id: outputRow
+
+                required property var modelData
+                readonly property var outputNode: modelData
+                readonly property bool shown: !!(outputNode && outputNode.audio && outputNode.isSink && !outputNode.isStream)
+
+                visible: shown
+                width: parent.width
+                implicitHeight: shown ? 44 : 0
+                height: shown ? implicitHeight : 0
+                iconName: "speaker"
+                title: root.outputLabel(outputRow.outputNode)
+                trailingIconName: root.audioSink === outputRow.outputNode ? "check" : ""
+                active: root.audioSink === outputRow.outputNode
+                compact: true
+                onClicked: Pipewire.preferredDefaultAudioSink = outputRow.outputNode
+              }
+            }
+          }
+        }
       }
 
       UiSurface {

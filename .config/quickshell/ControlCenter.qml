@@ -29,9 +29,10 @@ FocusScope {
   property bool panelOpen: false
   property bool initialLoadDeadlineElapsed: false
   property int initialLoadDeadlineMs: 50
+  readonly property bool powerMenuOpen: expandedSection === "power"
   readonly property bool selectorPopoverOpen: expandedSection === "profile" || (expandedSection === "keyboard" && brightnessService.keyboardAvailable)
   readonly property bool tileMenuOpen: expandedSection === "wifi" || expandedSection === "bluetooth"
-  readonly property bool overlayDismissActive: selectorPopoverOpen || tileMenuOpen
+  readonly property bool overlayDismissActive: selectorPopoverOpen || tileMenuOpen || powerMenuOpen
   readonly property var audioSink: Pipewire.defaultAudioSink
   readonly property var audioNode: audioSink && audioSink.audio ? audioSink.audio : null
   readonly property var battery: UPower.displayDevice
@@ -1207,136 +1208,11 @@ FocusScope {
         }
       }
 
-      UiSurface {
-        id: powerPopover
+      Item {
+        id: powerPopoverSpacer
 
-        visible: root.expandedSection === "power"
         width: parent.width
-        implicitHeight: powerColumn.implicitHeight + 28
-        tone: "submenu"
-        outlined: false
-        radius: 24
-        color: Qt.darker(Theme.submenu, 1.06)
-        border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.08)
-
-        Column {
-          id: powerColumn
-
-          width: parent.width - 32
-          anchors.left: parent.left
-          anchors.leftMargin: 16
-          anchors.top: parent.top
-          anchors.topMargin: 16
-          spacing: 14
-
-          Row {
-            width: parent.width
-            spacing: 12
-
-            Rectangle {
-              width: 52
-              height: 52
-              radius: 26
-              color: "#f2f4f7"
-
-              UiIcon {
-                anchors.centerIn: parent
-                name: root.powerActionIcon(root.powerHeroAction())
-                strokeColor: Theme.panelOverlay
-                stroke: 2.1
-              }
-            }
-
-            Column {
-              width: Math.max(0, parent.width - 64)
-              anchors.verticalCenter: parent.verticalCenter
-              spacing: 2
-
-              UiText {
-                width: parent.width
-                text: root.powerActionTitle(root.powerHeroAction())
-                size: "lg"
-                font.weight: Font.Bold
-                elide: Text.ElideRight
-              }
-
-              UiText {
-                width: parent.width
-                visible: root.powerHeroHint() !== ""
-                text: root.powerHeroHint()
-                size: "xs"
-                tone: "subtle"
-                wrapMode: Text.WordWrap
-              }
-            }
-          }
-
-          Column {
-            width: parent.width
-            spacing: 2
-
-            Controls.MenuItem {
-              width: parent.width
-              iconName: ""
-              title: "Lock"
-              compact: true
-              onClicked: sessionActions.lock()
-            }
-
-            Controls.MenuItem {
-              width: parent.width
-              iconName: ""
-              title: "Suspend"
-              compact: true
-              onClicked: sessionActions.sleep()
-            }
-
-            Controls.MenuItem {
-              width: parent.width
-              iconName: ""
-              title: "Restart"
-              compact: true
-              activeStyle: "subtle"
-              actionText: root.pendingPowerAction === "restart" ? "Confirm" : ""
-              actionTextOnHover: false
-              active: root.pendingPowerAction === "restart"
-              onClicked: root.triggerPowerAction("restart")
-            }
-
-            Controls.MenuItem {
-              width: parent.width
-              iconName: ""
-              title: "Power Off"
-              compact: true
-              activeStyle: "subtle"
-              actionText: root.pendingPowerAction === "shutdown" ? "Confirm" : ""
-              actionTextOnHover: false
-              active: root.pendingPowerAction === "shutdown"
-              onClicked: root.triggerPowerAction("shutdown")
-            }
-
-            Controls.MenuItem {
-              width: parent.width
-              iconName: ""
-              title: "Log Out"
-              compact: true
-              activeStyle: "subtle"
-              actionText: root.pendingPowerAction === "logout" ? "Confirm" : ""
-              actionTextOnHover: false
-              active: root.pendingPowerAction === "logout"
-              onClicked: root.triggerPowerAction("logout")
-            }
-          }
-
-          UiText {
-            visible: sessionActions.lastError !== ""
-            text: sessionActions.lastError
-            size: "xs"
-            tone: "accent"
-            wrapMode: Text.WordWrap
-          }
-        }
+        height: root.powerMenuOpen ? powerPopover.implicitHeight : 0
       }
 
       Row {
@@ -1610,19 +1486,154 @@ FocusScope {
       id: tileMenuOverlay
 
       anchors.fill: parent
-      visible: root.tileMenuOpen
+      visible: root.tileMenuOpen || root.powerMenuOpen
       z: 4
 
       UiScrim {
         anchors.fill: parent
         radius: panel.radius
-        visible: root.tileMenuOpen
+        visible: root.tileMenuOpen || root.powerMenuOpen
       }
 
       MouseArea {
         anchors.fill: parent
-        enabled: root.tileMenuOpen
+        enabled: root.tileMenuOpen || root.powerMenuOpen
         onClicked: root.dismissOverlaySection()
+      }
+
+      UiSurface {
+        id: powerPopover
+
+        visible: root.powerMenuOpen
+        width: content.width
+        x: content.x
+        y: content.y + powerPopoverSpacer.y
+        z: 1
+        implicitHeight: powerColumn.implicitHeight + 28
+        tone: "submenu"
+        outlined: false
+        radius: 24
+        color: Qt.darker(Theme.submenu, 1.06)
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.08)
+
+        Column {
+          id: powerColumn
+
+          width: parent.width - 32
+          anchors.left: parent.left
+          anchors.leftMargin: 16
+          anchors.top: parent.top
+          anchors.topMargin: 16
+          spacing: 14
+
+          Row {
+            width: parent.width
+            spacing: 12
+
+            Rectangle {
+              width: 52
+              height: 52
+              radius: 26
+              color: "#f2f4f7"
+
+              UiIcon {
+                anchors.centerIn: parent
+                name: root.powerActionIcon(root.powerHeroAction())
+                strokeColor: Theme.panelOverlay
+                stroke: 2.1
+              }
+            }
+
+            Column {
+              width: Math.max(0, parent.width - 64)
+              anchors.verticalCenter: parent.verticalCenter
+              spacing: 2
+
+              UiText {
+                width: parent.width
+                text: root.powerActionTitle(root.powerHeroAction())
+                size: "lg"
+                font.weight: Font.Bold
+                elide: Text.ElideRight
+              }
+
+              UiText {
+                width: parent.width
+                visible: root.powerHeroHint() !== ""
+                text: root.powerHeroHint()
+                size: "xs"
+                tone: "subtle"
+                wrapMode: Text.WordWrap
+              }
+            }
+          }
+
+          Column {
+            width: parent.width
+            spacing: 2
+
+            Controls.MenuItem {
+              width: parent.width
+              iconName: ""
+              title: "Lock"
+              compact: true
+              onClicked: sessionActions.lock()
+            }
+
+            Controls.MenuItem {
+              width: parent.width
+              iconName: ""
+              title: "Suspend"
+              compact: true
+              onClicked: sessionActions.sleep()
+            }
+
+            Controls.MenuItem {
+              width: parent.width
+              iconName: ""
+              title: "Restart"
+              compact: true
+              activeStyle: "subtle"
+              actionText: root.pendingPowerAction === "restart" ? "Confirm" : ""
+              actionTextOnHover: false
+              active: root.pendingPowerAction === "restart"
+              onClicked: root.triggerPowerAction("restart")
+            }
+
+            Controls.MenuItem {
+              width: parent.width
+              iconName: ""
+              title: "Power Off"
+              compact: true
+              activeStyle: "subtle"
+              actionText: root.pendingPowerAction === "shutdown" ? "Confirm" : ""
+              actionTextOnHover: false
+              active: root.pendingPowerAction === "shutdown"
+              onClicked: root.triggerPowerAction("shutdown")
+            }
+
+            Controls.MenuItem {
+              width: parent.width
+              iconName: ""
+              title: "Log Out"
+              compact: true
+              activeStyle: "subtle"
+              actionText: root.pendingPowerAction === "logout" ? "Confirm" : ""
+              actionTextOnHover: false
+              active: root.pendingPowerAction === "logout"
+              onClicked: root.triggerPowerAction("logout")
+            }
+          }
+
+          UiText {
+            visible: sessionActions.lastError !== ""
+            text: sessionActions.lastError
+            size: "xs"
+            tone: "accent"
+            wrapMode: Text.WordWrap
+          }
+        }
       }
 
       Patterns.QuickTileMenuPanel {

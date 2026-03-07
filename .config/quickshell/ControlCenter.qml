@@ -1540,7 +1540,7 @@ FocusScope {
         Controls.Slider {
           id: brightnessSlider
 
-          width: parent.width - brightnessBadge.width - parent.spacing
+          width: parent.width - brightnessBadge.width - brightnessSettingsSpacer.width - parent.spacing * 2
           anchors.verticalCenter: parent.verticalCenter
           showIcon: false
           from: 0
@@ -1556,6 +1556,13 @@ FocusScope {
             brightnessCommitTimer.stop();
             brightnessService.applyScreenPercent(value);
           }
+        }
+
+        Item {
+          id: brightnessSettingsSpacer
+
+          width: outputButton.width
+          height: 1
         }
       }
 

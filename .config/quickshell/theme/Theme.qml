@@ -109,7 +109,7 @@ Singleton {
 
   readonly property int iconSm: 42
   readonly property int iconMd: 46
-  readonly property int controlAccessorySlot: 40
+  readonly property int controlAccessorySlot: 32
 
   readonly property int motionFast: 120
   readonly property int motionBase: 170

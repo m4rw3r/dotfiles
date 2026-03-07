@@ -673,7 +673,6 @@ Item {
               anchors.rightMargin: pagerArea.arrowGutter
               clip: true
 
-              property bool instantStripSync: false
               property int dragStartPage: 0
               property real dragStartX: 0
 
@@ -687,16 +686,25 @@ Item {
 
               function syncStripToPage(page, immediate) {
                 const targetX = targetStripX(page);
+                stripSnapAnimation.stop();
                 if (immediate) {
-                  instantStripSync = true;
                   pageStrip.x = targetX;
-                  Qt.callLater(function() {
-                    pageFrame.instantStripSync = false;
-                  });
                   return;
                 }
 
-                pageStrip.x = targetX;
+                if (pageStrip.x === targetX) return;
+
+                stripSnapAnimation.from = pageStrip.x;
+                stripSnapAnimation.to = targetX;
+                stripSnapAnimation.start();
+              }
+
+              NumberAnimation {
+                id: stripSnapAnimation
+                target: pageStrip
+                property: "x"
+                duration: Theme.motionBase
+                easing.type: Easing.OutCubic
               }
 
               onWidthChanged: syncStripToPage(root.launcherPage, true)
@@ -704,17 +712,23 @@ Item {
               DragHandler {
                 id: pageSwipe
 
-                target: pageStrip
+                target: null
                 enabled: pagerArea.pageCount > 1
-                acceptedDevices: PointerDevice.TouchScreen
+                acceptedDevices: PointerDevice.TouchScreen | PointerDevice.Mouse | PointerDevice.TouchPad
                 xAxis.enabled: true
                 yAxis.enabled: false
-                xAxis.minimum: Math.min(0, pageFrame.width - pageStrip.width)
-                xAxis.maximum: 0
                 grabPermissions: PointerHandler.CanTakeOverFromAnything
+
+                onTranslationChanged: {
+                  if (!active) return;
+                  const minX = Math.min(0, pageFrame.width - pageStrip.width);
+                  const nextX = pageFrame.dragStartX + translation.x;
+                  pageStrip.x = Math.max(minX, Math.min(0, nextX));
+                }
 
                 onActiveChanged: {
                   if (active) {
+                    stripSnapAnimation.stop();
                     pageFrame.dragStartPage = root.launcherPage;
                     pageFrame.dragStartX = pageStrip.x;
                     root.activeScreen = launcherWindow.modelData;
@@ -722,7 +736,7 @@ Item {
                   }
 
                   const delta = pageStrip.x - pageFrame.dragStartX;
-                  const threshold = Math.max(72, pageFrame.width * 0.12);
+                  const threshold = Math.max(120, pageFrame.width * 0.22);
                   let targetPage = pageFrame.dragStartPage;
                   if (Math.abs(delta) >= threshold) targetPage += delta < 0 ? 1 : -1;
                   targetPage = pageFrame.clampPage(targetPage);
@@ -737,16 +751,8 @@ Item {
 
                 width: Math.max(pageFrame.width, pagerArea.pageCount * pageFrame.width)
                 height: pageFrame.height
-                x: pageFrame.targetStripX(root.launcherPage)
-
-                Behavior on x {
-                  enabled: !pageSwipe.active && !pageFrame.instantStripSync
-
-                  NumberAnimation {
-                    duration: Theme.motionBase
-                    easing.type: Easing.OutCubic
-                  }
-                }
+                x: 0
+                Component.onCompleted: pageFrame.syncStripToPage(root.launcherPage, true)
 
                 Repeater {
                   model: pagerArea.pageCount

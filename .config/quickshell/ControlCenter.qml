@@ -403,7 +403,7 @@ FocusScope {
     }
 
     function setVolume(nextVolume) {
-      const clamped = Math.max(0, Math.min(1.5, Number(nextVolume)));
+      const clamped = Math.max(0, Math.min(1, Number(nextVolume)));
       volume = clamped;
       if (clamped > 0 && muted) muted = false;
       lastError = "";
@@ -430,7 +430,7 @@ FocusScope {
         return;
       }
 
-      volume = Math.max(0, Math.min(1.5, Number(match[1]) || 0));
+      volume = Math.max(0, Math.min(1, Number(match[1]) || 0));
       muted = match[2] === "MUTED";
       ready = true;
     }

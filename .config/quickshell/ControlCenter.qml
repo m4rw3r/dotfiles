@@ -31,7 +31,7 @@ FocusScope {
   property int initialLoadDeadlineMs: 50
   readonly property bool powerMenuOpen: expandedSection === "power"
   readonly property bool outputMenuOpen: expandedSection === "outputs"
-  readonly property bool selectorPopoverOpen: expandedSection === "profile" || (expandedSection === "keyboard" && brightnessService.keyboardAvailable)
+  readonly property bool selectorPopoverOpen: expandedSection === "profile" || (expandedSection === "lighting" && lightingService.available)
   readonly property bool tileMenuOpen: expandedSection === "wifi" || expandedSection === "bluetooth"
   readonly property bool overlayDismissActive: selectorPopoverOpen || tileMenuOpen || powerMenuOpen || outputMenuOpen
   readonly property var audioSink: Pipewire.defaultAudioSink
@@ -247,46 +247,36 @@ FocusScope {
     expandedSection = "";
   }
 
-  function keyboardTileTitle() {
-    return keyboardLevelLabel(keyboardLevelIndex());
+  function lightingTileTitle() {
+    if (lightingService.commandAvailable && !lightingService.available) return "Unavailable";
+    return lightingLevelLabel(lightingLevelIndex());
   }
 
-  function keyboardPresetValue(index) {
-    const maximum = Math.max(1, Number(brightnessService.keyboardMax) || 1);
-    if (index <= 0) return 0;
-    if (index === 1) return Math.max(1, Math.round(maximum / 3));
-    if (index === 2) return Math.max(1, Math.round((maximum * 2) / 3));
-    return maximum;
+  function lightingLevelKey(index) {
+    if (index === 3) return "high";
+    if (index === 2) return "medium";
+    if (index === 1) return "low";
+    return "off";
   }
 
-  function keyboardLevelIndex() {
-    if (!brightnessService.keyboardAvailable) return 0;
-
-    const currentValue = Math.max(0, Math.round(Number(brightnessService.keyboardValue) || 0));
-    let nearestIndex = 0;
-    let nearestDistance = Number.MAX_VALUE;
-
-    for (let index = 0; index < 4; index += 1) {
-      const distance = Math.abs(currentValue - keyboardPresetValue(index));
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearestIndex = index;
-      }
-    }
-
-    return nearestIndex;
+  function lightingLevelIndex() {
+    if (lightingService.level === "high") return 3;
+    if (lightingService.level === "medium") return 2;
+    if (lightingService.level === "low") return 1;
+    return 0;
   }
 
-  function keyboardLevelLabel(index) {
+  function lightingLevelLabel(index) {
     if (index === 3) return "High";
-    if (index === 2) return "Med";
+    if (index === 2) return "Medium";
     if (index === 1) return "Low";
     return "Off";
   }
 
-  function setKeyboardLevel(index) {
-    if (!brightnessService.keyboardAvailable) return;
-    brightnessService.applyKeyboardValue(keyboardPresetValue(index));
+  function setLightingLevel(index) {
+    if (!lightingService.available) return;
+    expandedSection = "";
+    lightingService.applyLevel(lightingLevelKey(index));
   }
 
   function outputLabel(node) {
@@ -308,6 +298,7 @@ FocusScope {
   function refreshPanelData() {
     audioService.refresh();
     brightnessService.refresh();
+    lightingService.refresh();
     wifiService.refresh();
     pendingAudioVolume = audioService.volume;
     pendingScreenBrightness = brightnessService.screenPercent;
@@ -409,6 +400,10 @@ FocusScope {
     onScreenPercentChanged: {
       if (!brightnessCommitTimer.running) root.pendingScreenBrightness = screenPercent;
     }
+  }
+
+  LightingController {
+    id: lightingService
   }
 
   Item {
@@ -780,6 +775,140 @@ FocusScope {
         brightnessController.lastError = exitCode === 0 ? "" : String(keyboardWriteStderr.text || "").trim();
         brightnessController.refreshKeyboard();
       }
+    }
+  }
+
+  component LightingController: Item {
+    id: lightingController
+
+    property bool commandAvailable: false
+    property bool available: false
+    property bool settled: false
+    property string level: "off"
+    property string lastError: ""
+
+    function refresh() {
+      stateReadProcess.exec([
+        "zsh",
+        "-lc",
+        "command -v z13ctl >/dev/null 2>&1 || exit 127; state_file=${XDG_STATE_HOME:-$HOME/.local/state}/z13ctl/state.json; [ -r \"$state_file\" ] || exit 66; command cat \"$state_file\""
+      ]);
+    }
+
+    function applyLevel(nextLevel) {
+      if (!available) return;
+      lastError = "";
+      lightingWriteProcess.exec(["zsh", "-lc", `z13ctl brightness ${nextLevel}`]);
+    }
+
+    function parseState(text) {
+      let parsed;
+
+      try {
+        parsed = JSON.parse(String(text || "{}"));
+      } catch (error) {
+        commandAvailable = true;
+        available = false;
+        settled = true;
+        level = "off";
+        lastError = "Unable to parse lighting state.";
+        return;
+      }
+
+      const lighting = parsed && parsed.lighting ? parsed.lighting : null;
+      const keyboard = parsed && parsed.devices && parsed.devices.keyboard ? parsed.devices.keyboard : null;
+      if (!lighting && !keyboard) {
+        commandAvailable = true;
+        available = false;
+        settled = true;
+        level = "off";
+        lastError = "Lighting state unavailable.";
+        return;
+      }
+
+      const enabled = lighting && lighting.enabled !== undefined
+        ? Boolean(lighting.enabled)
+        : (keyboard && keyboard.enabled !== undefined ? Boolean(keyboard.enabled) : false);
+      const brightness = lighting && lighting.brightness !== undefined
+        ? Number(lighting.brightness)
+        : (keyboard && keyboard.brightness !== undefined ? Number(keyboard.brightness) : 0);
+
+      commandAvailable = true;
+      available = true;
+      settled = true;
+      lastError = "";
+
+      if (!enabled || !Number.isFinite(brightness) || brightness <= 0) {
+        level = "off";
+        return;
+      }
+
+      if (brightness >= 3) {
+        level = "high";
+        return;
+      }
+
+      if (brightness >= 2) {
+        level = "medium";
+        return;
+      }
+
+      level = "low";
+    }
+
+    StdioCollector {
+      id: lightingStateStdout
+      waitForEnd: true
+    }
+
+    StdioCollector {
+      id: lightingStateStderr
+      waitForEnd: true
+    }
+
+    Process {
+      id: stateReadProcess
+
+      stdout: lightingStateStdout
+      stderr: lightingStateStderr
+
+      onExited: function(exitCode) {
+        lightingController.settled = true;
+        if (exitCode === 0) {
+          lightingController.parseState(lightingStateStdout.text);
+          return;
+        }
+
+        lightingController.commandAvailable = exitCode !== 127;
+        lightingController.available = false;
+        lightingController.level = "off";
+        lightingController.lastError = exitCode === 127
+          ? ""
+          : (exitCode === 66 ? "Lighting state unavailable." : String(lightingStateStderr.text || "").trim());
+      }
+    }
+
+    StdioCollector {
+      id: lightingWriteStderr
+      waitForEnd: true
+    }
+
+    Process {
+      id: lightingWriteProcess
+
+      stderr: lightingWriteStderr
+
+      onExited: function(exitCode) {
+        lightingController.lastError = exitCode === 0 ? "" : String(lightingWriteStderr.text || "").trim();
+        lightingRefreshTimer.restart();
+      }
+    }
+
+    Timer {
+      id: lightingRefreshTimer
+      interval: 150
+      repeat: false
+      onTriggered: lightingController.refresh()
     }
   }
 
@@ -1409,7 +1538,7 @@ FocusScope {
 
             Patterns.QuickSelectorTile {
               id: profileTile
-              width: brightnessService.keyboardAvailable ? Math.floor((parent.width - parent.spacing) / 2) : parent.width
+              width: lightingService.commandAvailable ? Math.floor((parent.width - parent.spacing) / 2) : parent.width
               iconName: "gauge"
               title: root.profileShortLabel()
               useActiveStyling: false
@@ -1418,15 +1547,16 @@ FocusScope {
             }
 
             Patterns.QuickSelectorTile {
-              id: keyboardTile
-              visible: brightnessService.keyboardAvailable
+              id: lightingTile
+              visible: lightingService.commandAvailable
               width: Math.floor((parent.width - parent.spacing) / 2)
-              iconName: "keyboard"
-              title: root.keyboardTileTitle()
-              active: brightnessService.keyboardAvailable && root.keyboardLevelIndex() > 0
+              iconName: "sun"
+              title: root.lightingTileTitle()
+              active: lightingService.available && root.lightingLevelIndex() > 0
+              enabled: lightingService.available
               useActiveStyling: true
-              open: root.expandedSection === "keyboard"
-              onClicked: root.toggleSection("keyboard")
+              open: root.expandedSection === "lighting"
+              onClicked: root.toggleSection("lighting")
             }
           }
 
@@ -1435,22 +1565,23 @@ FocusScope {
 
     }
 
+    UiScrim {
+      anchors.fill: parent
+      radius: panel.radius
+      visible: root.overlayDismissActive
+      z: 3
+    }
+
     Item {
       id: tileMenuOverlay
 
       anchors.fill: parent
-      visible: root.tileMenuOpen || root.powerMenuOpen || root.outputMenuOpen
+      visible: root.overlayDismissActive
       z: 4
-
-      UiScrim {
-        anchors.fill: parent
-        radius: panel.radius
-        visible: root.tileMenuOpen || root.powerMenuOpen || root.outputMenuOpen
-      }
 
       MouseArea {
         anchors.fill: parent
-        enabled: root.tileMenuOpen || root.powerMenuOpen || root.outputMenuOpen
+        enabled: root.overlayDismissActive
         onClicked: root.dismissOverlaySection()
       }
 
@@ -1998,12 +2129,6 @@ FocusScope {
       anchors.fill: parent
       z: 6
 
-      UiScrim {
-        anchors.fill: panel
-        radius: panel.radius
-        visible: root.selectorPopoverOpen
-      }
-
       MouseArea {
         anchors.fill: panel
         enabled: root.selectorPopoverOpen
@@ -2055,56 +2180,56 @@ FocusScope {
       }
 
       PopoverSurface {
-        visible: root.expandedSection === "keyboard" && brightnessService.keyboardAvailable
-        width: keyboardTile.width
-        x: root.popupX(keyboardTile, width, false)
-        y: root.popupOverlayY(keyboardTile, height)
+        visible: root.expandedSection === "lighting" && lightingService.available
+        width: lightingTile.width
+        x: root.popupX(lightingTile, width, false)
+        y: root.popupOverlayY(lightingTile, height)
 
         Controls.MenuItem {
           width: parent.width
-          iconName: "keyboard"
+          iconName: "sun"
           title: "Off"
-          trailingIconName: root.keyboardLevelIndex() === 0 ? "check" : ""
-          active: root.keyboardLevelIndex() === 0
+          trailingIconName: root.lightingLevelIndex() === 0 ? "check" : ""
+          active: root.lightingLevelIndex() === 0
           activeStyle: "indicator"
           compact: true
           dividerVisible: true
-          onClicked: root.setKeyboardLevel(0)
+          onClicked: root.setLightingLevel(0)
         }
 
         Controls.MenuItem {
           width: parent.width
-          iconName: "keyboard"
+          iconName: "sun"
           title: "Low"
-          trailingIconName: root.keyboardLevelIndex() === 1 ? "check" : ""
-          active: root.keyboardLevelIndex() === 1
+          trailingIconName: root.lightingLevelIndex() === 1 ? "check" : ""
+          active: root.lightingLevelIndex() === 1
           activeStyle: "indicator"
           compact: true
           dividerVisible: true
-          onClicked: root.setKeyboardLevel(1)
+          onClicked: root.setLightingLevel(1)
         }
 
         Controls.MenuItem {
           width: parent.width
-          iconName: "keyboard"
-          title: "Med"
-          trailingIconName: root.keyboardLevelIndex() === 2 ? "check" : ""
-          active: root.keyboardLevelIndex() === 2
+          iconName: "sun"
+          title: "Medium"
+          trailingIconName: root.lightingLevelIndex() === 2 ? "check" : ""
+          active: root.lightingLevelIndex() === 2
           activeStyle: "indicator"
           compact: true
           dividerVisible: true
-          onClicked: root.setKeyboardLevel(2)
+          onClicked: root.setLightingLevel(2)
         }
 
         Controls.MenuItem {
           width: parent.width
-          iconName: "keyboard"
+          iconName: "sun"
           title: "High"
-          trailingIconName: root.keyboardLevelIndex() === 3 ? "check" : ""
-          active: root.keyboardLevelIndex() === 3
+          trailingIconName: root.lightingLevelIndex() === 3 ? "check" : ""
+          active: root.lightingLevelIndex() === 3
           activeStyle: "indicator"
           compact: true
-          onClicked: root.setKeyboardLevel(3)
+          onClicked: root.setLightingLevel(3)
         }
       }
 

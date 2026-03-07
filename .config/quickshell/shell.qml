@@ -112,11 +112,6 @@ ShellRoot {
       if (visible) controlCenter.forceActiveFocus();
     }
 
-    UiScrim {
-      anchors.fill: parent
-      visible: controlCenter.selectorPopoverOpen
-    }
-
     MouseArea {
       anchors.fill: parent
       onClicked: {

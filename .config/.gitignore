@@ -1,8 +1,11 @@
+/1Password/
 /alacritty/current-theme.toml
 /composer/auth.json
+/discord/
+/ibus/bus/
 /kitty/current-theme.conf
 /kitty/kitty.conf.bak
-/nvim/plugin
 /nvim/colors
+/nvim/plugin
 /tmux/plugins
 /zsh/plugins

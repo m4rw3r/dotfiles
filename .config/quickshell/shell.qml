@@ -112,9 +112,17 @@ ShellRoot {
       if (visible) controlCenter.forceActiveFocus();
     }
 
+    UiScrim {
+      anchors.fill: parent
+      visible: controlCenter.overlayDismissActive
+    }
+
     MouseArea {
       anchors.fill: parent
-      onClicked: root.shadeOpen = false
+      onClicked: {
+        if (controlCenter.overlayDismissActive) controlCenter.dismissOverlaySection();
+        else root.shadeOpen = false;
+      }
     }
 
     ControlCenter {

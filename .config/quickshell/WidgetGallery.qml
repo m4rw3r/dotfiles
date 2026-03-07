@@ -16,6 +16,7 @@ FocusScope {
   property bool bluetoothEnabled: false
   property bool doNotDisturb: true
   property bool galleryProfilePopoverOpen: false
+  property bool galleryWifiMenuOpen: false
   property real mediaLevel: 0.68
   property real brightnessLevel: 82
   property real keyboardLevel: 2
@@ -523,78 +524,181 @@ FocusScope {
               }
             }
 
-            UiSurface {
-              id: popoverPreview
+            Row {
+              width: parent.width
+              spacing: 14
 
-              width: Math.max(240, Math.floor((parent.width - 14) / 2))
-              implicitHeight: popoverPreviewProfileTile.implicitHeight + 36
-              tone: "panel"
-              outlined: false
-              radius: 26
+              UiSurface {
+                id: popoverPreview
 
-              border.width: 1
-              border.color: Qt.rgba(1, 1, 1, 0.12)
+                width: Math.max(240, Math.floor((parent.width - parent.spacing) / 2))
+                implicitHeight: popoverPreviewProfileTile.implicitHeight + 36
+                tone: "panel"
+                outlined: false
+                radius: 26
 
-              UiScrim {
-                anchors.fill: parent
-                radius: popoverPreview.radius
-                visible: root.galleryProfilePopoverOpen
-              }
+                border.width: 1
+                border.color: Qt.rgba(1, 1, 1, 0.12)
 
-              MouseArea {
-                anchors.fill: parent
-                enabled: root.galleryProfilePopoverOpen
-                onClicked: root.galleryProfilePopoverOpen = false
-              }
-
-              Patterns.QuickTile {
-                id: popoverPreviewProfileTile
-
-                width: parent.width - 36
-                anchors.left: parent.left
-                anchors.leftMargin: 18
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: 18
-                iconName: "gauge"
-                title: "Saver"
-                subtitle: "Power Mode"
-                expanded: root.galleryProfilePopoverOpen
-                highlightExpanded: true
-                onPrimaryClicked: root.galleryProfilePopoverOpen = !root.galleryProfilePopoverOpen
-                onSecondaryClicked: root.galleryProfilePopoverOpen = !root.galleryProfilePopoverOpen
-              }
-
-              PopoverSurface {
-                visible: root.galleryProfilePopoverOpen
-                width: implicitWidth
-                x: popoverPreviewProfileTile.x
-                y: popoverPreviewProfileTile.y + (popoverPreviewProfileTile.height - height) / 2 + 12
-                z: 2
-
-                Controls.MenuItem {
-                  width: parent.width
-                  iconName: "gauge"
-                  title: "Performance"
-                  compact: true
-                  dividerVisible: true
+                UiScrim {
+                  anchors.fill: parent
+                  radius: popoverPreview.radius
+                  visible: root.galleryProfilePopoverOpen
                 }
 
-                Controls.MenuItem {
-                  width: parent.width
-                  iconName: "gauge"
-                  title: "Balanced"
-                  compact: true
-                  dividerVisible: true
+                MouseArea {
+                  anchors.fill: parent
+                  enabled: root.galleryProfilePopoverOpen
+                  onClicked: root.galleryProfilePopoverOpen = false
                 }
 
-                Controls.MenuItem {
-                  width: parent.width
+                Patterns.QuickSelectorTile {
+                  id: popoverPreviewProfileTile
+
+                  width: parent.width - 36
+                  anchors.left: parent.left
+                  anchors.leftMargin: 18
+                  anchors.bottom: parent.bottom
+                  anchors.bottomMargin: 18
                   iconName: "gauge"
-                  title: "Power Saver"
-                  trailingIconName: "check"
-                  active: true
-                  activeStyle: "indicator"
-                  compact: true
+                  title: "Saver"
+                  useActiveStyling: false
+                  open: root.galleryProfilePopoverOpen
+                  onClicked: root.galleryProfilePopoverOpen = !root.galleryProfilePopoverOpen
+                }
+
+                PopoverSurface {
+                  visible: root.galleryProfilePopoverOpen
+                  width: implicitWidth
+                  x: popoverPreviewProfileTile.x
+                  y: popoverPreviewProfileTile.y + (popoverPreviewProfileTile.height - height) / 2
+                  z: 2
+
+                  Controls.MenuItem {
+                    width: parent.width
+                    iconName: "gauge"
+                    title: "Performance"
+                    compact: true
+                    dividerVisible: true
+                  }
+
+                  Controls.MenuItem {
+                    width: parent.width
+                    iconName: "gauge"
+                    title: "Balanced"
+                    compact: true
+                    dividerVisible: true
+                  }
+
+                  Controls.MenuItem {
+                    width: parent.width
+                    iconName: "gauge"
+                    title: "Power Saver"
+                    trailingIconName: "check"
+                    active: true
+                    activeStyle: "indicator"
+                    compact: true
+                  }
+                }
+              }
+
+              UiSurface {
+                id: menuPreview
+
+                width: Math.max(240, Math.floor((parent.width - parent.spacing) / 2))
+                implicitHeight: menuPreviewSlot.implicitHeight + 36
+                tone: "panel"
+                outlined: false
+                radius: 26
+
+                border.width: 1
+                border.color: Qt.rgba(1, 1, 1, 0.12)
+
+                UiScrim {
+                  anchors.fill: parent
+                  radius: menuPreview.radius
+                  visible: root.galleryWifiMenuOpen
+                }
+
+                TapHandler {
+                  enabled: root.galleryWifiMenuOpen
+                  onTapped: function(eventPoint) {
+                    const point = eventPoint.position;
+                    const x = menuPreviewPanel.x;
+                    const y = menuPreviewPanel.y;
+                    if (point.x >= x && point.x <= x + menuPreviewPanel.width && point.y >= y && point.y <= y + menuPreviewPanel.height) return;
+                    root.galleryWifiMenuOpen = false;
+                  }
+                }
+
+                Column {
+                  id: menuPreviewSlot
+
+                  width: parent.width - 36
+                  anchors.left: parent.left
+                  anchors.leftMargin: 18
+                  anchors.bottom: parent.bottom
+                  anchors.bottomMargin: 18
+                  spacing: 0
+
+                  Patterns.QuickToggleMenuTile {
+                    id: menuPreviewTile
+
+                    visible: !menuPreviewPanel.visible
+                    width: parent.width
+                    iconName: "wifi"
+                    title: root.wifiEnabled ? "Studio 5G" : "Wi-Fi"
+                    active: root.wifiEnabled
+                    menuOpen: root.galleryWifiMenuOpen
+                    onPrimaryClicked: root.wifiEnabled = !root.wifiEnabled
+                    onSecondaryClicked: root.galleryWifiMenuOpen = !root.galleryWifiMenuOpen
+                  }
+
+                  Patterns.QuickTileMenuPanel {
+                    id: menuPreviewPanel
+
+                    visible: root.galleryWifiMenuOpen
+                    width: parent.width
+                    iconName: "wifi"
+                    title: root.wifiEnabled ? "Studio 5G" : "Wi-Fi"
+
+                    Controls.Menu {
+                      width: parent.width
+
+                      Controls.MenuItem {
+                        width: parent.width
+                        iconName: "wifi"
+                        title: "Studio 5G"
+                        subtitle: "78%, WPA3, saved"
+                        trailingIconName: "check"
+                        active: true
+                        activeStyle: "subtle"
+                        dividerVisible: true
+                      }
+
+                      Controls.MenuItem {
+                        width: parent.width
+                        iconName: "wifi"
+                        title: "Guest Network"
+                        subtitle: "54%, open"
+                        actionText: "Connect"
+                      }
+                    }
+
+                    Row {
+                      width: parent.width
+                      spacing: 8
+
+                      Controls.Button {
+                        text: root.wifiEnabled ? "Turn Off" : "Turn On"
+                        onClicked: root.wifiEnabled = !root.wifiEnabled
+                      }
+
+                      Controls.Button {
+                        text: "Rescan"
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -602,7 +706,7 @@ FocusScope {
 
           GallerySection {
             title: "Quick Tiles"
-            description: "Split-action patterns for dashboard toggles and compact status affordances."
+            description: "Separate toggle, selector, and toggle-plus-submenu quick-tile patterns."
 
             Flow {
               id: quickTileFlow
@@ -610,43 +714,37 @@ FocusScope {
               width: parent.width
               spacing: 10
 
-              Patterns.QuickTile {
+              Patterns.QuickToggleTile {
+                width: Math.max(220, Math.floor((parent.width - quickTileFlow.spacing) / 2))
+                iconName: "moon"
+                title: "Do Not Disturb"
+                active: root.doNotDisturb
+                onClicked: root.doNotDisturb = !root.doNotDisturb
+              }
+
+              Patterns.QuickToggleMenuTile {
                 width: Math.max(220, Math.floor((parent.width - quickTileFlow.spacing) / 2))
                 iconName: "wifi"
                 title: root.wifiEnabled ? "Studio 5G" : "Wi-Fi"
-                subtitle: root.wifiEnabled ? "78%" : "Off"
                 active: root.wifiEnabled
-                expanded: root.wifiEnabled
-                highlightExpanded: true
+                menuOpen: root.galleryWifiMenuOpen
                 onPrimaryClicked: root.wifiEnabled = !root.wifiEnabled
+                onSecondaryClicked: root.galleryWifiMenuOpen = !root.galleryWifiMenuOpen
               }
 
-              Patterns.QuickTile {
-                width: Math.max(220, Math.floor((parent.width - quickTileFlow.spacing) / 2))
-                iconName: "bluetooth"
-                title: root.bluetoothEnabled ? "2 Devices" : "Bluetooth"
-                subtitle: root.bluetoothEnabled ? "Ready" : "Off"
-                active: root.bluetoothEnabled
-                onPrimaryClicked: root.bluetoothEnabled = !root.bluetoothEnabled
-              }
-
-              Patterns.QuickTile {
+              Patterns.QuickSelectorTile {
                 width: Math.max(220, Math.floor((parent.width - quickTileFlow.spacing) / 2))
                 iconName: "gauge"
-                title: "Performance"
-                subtitle: "Power Mode"
-                expanded: true
-                highlightExpanded: true
+                title: "Balanced"
+                useActiveStyling: false
               }
 
-              Patterns.QuickTile {
+              Patterns.QuickSelectorTile {
                 width: Math.max(220, Math.floor((parent.width - quickTileFlow.spacing) / 2))
                 iconName: "keyboard"
                 title: ["Off", "Low", "Med", "High"][Math.round(root.keyboardLevel)]
-                subtitle: "Keyboard Light"
                 active: Math.round(root.keyboardLevel) > 0
-                expandable: false
-                onPrimaryClicked: root.keyboardLevel = (Math.round(root.keyboardLevel) + 1) % 4
+                useActiveStyling: true
               }
             }
           }

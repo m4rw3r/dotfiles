@@ -29,7 +29,9 @@ FocusScope {
   property bool panelOpen: false
   property bool initialLoadDeadlineElapsed: false
   property int initialLoadDeadlineMs: 50
-  readonly property bool selectionPopoverOpen: expandedSection === "profile" || (expandedSection === "keyboard" && brightnessService.keyboardAvailable)
+  readonly property bool selectorPopoverOpen: expandedSection === "profile" || (expandedSection === "keyboard" && brightnessService.keyboardAvailable)
+  readonly property bool tileMenuOpen: expandedSection === "wifi" || expandedSection === "bluetooth"
+  readonly property bool overlayDismissActive: selectorPopoverOpen || tileMenuOpen
   readonly property var audioSink: Pipewire.defaultAudioSink
   readonly property var audioNode: audioSink && audioSink.audio ? audioSink.audio : null
   readonly property var battery: UPower.displayDevice
@@ -47,30 +49,6 @@ FocusScope {
 
   function clamp(value, minValue, maxValue) {
     return Math.max(minValue, Math.min(maxValue, value));
-  }
-
-  function itemPositionIn(item, ancestor) {
-    let itemX = 0;
-    let itemY = 0;
-    let current = item;
-
-    while (current) {
-      itemX += current.x;
-      itemY += current.y;
-      current = current.parent;
-    }
-
-    let ancestorX = 0;
-    let ancestorY = 0;
-    current = ancestor;
-
-    while (current) {
-      ancestorX += current.x;
-      ancestorY += current.y;
-      current = current.parent;
-    }
-
-    return Qt.point(itemX - ancestorX, itemY - ancestorY);
   }
 
   function toggleSection(section) {
@@ -93,27 +71,22 @@ FocusScope {
   }
 
   function popupY(anchorItem, spacing) {
-    if (!anchorItem) return 0;
+    if (!anchorItem || !panel) return 0;
     const position = anchorItem.mapToItem(panel, 0, 0);
     return position.y + anchorItem.height + (spacing || 8);
   }
 
-  function popupCenteredX(anchorItem, popupWidth) {
+  function popupOverlayY(anchorItem, popupHeight) {
     if (!anchorItem || !panel) return 0;
     const position = anchorItem.mapToItem(panel, 0, 0);
-    const maxX = Math.max(0, panel.width - popupWidth);
-    const rawX = position.x + (anchorItem.width - popupWidth) / 2;
-    return clamp(rawX, 0, maxX);
+    const maxY = Math.max(0, panel.height - popupHeight);
+    const rawY = position.y + (anchorItem.height - popupHeight) / 2;
+    return clamp(rawY, 0, maxY);
   }
 
-  function popupAboveY(anchorItem, popupHeight, spacing) {
-    if (!anchorItem || !panel) return 0;
-    const position = anchorItem.mapToItem(panel, 0, 0);
-    return position.y + (anchorItem.height - popupHeight) / 2 - (spacing || 0);
-  }
-
-  function dismissSelectionPopover() {
-    if (expandedSection === "profile" || expandedSection === "keyboard") expandedSection = "";
+  function dismissOverlaySection() {
+    if (!overlayDismissActive) return;
+    toggleSection(expandedSection);
   }
 
   function profileLabel(profile) {
@@ -238,21 +211,6 @@ FocusScope {
     return wifiService.connectedSsid;
   }
 
-  function wifiTileSubtitle() {
-    if (!wifiService.ready) return initialLoadDeadlineElapsed ? "Loading..." : "";
-    if (wifiService.lastError !== "") return "Unavailable";
-    if (!wifiService.hardwareEnabled) return "Blocked";
-    if (!wifiService.enabled) return "Off";
-    if (wifiService.connectedSsid !== "") return `${wifiService.connectedSignal}%`;
-    return wifiService.networks.length > 0 ? `${wifiService.networks.length} networks` : "Available";
-  }
-
-  function wifiHeroTitle() {
-    if (!wifiService.ready) return "Wi-Fi";
-    if (!wifiService.enabled || wifiService.connectedSsid === "") return "Wi-Fi";
-    return wifiService.connectedSsid;
-  }
-
   function wifiHeroHint() {
     if (!wifiService.ready) return initialLoadDeadlineElapsed ? "Loading Wi-Fi..." : "";
     if (wifiService.lastError !== "") return "Unavailable";
@@ -291,10 +249,6 @@ FocusScope {
     return keyboardLevelLabel(keyboardLevelIndex());
   }
 
-  function keyboardTileSubtitle() {
-    return brightnessService.keyboardAvailable ? "Keyboard Backlight" : "Unavailable";
-  }
-
   function keyboardPresetValue(index) {
     const maximum = Math.max(1, Number(brightnessService.keyboardMax) || 1);
     if (index <= 0) return 0;
@@ -331,11 +285,6 @@ FocusScope {
   function setKeyboardLevel(index) {
     if (!brightnessService.keyboardAvailable) return;
     brightnessService.applyKeyboardValue(keyboardPresetValue(index));
-  }
-
-  function cycleKeyboardBacklight() {
-    if (!brightnessService.keyboardAvailable) return;
-    setKeyboardLevel((keyboardLevelIndex() + 1) % 4);
   }
 
   function outputLabel(node) {
@@ -409,20 +358,6 @@ FocusScope {
     if (!bluetoothAdapter || bluetoothAdapter.state === BluetoothAdapterState.Blocked) return;
     bluetoothAdapter.enabled = !bluetoothAdapter.enabled;
     if (!bluetoothAdapter.enabled) bluetoothAdapter.discovering = false;
-  }
-
-  function cyclePowerProfile() {
-    if (PowerProfiles.profile === PowerProfile.PowerSaver) {
-      PowerProfiles.profile = PowerProfile.Balanced;
-      return;
-    }
-
-    if (PowerProfiles.profile === PowerProfile.Balanced) {
-      PowerProfiles.profile = PowerProfiles.hasPerformanceProfile ? PowerProfile.Performance : PowerProfile.PowerSaver;
-      return;
-    }
-
-    PowerProfiles.profile = PowerProfile.PowerSaver;
   }
 
   onPanelOpenChanged: {
@@ -1225,6 +1160,26 @@ FocusScope {
       anchors.fill: parent
     }
 
+    MouseArea {
+      visible: root.tileMenuOpen
+      enabled: root.tileMenuOpen
+      x: content.x
+      y: content.y
+      width: content.width
+      height: quickTileStack.y
+      onClicked: root.dismissOverlaySection()
+    }
+
+    MouseArea {
+      visible: root.tileMenuOpen
+      enabled: root.tileMenuOpen
+      x: content.x
+      y: content.y + quickTileStack.y + quickTileSection.y + quickTileSection.height
+      width: content.width
+      height: Math.max(0, content.height - (quickTileStack.y + quickTileSection.y + quickTileSection.height))
+      onClicked: root.dismissOverlaySection()
+    }
+
     Column {
       id: content
 
@@ -1583,102 +1538,70 @@ FocusScope {
       }
 
       Column {
+        id: quickTileStack
+
         width: parent.width
         spacing: 8
 
-        Row {
-          width: parent.width
-          spacing: 8
+        Item {
+          id: quickTileSection
 
-          Patterns.QuickTile {
-            id: wifiTile
-            width: Math.floor((parent.width - parent.spacing) / 2)
+          width: parent.width
+          height: root.expandedSection === "wifi"
+            ? wifiMenuPanel.implicitHeight
+            : (root.expandedSection === "bluetooth" ? bluetoothMenuPanel.implicitHeight : quickTileRow.implicitHeight)
+
+          Row {
+            id: quickTileRow
+
+            visible: !root.tileMenuOpen
+            width: parent.width
+            spacing: 8
+
+            Patterns.QuickToggleMenuTile {
+              id: wifiTile
+
+              width: Math.floor((parent.width - parent.spacing) / 2)
+              iconName: "wifi"
+              title: root.wifiTileTitle()
+              active: wifiService.ready && wifiService.enabled
+              menuOpen: root.expandedSection === "wifi"
+              enabled: wifiService.ready && !root.tileMenuOpen
+              onPrimaryClicked: root.toggleWifiEnabled()
+              onSecondaryClicked: root.toggleSection("wifi")
+            }
+
+            Patterns.QuickToggleMenuTile {
+              id: bluetoothTile
+
+              width: Math.floor((parent.width - parent.spacing) / 2)
+              iconName: "bluetooth"
+              title: root.bluetoothTileTitle()
+              active: !!(root.bluetoothAdapter && root.bluetoothAdapter.enabled)
+              menuOpen: root.expandedSection === "bluetooth"
+              enabled: !root.tileMenuOpen
+              onPrimaryClicked: root.toggleBluetoothEnabled()
+              onSecondaryClicked: root.toggleSection("bluetooth")
+            }
+          }
+
+          Patterns.QuickTileMenuPanel {
+            id: wifiMenuPanel
+
+            visible: root.expandedSection === "wifi"
+            width: parent.width
+            anchors.top: parent.top
+            anchors.left: parent.left
             iconName: "wifi"
             title: root.wifiTileTitle()
-            subtitle: root.wifiTileSubtitle()
-            active: wifiService.ready && wifiService.enabled
-            expanded: root.expandedSection === "wifi"
-            highlightExpanded: true
-            enabled: wifiService.ready
-            onPrimaryClicked: root.toggleWifiEnabled()
-            onSecondaryClicked: root.toggleSection("wifi")
-          }
 
-          Patterns.QuickTile {
-            id: bluetoothTile
-            width: Math.floor((parent.width - parent.spacing) / 2)
-            iconName: "bluetooth"
-            title: root.bluetoothTileTitle()
-            subtitle: root.bluetoothTileSubtitle()
-            active: !!(root.bluetoothAdapter && root.bluetoothAdapter.enabled)
-            expanded: root.expandedSection === "bluetooth"
-            highlightExpanded: true
-            onPrimaryClicked: root.toggleBluetoothEnabled()
-            onSecondaryClicked: root.toggleSection("bluetooth")
-          }
-        }
-
-        UiSurface {
-          visible: root.expandedSection === "wifi"
-          width: parent.width
-          implicitHeight: wifiColumn.implicitHeight + 28
-          tone: "submenu"
-          outlined: false
-          radius: 24
-          color: Qt.darker(Theme.submenu, 1.06)
-          border.width: 1
-          border.color: Qt.rgba(1, 1, 1, 0.08)
-
-          Column {
-            id: wifiColumn
-
-            width: parent.width - 32
-            anchors.left: parent.left
-            anchors.leftMargin: 16
-            anchors.top: parent.top
-            anchors.topMargin: 16
-            spacing: 14
-
-            Row {
+            UiText {
               width: parent.width
-              spacing: 12
-
-              Rectangle {
-                width: 52
-                height: 52
-                radius: 26
-                color: "#f2f4f7"
-
-                UiIcon {
-                  anchors.centerIn: parent
-                  name: "wifi"
-                  strokeColor: Theme.panelOverlay
-                  stroke: 2.1
-                }
-              }
-
-              Column {
-                width: Math.max(0, parent.width - 64)
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 2
-
-                UiText {
-                  width: parent.width
-                  text: root.wifiHeroTitle()
-                  size: "lg"
-                  font.weight: Font.Bold
-                  elide: Text.ElideRight
-                }
-
-                UiText {
-                  width: parent.width
-                  visible: root.wifiHeroHint() !== ""
-                  text: root.wifiHeroHint()
-                  size: "xs"
-                  tone: "subtle"
-                  wrapMode: Text.WordWrap
-                }
-              }
+              visible: root.wifiHeroHint() !== ""
+              text: root.wifiHeroHint()
+              size: "xs"
+              tone: "subtle"
+              wrapMode: Text.WordWrap
             }
 
             UiText {
@@ -1695,12 +1618,11 @@ FocusScope {
               tone: "accent"
             }
 
-            Column {
-              id: wifiNetworksColumn
+            Controls.Menu {
+              id: wifiNetworksMenu
 
               width: parent.width
               visible: wifiService.ready && wifiService.enabled && wifiService.networks.length > 0
-              spacing: 2
 
               Repeater {
                 model: wifiService.enabled ? Math.min(6, wifiService.networks.length) : 0
@@ -1711,7 +1633,7 @@ FocusScope {
                   required property int index
                   readonly property var network: wifiService.networks[index]
 
-                  width: wifiNetworksColumn.width
+                  width: wifiNetworksMenu.width
                   implicitHeight: 52
                   height: implicitHeight
                   iconName: "wifi"
@@ -1753,6 +1675,7 @@ FocusScope {
                   text: `Password required for ${root.wifiPasswordTarget}`
                   size: "xs"
                   font.weight: Font.DemiBold
+                  wrapMode: Text.WordWrap
                 }
 
                 TextField {
@@ -1840,32 +1763,24 @@ FocusScope {
               }
             }
           }
-        }
 
-        UiSurface {
-          visible: root.expandedSection === "bluetooth"
-          width: parent.width
-          implicitHeight: bluetoothColumn.implicitHeight + 20
-          tone: "submenu"
-          outlined: false
-          radius: 18
-          border.width: 1
-          border.color: Theme.divider
+          Patterns.QuickTileMenuPanel {
+            id: bluetoothMenuPanel
 
-          Column {
-            id: bluetoothColumn
-
-            width: parent.width - 20
-            anchors.left: parent.left
-            anchors.leftMargin: 10
+            visible: root.expandedSection === "bluetooth"
+            width: parent.width
             anchors.top: parent.top
-            anchors.topMargin: 10
-            spacing: 8
+            anchors.left: parent.left
+            iconName: "bluetooth"
+            title: root.bluetoothTileTitle()
 
             UiText {
-              text: "Bluetooth"
-              size: "sm"
-              font.weight: Font.DemiBold
+              width: parent.width
+              visible: root.bluetoothTileSubtitle() !== ""
+              text: root.bluetoothTileSubtitle()
+              size: "xs"
+              tone: "subtle"
+              wrapMode: Text.WordWrap
             }
 
             UiText {
@@ -1891,6 +1806,8 @@ FocusScope {
             }
 
             Controls.Menu {
+              id: bluetoothConnectedMenu
+
               width: parent.width
               visible: root.bluetoothAdapter && root.bluetoothAdapter.enabled && root.bluetoothConnectedCount() > 0
 
@@ -1914,7 +1831,7 @@ FocusScope {
                   }
 
                   visible: device && device.connected
-                  width: parent.width
+                  width: bluetoothConnectedMenu.width
                   implicitHeight: visible ? 52 : 0
                   height: visible ? implicitHeight : 0
                   iconName: "bluetooth"
@@ -1943,6 +1860,8 @@ FocusScope {
             }
 
             Controls.Menu {
+              id: bluetoothAvailableMenu
+
               width: parent.width
               visible: root.bluetoothAdapter && root.bluetoothAdapter.enabled && root.bluetoothAvailableCount() > 0
 
@@ -1966,7 +1885,7 @@ FocusScope {
                   }
 
                   visible: device && !device.connected
-                  width: parent.width
+                  width: bluetoothAvailableMenu.width
                   implicitHeight: visible ? 52 : 0
                   height: visible ? implicitHeight : 0
                   iconName: "bluetooth"
@@ -2019,31 +1938,26 @@ FocusScope {
             width: parent.width
             spacing: 8
 
-            Patterns.QuickTile {
+            Patterns.QuickSelectorTile {
               id: profileTile
               width: brightnessService.keyboardAvailable ? Math.floor((parent.width - parent.spacing) / 2) : parent.width
               iconName: "gauge"
               title: root.profileShortLabel()
-              subtitle: "Power Mode"
-              active: false
-              expanded: root.expandedSection === "profile"
-              highlightExpanded: true
-              onPrimaryClicked: root.cyclePowerProfile()
-              onSecondaryClicked: root.toggleSection("profile")
+              useActiveStyling: false
+              open: root.expandedSection === "profile"
+              onClicked: root.toggleSection("profile")
             }
 
-            Patterns.QuickTile {
+            Patterns.QuickSelectorTile {
               id: keyboardTile
               visible: brightnessService.keyboardAvailable
               width: Math.floor((parent.width - parent.spacing) / 2)
               iconName: "keyboard"
               title: root.keyboardTileTitle()
-              subtitle: root.keyboardTileSubtitle()
               active: brightnessService.keyboardAvailable && root.keyboardLevelIndex() > 0
-              expanded: root.expandedSection === "keyboard"
-              highlightExpanded: true
-              onPrimaryClicked: root.cycleKeyboardBacklight()
-              onSecondaryClicked: root.toggleSection("keyboard")
+              useActiveStyling: true
+              open: root.expandedSection === "keyboard"
+              onClicked: root.toggleSection("keyboard")
             }
           }
 
@@ -2061,22 +1975,21 @@ FocusScope {
       UiScrim {
         anchors.fill: panel
         radius: panel.radius
-        visible: root.selectionPopoverOpen
+        visible: root.selectorPopoverOpen
       }
 
       MouseArea {
         anchors.fill: panel
-        enabled: root.selectionPopoverOpen
-        onClicked: root.dismissSelectionPopover()
+        enabled: root.selectorPopoverOpen
+        onClicked: root.dismissOverlaySection()
       }
 
       PopoverSurface {
         id: profilePopover
         visible: root.expandedSection === "profile"
         width: implicitWidth
-        readonly property point anchorPosition: root.itemPositionIn(profileTile, popoverLayer)
-        x: anchorPosition.x
-        y: anchorPosition.y + (profileTile.height - profilePopover.height) / 2 + 12
+        x: root.popupX(profileTile, width, false)
+        y: root.popupOverlayY(profileTile, height)
 
         Controls.MenuItem {
           width: parent.width
@@ -2118,8 +2031,8 @@ FocusScope {
       PopoverSurface {
         visible: root.expandedSection === "keyboard" && brightnessService.keyboardAvailable
         width: keyboardTile.width
-        x: root.popupX(keyboardTile, width, true)
-        y: root.popupY(keyboardTile, 8)
+        x: root.popupX(keyboardTile, width, false)
+        y: root.popupOverlayY(keyboardTile, height)
 
         Controls.MenuItem {
           width: parent.width

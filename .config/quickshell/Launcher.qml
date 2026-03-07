@@ -303,8 +303,6 @@ Item {
         const pageOffset = root.launcherSelectedIndex - page * root.launcherPageSize;
         const row = Math.floor(pageOffset / root.launcherColumns);
         const col = pageOffset % root.launcherColumns;
-        const maxPage = Math.max(0, Math.ceil(root.launcherResults.length / root.launcherPageSize) - 1);
-
         if (direction < 0) {
           if (row <= 0) {
             launcherWindow.focusSearch(false);
@@ -324,23 +322,47 @@ Item {
           const targetCol = Math.min(col, nextRowCount - 1);
           const targetIndex = page * root.launcherPageSize + nextRow * root.launcherColumns + targetCol;
           root.setLauncherSelection(targetIndex);
-          return;
         }
-
-        if (page >= maxPage) return;
-
-        const targetPage = page + 1;
-        const targetRowCount = rowItemCount(targetPage, 0);
-        if (targetRowCount <= 0) return;
-
-        const targetCol = Math.min(col, targetRowCount - 1);
-        const targetIndex = targetPage * root.launcherPageSize + targetCol;
-        root.setLauncherSelection(targetIndex);
       }
 
       function focusGrid() {
         root.activeScreen = launcherWindow.modelData;
         launcherContent.forceActiveFocus();
+      }
+
+      function syncQueryFromSearchInput() {
+        root.launcherQuery = searchInput.text;
+      }
+
+      function editSearchFromGrid(event) {
+        const modifiers = event.modifiers;
+        const hasMetaModifier = modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier);
+        if (hasMetaModifier) return false;
+
+        if (event.key === Qt.Key_Backspace) {
+          launcherWindow.focusSearch(false);
+          if (searchInput.cursorPosition > 0) {
+            searchInput.remove(searchInput.cursorPosition - 1, 1);
+            launcherWindow.syncQueryFromSearchInput();
+          }
+          return true;
+        }
+
+        if (event.key === Qt.Key_Delete) {
+          launcherWindow.focusSearch(false);
+          if (searchInput.cursorPosition < searchInput.length) {
+            searchInput.remove(searchInput.cursorPosition, 1);
+            launcherWindow.syncQueryFromSearchInput();
+          }
+          return true;
+        }
+
+        if (!event.text || event.text.length === 0) return false;
+
+        launcherWindow.focusSearch(false);
+        searchInput.insert(searchInput.cursorPosition, event.text);
+        launcherWindow.syncQueryFromSearchInput();
+        return true;
       }
 
       function stopOsk() {
@@ -352,11 +374,16 @@ Item {
 
       function syncWindowState() {
         if (!launcherWindow.visible) {
+          pageFrame.syncStripToPage(0, true);
           launcherWindow.stopOsk();
           return;
         }
 
         pagerArea.setPage(root.launcherPage);
+        Qt.callLater(function() {
+          if (!launcherWindow.visible) return;
+          pageFrame.syncStripToPage(root.launcherPage, true);
+        });
 
         if (launcherWindow.isActiveWindow) launcherContent.forceActiveFocus();
         else launcherWindow.stopOsk();
@@ -402,7 +429,7 @@ Item {
         focus: launcherWindow.visible && !searchInput.activeFocus
         LayoutMirroring.enabled: false
         LayoutMirroring.childrenInherit: true
-        Keys.forwardTo: searchInput.activeFocus ? [] : [searchInput]
+        Keys.priority: Keys.BeforeItem
 
         Keys.onPressed: function(event) {
           if (!launcherWindow.visible || searchInput.activeFocus) return;
@@ -455,9 +482,10 @@ Item {
             }
           }
 
-          const modifiers = event.modifiers;
-          const hasMetaModifier = modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier);
-          if (!hasMetaModifier && event.text && event.text.length > 0) launcherWindow.focusSearch(false);
+          if (launcherWindow.editSearchFromGrid(event)) {
+            event.accepted = true;
+            return;
+          }
         }
 
         Behavior on y {
@@ -627,12 +655,14 @@ Item {
 
             onPageCountChanged: {
               setPage(root.launcherPage);
+              pageFrame.syncStripToPage(root.launcherPage, !launcherWindow.visible);
             }
 
             Connections {
               target: root
               function onLauncherPageChanged() {
                 pagerArea.setPage(root.launcherPage);
+                pageFrame.syncStripToPage(root.launcherPage, !launcherWindow.visible);
               }
             }
 
@@ -642,82 +672,174 @@ Item {
               anchors.leftMargin: pagerArea.arrowGutter
               anchors.rightMargin: pagerArea.arrowGutter
               clip: true
-                Grid {
-                  columns: pagerArea.columns
-                  rows: pagerArea.rows
-                  rowSpacing: pagerArea.tileSpacing
-                  columnSpacing: pagerArea.tileSpacing
-                  anchors.centerIn: parent
 
-                  Repeater {
-                    model: pagerArea.currentPageItemCount
+              property bool instantStripSync: false
+              property int dragStartPage: 0
+              property real dragStartX: 0
 
-                    delegate: Item {
-                      id: tile
-                      required property int index
-                      property int absoluteIndex: pagerArea.currentPageBase + index
-                      property var entry: root.launcherResults[absoluteIndex]
-                      property bool selected: root.launcherSelectedIndex === absoluteIndex
-                      width: pagerArea.tileWidth
-                      height: pagerArea.tileHeight
+              function clampPage(page) {
+                return Math.max(0, Math.min(page, Math.max(0, pagerArea.pageCount - 1)));
+              }
 
-                      MouseArea {
-                        id: tileTouch
-                        anchors.fill: parent
-                        onPressed: {
-                          root.activeScreen = launcherWindow.modelData;
-                          root.setLauncherSelection(tile.absoluteIndex);
-                        }
-                        onClicked: root.launchEntry(tile.entry)
-                      }
+              function targetStripX(page) {
+                return -clampPage(page) * width;
+              }
 
-                      Column {
-                        width: parent.width
-                        anchors.centerIn: parent
-                        spacing: 7
-                        opacity: tileTouch.pressed ? 0.62 : (tile.selected ? 1 : 0.82)
-                        scale: tile.selected ? 1.05 : 1
+              function syncStripToPage(page, immediate) {
+                const targetX = targetStripX(page);
+                if (immediate) {
+                  instantStripSync = true;
+                  pageStrip.x = targetX;
+                  Qt.callLater(function() {
+                    pageFrame.instantStripSync = false;
+                  });
+                  return;
+                }
 
-                        Behavior on scale {
-                          NumberAnimation {
-                            duration: Theme.motionFast
-                            easing.type: Easing.OutCubic
+                pageStrip.x = targetX;
+              }
+
+              onWidthChanged: syncStripToPage(root.launcherPage, true)
+
+              DragHandler {
+                id: pageSwipe
+
+                target: pageStrip
+                enabled: pagerArea.pageCount > 1
+                acceptedDevices: PointerDevice.TouchScreen
+                xAxis.enabled: true
+                yAxis.enabled: false
+                xAxis.minimum: Math.min(0, pageFrame.width - pageStrip.width)
+                xAxis.maximum: 0
+                grabPermissions: PointerHandler.CanTakeOverFromAnything
+
+                onActiveChanged: {
+                  if (active) {
+                    pageFrame.dragStartPage = root.launcherPage;
+                    pageFrame.dragStartX = pageStrip.x;
+                    root.activeScreen = launcherWindow.modelData;
+                    return;
+                  }
+
+                  const delta = pageStrip.x - pageFrame.dragStartX;
+                  const threshold = Math.max(72, pageFrame.width * 0.12);
+                  let targetPage = pageFrame.dragStartPage;
+                  if (Math.abs(delta) >= threshold) targetPage += delta < 0 ? 1 : -1;
+                  targetPage = pageFrame.clampPage(targetPage);
+                  pagerArea.setPage(targetPage);
+                  pageFrame.syncStripToPage(targetPage, false);
+                  launcherWindow.focusGrid();
+                }
+              }
+
+              Item {
+                id: pageStrip
+
+                width: Math.max(pageFrame.width, pagerArea.pageCount * pageFrame.width)
+                height: pageFrame.height
+                x: pageFrame.targetStripX(root.launcherPage)
+
+                Behavior on x {
+                  enabled: !pageSwipe.active && !pageFrame.instantStripSync
+
+                  NumberAnimation {
+                    duration: Theme.motionBase
+                    easing.type: Easing.OutCubic
+                  }
+                }
+
+                Repeater {
+                  model: pagerArea.pageCount
+
+                  delegate: Item {
+                    id: pageItem
+
+                    required property int index
+                    property int pageBase: index * pagerArea.pageSize
+                    property int pageItemCount: launcherWindow.pageItemCount(index)
+                    x: index * pageFrame.width
+                    width: pageFrame.width
+                    height: pageFrame.height
+
+                    Grid {
+                      columns: pagerArea.columns
+                      rows: pagerArea.rows
+                      rowSpacing: pagerArea.tileSpacing
+                      columnSpacing: pagerArea.tileSpacing
+                      anchors.centerIn: parent
+
+                      Repeater {
+                        model: pageItem.pageItemCount
+
+                        delegate: Item {
+                          id: tile
+                          required property int index
+                          property int absoluteIndex: pageItem.pageBase + index
+                          property var entry: root.launcherResults[absoluteIndex]
+                          property bool selected: root.launcherSelectedIndex === absoluteIndex
+                          width: pagerArea.tileWidth
+                          height: pagerArea.tileHeight
+
+                          MouseArea {
+                            id: tileTouch
+                            anchors.fill: parent
+                            onPressed: {
+                              root.activeScreen = launcherWindow.modelData;
+                              root.setLauncherSelection(tile.absoluteIndex);
+                            }
+                            onClicked: root.launchEntry(tile.entry)
                           }
-                        }
 
-                        IconImage {
-                          anchors.horizontalCenter: parent.horizontalCenter
-                          implicitSize: tile.selected ? Theme.iconMd : Theme.iconSm
-                          asynchronous: true
-                          mipmap: true
-                          source: tile.entry.icon !== "" ? `image://icon/${tile.entry.icon}` : "image://icon/application-x-executable"
-                        }
+                          Column {
+                            width: parent.width
+                            anchors.centerIn: parent
+                            spacing: 7
+                            opacity: tileTouch.pressed ? 0.62 : (tile.selected ? 1 : 0.82)
+                            scale: tile.selected ? 1.05 : 1
 
-                        UiText {
-                          width: parent.width
-                          horizontalAlignment: Text.AlignHCenter
-                          wrapMode: Text.WordWrap
-                          maximumLineCount: 2
-                          elide: Text.ElideRight
-                          text: tile.entry.name
-                          color: tile.selected ? Theme.textOnAccent : Theme.text
-                          size: "md"
-                          font.weight: Font.DemiBold
-                        }
+                            Behavior on scale {
+                              NumberAnimation {
+                                duration: Theme.motionFast
+                                easing.type: Easing.OutCubic
+                              }
+                            }
 
-                        UiText {
-                          width: parent.width
-                          horizontalAlignment: Text.AlignHCenter
-                          elide: Text.ElideRight
-                          visible: tile.entry.genericName !== ""
-                          text: tile.entry.genericName
-                          color: tile.selected ? Theme.textMuted : Theme.textSubtle
-                          size: "sm"
+                            IconImage {
+                              anchors.horizontalCenter: parent.horizontalCenter
+                              implicitSize: tile.selected ? Theme.iconMd : Theme.iconSm
+                              asynchronous: true
+                              mipmap: true
+                              source: tile.entry.icon !== "" ? `image://icon/${tile.entry.icon}` : "image://icon/application-x-executable"
+                            }
+
+                            UiText {
+                              width: parent.width
+                              horizontalAlignment: Text.AlignHCenter
+                              wrapMode: Text.WordWrap
+                              maximumLineCount: 2
+                              elide: Text.ElideRight
+                              text: tile.entry.name
+                              color: tile.selected ? Theme.textOnAccent : Theme.text
+                              size: "md"
+                              font.weight: Font.DemiBold
+                            }
+
+                            UiText {
+                              width: parent.width
+                              horizontalAlignment: Text.AlignHCenter
+                              elide: Text.ElideRight
+                              visible: tile.entry.genericName !== ""
+                              text: tile.entry.genericName
+                              color: tile.selected ? Theme.textMuted : Theme.textSubtle
+                              size: "sm"
+                            }
+                          }
                         }
                       }
                     }
                   }
                 }
+              }
             }
 
             Item {

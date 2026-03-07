@@ -9,6 +9,7 @@ Item {
   property string title: ""
   property string subtitle: ""
   property string actionText: ""
+  property bool actionTextOnHover: true
   property string trailingIconName: ""
   property bool active: false
   property bool dividerVisible: false
@@ -75,7 +76,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: parent.right
         text: root.actionText
-        visible: text !== ""
+        visible: text !== "" && (!root.actionTextOnHover || touchArea.containsMouse)
         size: "xs"
         tone: root.active ? "onAccent" : "muted"
         font.weight: Font.DemiBold
@@ -109,6 +110,7 @@ Item {
 
     anchors.fill: parent
     enabled: root.enabled
+    hoverEnabled: true
     onClicked: root.clicked()
   }
 }

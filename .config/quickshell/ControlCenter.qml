@@ -796,7 +796,7 @@ FocusScope {
       refreshProcess.exec([
         "sh",
         "-lc",
-        "set -e; nmcli -t -f WIFI,WIFI-HW general status; printf '\n@@SAVED@@\n'; nmcli -t --escape yes -f UUID,TYPE connection show | while IFS=: read -r uuid type; do [ \"$type\" = \"802-11-wireless\" ] || continue; nmcli -t --escape yes -g 802-11-wireless.ssid connection show uuid \"$uuid\"; done; printf '\n@@WIFI@@\n'; nmcli -t --escape yes -f IN-USE,BSSID,SSID,SIGNAL,SECURITY device wifi list --rescan no"
+        "saved_file=$(mktemp) || exit 1; connections_file=$(mktemp) || exit 1; wifi_file=$(mktemp) || exit 1; trap 'rm -f \"$saved_file\" \"$connections_file\" \"$wifi_file\"' EXIT; status_failed=0; saved_failed=0; wifi_failed=0; status_output=$(nmcli -t -f WIFI,WIFI-HW general status) || status_failed=1; if ! nmcli -t --escape yes -f UUID,TYPE connection show >\"$connections_file\"; then saved_failed=1; else while IFS=: read -r uuid type; do [ \"$type\" = \"802-11-wireless\" ] || continue; if ! nmcli -t --escape yes -g 802-11-wireless.ssid connection show uuid \"$uuid\" >>\"$saved_file\"; then saved_failed=1; break; fi; done <\"$connections_file\"; fi; if ! nmcli -t --escape yes -f IN-USE,BSSID,SSID,SIGNAL,SECURITY device wifi list --rescan no >\"$wifi_file\"; then wifi_failed=1; fi; printf '%s\n@@SAVED@@\n' \"$status_output\"; if [ \"$saved_failed\" -eq 0 ]; then cat \"$saved_file\"; fi; printf '\n@@WIFI@@\n'; if [ \"$wifi_failed\" -eq 0 ]; then cat \"$wifi_file\"; fi; printf '\n@@ERRORS@@\n'; if [ \"$status_failed\" -ne 0 ]; then printf 'status\n'; fi; if [ \"$saved_failed\" -ne 0 ]; then printf 'saved\n'; fi; if [ \"$wifi_failed\" -ne 0 ]; then printf 'wifi\n'; fi"
       ]);
     }
 
@@ -830,11 +830,40 @@ FocusScope {
       const remainder = blocks.length > 1 ? blocks[1] : "";
       const savedBlocks = remainder.split("\n@@WIFI@@\n");
       const savedBlock = savedBlocks.length > 0 ? savedBlocks[0] : "";
-      const wifiBlock = savedBlocks.length > 1 ? savedBlocks[1] : "";
+      const wifiAndErrors = savedBlocks.length > 1 ? savedBlocks[1] : "";
+      const wifiBlocks = wifiAndErrors.split("\n@@ERRORS@@\n");
+      const wifiBlock = wifiBlocks.length > 0 ? wifiBlocks[0] : "";
+      const errorBlock = wifiBlocks.length > 1 ? wifiBlocks[1] : "";
+      const refreshErrors = parseRefreshErrors(errorBlock);
 
-      parseStatus(statusBlock);
-      parseSaved(savedBlock);
-      parseWifiList(wifiBlock);
+      if (!refreshErrors.statusFailed) parseStatus(statusBlock);
+      if (!refreshErrors.savedFailed) parseSaved(savedBlock);
+      if (!refreshErrors.wifiFailed) parseWifiList(wifiBlock);
+    }
+
+    function parseRefreshErrors(text) {
+      const result = {
+        statusFailed: false,
+        savedFailed: false,
+        wifiFailed: false
+      };
+
+      const lines = String(text || "").split("\n");
+      for (let i = 0; i < lines.length; i += 1) {
+        const line = lines[i].trim();
+        if (line === "status") result.statusFailed = true;
+        else if (line === "saved") result.savedFailed = true;
+        else if (line === "wifi") result.wifiFailed = true;
+      }
+
+      return result;
+    }
+
+    function hasRefreshPayload(text) {
+      const payload = String(text || "");
+      return payload.indexOf("\n@@SAVED@@\n") >= 0
+        && payload.indexOf("\n@@WIFI@@\n") >= 0
+        && payload.indexOf("\n@@ERRORS@@\n") >= 0;
     }
 
     function parseStatus(text) {
@@ -940,8 +969,16 @@ FocusScope {
       onExited: function(exitCode) {
         wifiController.busy = false;
         wifiController.ready = true;
-        wifiController.lastError = exitCode === 0 ? "" : String(wifiRefreshStderr.text || "").trim();
-        if (exitCode === 0) wifiController.parseRefresh(wifiRefreshStdout.text);
+        const stderrText = String(wifiRefreshStderr.text || "").trim();
+        const stdoutText = wifiRefreshStdout.text;
+
+        if (exitCode === 0 && wifiController.hasRefreshPayload(stdoutText)) {
+          wifiController.parseRefresh(stdoutText);
+          wifiController.lastError = stderrText;
+          return;
+        }
+
+        wifiController.lastError = stderrText !== "" ? stderrText : "Unable to refresh Wi-Fi state.";
       }
     }
 

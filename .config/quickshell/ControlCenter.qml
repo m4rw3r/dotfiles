@@ -851,7 +851,11 @@ FocusScope {
       const known = {};
 
       for (let i = 0; i < lines.length; i += 1) {
-        const ssid = lines[i].trim();
+        const line = lines[i];
+        if (line === "") continue;
+
+        const fields = splitEscaped(line);
+        const ssid = fields.length > 0 ? fields[0] : "";
         if (ssid === "") continue;
         known[ssid] = true;
       }
@@ -866,7 +870,7 @@ FocusScope {
       let activeSignal = 0;
 
       for (let i = 0; i < lines.length; i += 1) {
-        const line = lines[i].trim();
+        const line = lines[i];
         if (line === "") continue;
 
         const parts = splitEscaped(line);

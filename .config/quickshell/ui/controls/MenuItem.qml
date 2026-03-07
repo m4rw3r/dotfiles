@@ -21,8 +21,9 @@ Item {
   implicitWidth: 1
   implicitHeight: compact || subtitle === "" ? 42 : 50
   opacity: enabled ? 1 : 0.45
-  readonly property bool accentActive: active && activeStyle !== "subtle"
+  readonly property bool accentActive: active && activeStyle === "accent"
   readonly property bool subtleActive: active && activeStyle === "subtle"
+  readonly property bool indicatorActive: active && activeStyle === "indicator"
 
   Rectangle {
     anchors.fill: parent
@@ -100,7 +101,9 @@ Item {
         anchors.right: parent.right
         name: root.trailingIconName
         visible: name !== ""
-        strokeColor: root.accentActive ? Theme.textOnAccent : Theme.iconSecondary
+        strokeColor: root.accentActive
+          ? Theme.textOnAccent
+          : (root.indicatorActive ? Theme.accent : Theme.iconSecondary)
       }
     }
   }
@@ -113,7 +116,7 @@ Item {
     anchors.rightMargin: 18
     height: 1
     color: Theme.divider
-    visible: root.dividerVisible && !root.active
+    visible: root.dividerVisible && !root.accentActive && !root.subtleActive
   }
 
   MouseArea {

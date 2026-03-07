@@ -29,6 +29,7 @@ FocusScope {
   property bool panelOpen: false
   property bool initialLoadDeadlineElapsed: false
   property int initialLoadDeadlineMs: 50
+  readonly property bool selectionPopoverOpen: expandedSection === "profile" || (expandedSection === "keyboard" && brightnessService.keyboardAvailable)
   readonly property var audioSink: Pipewire.defaultAudioSink
   readonly property var audioNode: audioSink && audioSink.audio ? audioSink.audio : null
   readonly property var battery: UPower.displayDevice
@@ -46,6 +47,30 @@ FocusScope {
 
   function clamp(value, minValue, maxValue) {
     return Math.max(minValue, Math.min(maxValue, value));
+  }
+
+  function itemPositionIn(item, ancestor) {
+    let itemX = 0;
+    let itemY = 0;
+    let current = item;
+
+    while (current) {
+      itemX += current.x;
+      itemY += current.y;
+      current = current.parent;
+    }
+
+    let ancestorX = 0;
+    let ancestorY = 0;
+    current = ancestor;
+
+    while (current) {
+      ancestorX += current.x;
+      ancestorY += current.y;
+      current = current.parent;
+    }
+
+    return Qt.point(itemX - ancestorX, itemY - ancestorY);
   }
 
   function toggleSection(section) {
@@ -85,6 +110,10 @@ FocusScope {
     if (!anchorItem || !panel) return 0;
     const position = anchorItem.mapToItem(panel, 0, 0);
     return position.y + (anchorItem.height - popupHeight) / 2 - (spacing || 0);
+  }
+
+  function dismissSelectionPopover() {
+    if (expandedSection === "profile" || expandedSection === "keyboard") expandedSection = "";
   }
 
   function profileLabel(profile) {
@@ -620,12 +649,14 @@ FocusScope {
     property int verticalPadding: 10
 
     width: implicitWidth
-    implicitWidth: 220
+    height: implicitHeight
+    implicitWidth: 196
     implicitHeight: popoverColumn.implicitHeight + verticalPadding * 2
     tone: "submenu"
     outlined: false
-    radius: 22
+    radius: 18
     z: 8
+    clip: true
 
     border.width: 1
     border.color: Qt.rgba(1, 1, 1, 0.08)
@@ -638,7 +669,7 @@ FocusScope {
       anchors.leftMargin: popover.horizontalPadding
       anchors.top: parent.top
       anchors.topMargin: popover.verticalPadding
-      spacing: 8
+      spacing: 2
     }
   }
 
@@ -1192,18 +1223,6 @@ FocusScope {
 
     MouseArea {
       anchors.fill: parent
-    }
-
-    TapHandler {
-      enabled: root.expandedSection === "profile"
-      acceptedButtons: Qt.LeftButton
-      onTapped: function(eventPoint) {
-        const localPoint = panel.mapToItem(profilePopover, eventPoint.position.x, eventPoint.position.y);
-        if (profilePopover.contains(localPoint)) return;
-        Qt.callLater(function() {
-          if (root.expandedSection === "profile") root.expandedSection = "";
-        });
-      }
     }
 
     Column {
@@ -1988,6 +2007,8 @@ FocusScope {
         }
 
         Item {
+          id: profileSection
+
           width: parent.width
           height: profileRow.height
 
@@ -2025,51 +2046,6 @@ FocusScope {
             }
           }
 
-          PopoverSurface {
-            id: profilePopover
-            visible: root.expandedSection === "profile"
-            width: Math.max(profileTile.width, 188)
-            x: root.clamp(profileTile.x + (profileTile.width - width) / 2, 0, profileRow.width - width)
-            y: (profileTile.height - implicitHeight) / 2
-            z: 2
-
-            Controls.Menu {
-              width: parent.width
-
-              Controls.MenuItem {
-                width: parent.width
-                iconName: "gauge"
-                title: "Performance"
-                trailingIconName: PowerProfiles.profile === PowerProfile.Performance ? "check" : ""
-                active: PowerProfiles.profile === PowerProfile.Performance
-                compact: true
-                dividerVisible: true
-                enabled: PowerProfiles.hasPerformanceProfile
-                onClicked: root.selectPowerProfile(PowerProfile.Performance)
-              }
-
-              Controls.MenuItem {
-                width: parent.width
-                iconName: "gauge"
-                title: "Balanced"
-                trailingIconName: PowerProfiles.profile === PowerProfile.Balanced ? "check" : ""
-                active: PowerProfiles.profile === PowerProfile.Balanced
-                compact: true
-                dividerVisible: true
-                onClicked: root.selectPowerProfile(PowerProfile.Balanced)
-              }
-
-              Controls.MenuItem {
-                width: parent.width
-                iconName: "gauge"
-                title: "Power Saver"
-                trailingIconName: PowerProfiles.profile === PowerProfile.PowerSaver ? "check" : ""
-                active: PowerProfiles.profile === PowerProfile.PowerSaver
-                compact: true
-                onClicked: root.selectPowerProfile(PowerProfile.PowerSaver)
-              }
-            }
-          }
         }
       }
 
@@ -2081,57 +2057,114 @@ FocusScope {
       anchors.fill: parent
       z: 6
 
+      UiScrim {
+        anchors.fill: panel
+        radius: panel.radius
+        visible: root.selectionPopoverOpen
+      }
+
+      MouseArea {
+        anchors.fill: panel
+        enabled: root.selectionPopoverOpen
+        onClicked: root.dismissSelectionPopover()
+      }
+
+      PopoverSurface {
+        id: profilePopover
+        visible: root.expandedSection === "profile"
+        width: implicitWidth
+        readonly property point anchorPosition: root.itemPositionIn(profileTile, popoverLayer)
+        x: anchorPosition.x
+        y: anchorPosition.y + (profileTile.height - profilePopover.height) / 2 + 12
+
+        Controls.MenuItem {
+          width: parent.width
+          iconName: "gauge"
+          title: "Performance"
+          trailingIconName: PowerProfiles.profile === PowerProfile.Performance ? "check" : ""
+          active: PowerProfiles.profile === PowerProfile.Performance
+          activeStyle: "indicator"
+          compact: true
+          dividerVisible: true
+          enabled: PowerProfiles.hasPerformanceProfile
+          onClicked: root.selectPowerProfile(PowerProfile.Performance)
+        }
+
+        Controls.MenuItem {
+          width: parent.width
+          iconName: "gauge"
+          title: "Balanced"
+          trailingIconName: PowerProfiles.profile === PowerProfile.Balanced ? "check" : ""
+          active: PowerProfiles.profile === PowerProfile.Balanced
+          activeStyle: "indicator"
+          compact: true
+          dividerVisible: true
+          onClicked: root.selectPowerProfile(PowerProfile.Balanced)
+        }
+
+        Controls.MenuItem {
+          width: parent.width
+          iconName: "gauge"
+          title: "Power Saver"
+          trailingIconName: PowerProfiles.profile === PowerProfile.PowerSaver ? "check" : ""
+          active: PowerProfiles.profile === PowerProfile.PowerSaver
+          activeStyle: "indicator"
+          compact: true
+          onClicked: root.selectPowerProfile(PowerProfile.PowerSaver)
+        }
+      }
+
       PopoverSurface {
         visible: root.expandedSection === "keyboard" && brightnessService.keyboardAvailable
         width: keyboardTile.width
         x: root.popupX(keyboardTile, width, true)
         y: root.popupY(keyboardTile, 8)
 
-        Controls.Menu {
+        Controls.MenuItem {
           width: parent.width
+          iconName: "keyboard"
+          title: "Off"
+          trailingIconName: root.keyboardLevelIndex() === 0 ? "check" : ""
+          active: root.keyboardLevelIndex() === 0
+          activeStyle: "indicator"
+          compact: true
+          dividerVisible: true
+          onClicked: root.setKeyboardLevel(0)
+        }
 
-          Controls.MenuItem {
-            width: parent.width
-            iconName: "keyboard"
-            title: "Off"
-            trailingIconName: root.keyboardLevelIndex() === 0 ? "check" : ""
-            active: root.keyboardLevelIndex() === 0
-            compact: true
-            dividerVisible: true
-            onClicked: root.setKeyboardLevel(0)
-          }
+        Controls.MenuItem {
+          width: parent.width
+          iconName: "keyboard"
+          title: "Low"
+          trailingIconName: root.keyboardLevelIndex() === 1 ? "check" : ""
+          active: root.keyboardLevelIndex() === 1
+          activeStyle: "indicator"
+          compact: true
+          dividerVisible: true
+          onClicked: root.setKeyboardLevel(1)
+        }
 
-          Controls.MenuItem {
-            width: parent.width
-            iconName: "keyboard"
-            title: "Low"
-            trailingIconName: root.keyboardLevelIndex() === 1 ? "check" : ""
-            active: root.keyboardLevelIndex() === 1
-            compact: true
-            dividerVisible: true
-            onClicked: root.setKeyboardLevel(1)
-          }
+        Controls.MenuItem {
+          width: parent.width
+          iconName: "keyboard"
+          title: "Med"
+          trailingIconName: root.keyboardLevelIndex() === 2 ? "check" : ""
+          active: root.keyboardLevelIndex() === 2
+          activeStyle: "indicator"
+          compact: true
+          dividerVisible: true
+          onClicked: root.setKeyboardLevel(2)
+        }
 
-          Controls.MenuItem {
-            width: parent.width
-            iconName: "keyboard"
-            title: "Med"
-            trailingIconName: root.keyboardLevelIndex() === 2 ? "check" : ""
-            active: root.keyboardLevelIndex() === 2
-            compact: true
-            dividerVisible: true
-            onClicked: root.setKeyboardLevel(2)
-          }
-
-          Controls.MenuItem {
-            width: parent.width
-            iconName: "keyboard"
-            title: "High"
-            trailingIconName: root.keyboardLevelIndex() === 3 ? "check" : ""
-            active: root.keyboardLevelIndex() === 3
-            compact: true
-            onClicked: root.setKeyboardLevel(3)
-          }
+        Controls.MenuItem {
+          width: parent.width
+          iconName: "keyboard"
+          title: "High"
+          trailingIconName: root.keyboardLevelIndex() === 3 ? "check" : ""
+          active: root.keyboardLevelIndex() === 3
+          activeStyle: "indicator"
+          compact: true
+          onClicked: root.setKeyboardLevel(3)
         }
       }
 

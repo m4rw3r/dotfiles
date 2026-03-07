@@ -22,6 +22,7 @@ The repository already contains a running Quickshell configuration, and `AGENTS.
 - [x] (2026-03-07 00:06Z) Completed final validation: `qmllint` remained at the known warning baseline, `qs ipc call gallery open`, `qs ipc call ui openShade`, and `qs ipc call launcher open` all succeeded, and live manual verification confirmed the expected control center, Wi-Fi, launcher, QuickTile, Bluetooth, and session-action behaviors.
 - [x] (2026-03-06 23:36Z) Fixed a post-implementation Wi-Fi regression after live validation: `nmcli connection show` does not accept `802-11-wireless.ssid` in the bulk field list, so saved-network lookup now enumerates wireless profile UUIDs and queries each profile's SSID separately.
 - [x] (2026-03-07 00:00Z) Fixed a post-validation launcher regression in `Launcher.qml` by keeping the search field's `text` property at the current bound value when focus disables the binding, so reopening the launcher no longer revives a stale query.
+- [x] (2026-03-07 00:12Z) Fixed a second post-validation launcher regression in `Launcher.qml` by deduplicating `DesktopEntries.applications.values` before ranking, so package removals no longer leave repeated app tiles in the launcher.
 
 ## Surprises & Discoveries
 
@@ -42,6 +43,9 @@ The repository already contains a running Quickshell configuration, and `AGENTS.
 
 - Observation: The launcher's `Binding on text` looked correct while unfocused but restored an older explicit value as soon as the field regained focus, which made a closed launcher appear reset until the user clicked into the field.
   Evidence: The search field used `Binding on text` with a focus-dependent `when` clause and the default restore behavior, so reopening the launcher with `root.launcherQuery === ""` still allowed the previously typed `TextInput.text` value to come back on focus.
+
+- Observation: `DesktopEntries.applications.values` can transiently contain repeated application records after package removals, and the launcher currently trusts that list as canonical.
+  Evidence: After uninstalling GNOME applications, the launcher rendered repeated copies of each remaining app tile until the result list was deduplicated before ranking.
 
 ## Decision Log
 
@@ -65,9 +69,13 @@ The repository already contains a running Quickshell configuration, and `AGENTS.
   Rationale: This preserves correct SSID detection for renamed profiles without depending on an unsupported bulk `nmcli` field selection.
   Date/Author: 2026-03-06 / OpenCode
 
+- Decision: Deduplicate launcher entries inside `refreshLauncherResults()` using normalized desktop-entry identity instead of assuming the `DesktopEntries` feed is already unique.
+  Rationale: This keeps the launcher stable when the desktop-entry cache emits duplicates after package churn, while preserving ranking and pagination behavior.
+  Date/Author: 2026-03-07 / OpenCode
+
 ## Outcomes & Retrospective
 
-The main implementation pass is complete. `ControlCenter.qml` now treats brightness availability as optional for initial render, Wi-Fi parsing now uses SSID and BSSID-aware data instead of profile-name guesses, launcher navigation is row-aware, the launcher search field no longer resurrects stale text after reopen, shared subprocess stderr collectors no longer overlap, `QuickTile` now renders subtitle text, Bluetooth rows stop accepting repeated transitional clicks, and logout has a non-`XDG_SESSION_ID` fallback.
+The main implementation pass is complete. `ControlCenter.qml` now treats brightness availability as optional for initial render, Wi-Fi parsing now uses SSID and BSSID-aware data instead of profile-name guesses, launcher navigation is row-aware, the launcher search field no longer resurrects stale text after reopen, launcher results now deduplicate repeated desktop entries after package churn, shared subprocess stderr collectors no longer overlap, `QuickTile` now renders subtitle text, Bluetooth rows stop accepting repeated transitional clicks, and logout has a non-`XDG_SESSION_ID` fallback.
 
 Final validation also passed on the live desktop. Static validation succeeded with the existing Quickshell-specific `qmllint` warnings only, the IPC entry points remained callable, and manual verification confirmed the launcher, control center, shared tiles, Bluetooth busy-state handling, and session actions all behaved as intended. The main lesson from implementation is that most of the bugs were contract bugs between state and presentation, so the fixes landed best as grouped state-model changes rather than isolated line edits.
 

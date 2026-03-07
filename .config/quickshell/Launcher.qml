@@ -83,13 +83,29 @@ Item {
     return String(value || "").toLowerCase();
   }
 
+  function launcherEntryKey(entry) {
+    const id = normalizeText(entry.id).trim();
+    if (id !== "") return `id:${id}`;
+
+    const name = normalizeText(entry.name).trim();
+    const genericName = normalizeText(entry.genericName).trim();
+    const comment = normalizeText(entry.comment).trim();
+    const icon = normalizeText(entry.icon).trim();
+    return `meta:${name}|${genericName}|${comment}|${icon}`;
+  }
+
   function refreshLauncherResults() {
     const query = normalizeText(launcherQuery).trim();
     const entries = DesktopEntries.applications.values;
     const ranked = [];
+    const seenEntryKeys = {};
 
     for (let i = 0; i < entries.length; i += 1) {
       const entry = entries[i];
+      const entryKey = launcherEntryKey(entry);
+      if (seenEntryKeys[entryKey]) continue;
+      seenEntryKeys[entryKey] = true;
+
       const name = normalizeText(entry.name);
       const genericName = normalizeText(entry.genericName);
       const comment = normalizeText(entry.comment);

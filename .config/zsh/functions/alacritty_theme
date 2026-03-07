@@ -1,0 +1,42 @@
+#!/usr/bin/env zsh
+
+ALACRITTY_THEME_FOLDER="$XDG_CONFIG_HOME/alacritty/themes"
+# File imported from alacritty.toml
+ALACRITTY_THEME_SELECTOR_FILE="$XDG_CONFIG_HOME/alacritty/current-theme.toml"
+
+_list_alacritty_themes() {
+  ls -1 "$ALACRITTY_THEME_FOLDER" | sed -e 's/\.toml//'
+}
+
+_apply_alacritty_theme() {
+  if [[ ! -e "$ALACRITTY_THEME_FOLDER/$1.toml" ]]; then
+    echo "Theme $1 not found"
+    return 1
+  fi
+
+  echo "general.import = [\"themes/$1.toml\"]" > "$ALACRITTY_THEME_SELECTOR_FILE"
+  alacritty msg config --window-id -1 --reset
+  return 0
+}
+
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    list)
+      shift
+      echo "Available themes:"
+      echo ""
+      _list_alacritty_themes
+      return $?
+      ;;
+    *)
+      if [[ $# -gt 1 ]]; then
+        echo "Unknown parameter $1"
+        return 1
+      fi
+
+      _apply_alacritty_theme "$1"
+      return $?
+  esac
+done
+
+_list_alacritty_themes

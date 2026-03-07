@@ -1,0 +1,13 @@
+[general]
+import = ["~/.config/alacritty/current-theme.toml"]
+
+[window]
+padding = { x = 4, y = 4 }
+dynamic_padding = true
+[font]
+normal = { family = "PragmataPro Mono Liga" }
+size = 12
+# We want to use PragmataPro
+builtin_box_drawing = false
+[keyboard]
+bindings = []

@@ -23,8 +23,6 @@ alias genuuid="uuidgen | tr '[:upper:]' '[:lower:]' | tr -d \"\\n\""
 alias mysql='mysql --auto-vertical-output --show-warnings --sigint-ignore --line-numbers'
 alias mysqlp='mysql --auto-vertical-output --show-warnings --sigint-ignore --pager=less --line-numbers --column-type-info'
 alias json_escape='jq -aR'
-alias light='kitty_theme base16-tomorrow'
-alias dark='kitty_theme base16-tomorrow-night'
 alias ccusage='npx ccusage@latest'
 alias ccusage-opencode='bunx @ccusage/opencode@latest'
 # KCachegrind for visualizing profiles
@@ -39,6 +37,16 @@ alias clear="printf '\\033[2J\\033[3J\\033[1;1H'"
 # Use NeoVIM
 if command -v nvim &>/dev/null; then
 	alias vim=nvim
+fi
+
+if [[ $TERM = "alacritty" ]]; then
+  alias theme='alacritty_theme'
+  alias light='alacritty_theme tomorrow'
+  alias dark='alacritty_theme tomorrow-night'
+else
+  alias theme='kitty_theme'
+  alias light='kitty_theme base16-tomorrow'
+  alias dark='kitty_theme base16-tomorrow-night'
 fi
 
 # Kitty kittens

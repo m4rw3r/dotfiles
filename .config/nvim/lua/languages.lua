@@ -47,6 +47,7 @@ vim.filetype.add({
   filename = {
     ["opencode.json"] = "jsonc",
     ["tsconfig.json"] = "jsonc",
+    ["tui.json"] = "jsonc",
    }
 })
 

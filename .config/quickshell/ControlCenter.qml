@@ -1407,25 +1407,37 @@ FocusScope {
       Row {
         width: parent.width
         height: 40
-        spacing: 10
-
-        Controls.IconButton {
-          id: muteButton
-          anchors.verticalCenter: parent.verticalCenter
-          width: implicitWidth
-          variant: "minimal"
-          iconName: root.audioReady && audioService.muted ? "speaker-muted" : "speaker"
-          active: root.audioReady && audioService.muted
-          enabled: root.audioReady
-          onClicked: {
-            if (root.audioReady) audioService.toggleMuted();
-          }
-        }
+        spacing: 0
 
         Controls.Slider {
-          width: parent.width - muteButton.width - outputButton.width - parent.spacing * 2
+          width: parent.width
           anchors.verticalCenter: parent.verticalCenter
           showIcon: false
+          leadingAccessory: [
+            Controls.IconButton {
+              anchors.centerIn: parent
+              width: implicitWidth
+              variant: "minimal"
+              iconName: root.audioReady && audioService.muted ? "speaker-muted" : "speaker"
+              active: root.audioReady && audioService.muted
+              enabled: root.audioReady
+              onClicked: {
+                if (root.audioReady) audioService.toggleMuted();
+              }
+            }
+          ]
+          trailingAccessory: [
+            Controls.IconButton {
+              anchors.centerIn: parent
+              width: implicitWidth
+              variant: "minimal"
+              iconSize: 18
+              iconName: root.expandedSection === "outputs" ? "chevron-down" : "chevron-right"
+              active: root.expandedSection === "outputs"
+              enabled: Pipewire.ready
+              onClicked: root.toggleSection("outputs")
+            }
+          ]
           value: root.pendingAudioVolume
           enabled: root.audioReady
           onValueMoved: function(value) {
@@ -1439,18 +1451,6 @@ FocusScope {
             audioCommitTimer.stop();
             audioService.setVolume(value);
           }
-        }
-
-        Controls.IconButton {
-          id: outputButton
-          anchors.verticalCenter: parent.verticalCenter
-          width: implicitWidth
-          variant: "minimal"
-          iconSize: 18
-          iconName: root.expandedSection === "outputs" ? "chevron-down" : "chevron-right"
-          active: root.expandedSection === "outputs"
-          enabled: Pipewire.ready
-          onClicked: root.toggleSection("outputs")
         }
       }
 
@@ -1527,22 +1527,23 @@ FocusScope {
       Row {
         width: parent.width
         height: 40
-        spacing: 10
-
-        Controls.IconButton {
-          id: brightnessBadge
-          anchors.verticalCenter: parent.verticalCenter
-          interactive: false
-          variant: "minimal"
-          iconName: "sun"
-        }
+        spacing: 0
 
         Controls.Slider {
           id: brightnessSlider
 
-          width: parent.width - brightnessBadge.width - brightnessSettingsSpacer.width - parent.spacing * 2
+          width: parent.width
           anchors.verticalCenter: parent.verticalCenter
           showIcon: false
+          trailingSlotWidth: Theme.controlAccessorySlot
+          leadingAccessory: [
+            Controls.IconButton {
+              anchors.centerIn: parent
+              interactive: false
+              variant: "minimal"
+              iconName: "sun"
+            }
+          ]
           from: 0
           to: 100
           value: brightnessService.screenPercent
@@ -1556,13 +1557,6 @@ FocusScope {
             brightnessCommitTimer.stop();
             brightnessService.applyScreenPercent(value);
           }
-        }
-
-        Item {
-          id: brightnessSettingsSpacer
-
-          width: outputButton.width
-          height: 1
         }
       }
 

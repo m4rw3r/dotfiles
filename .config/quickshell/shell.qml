@@ -114,7 +114,7 @@ ShellRoot {
 
     UiScrim {
       anchors.fill: parent
-      visible: controlCenter.overlayDismissActive
+      visible: controlCenter.selectorPopoverOpen
     }
 
     MouseArea {

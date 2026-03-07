@@ -24,6 +24,7 @@ FocusScope {
   property string pendingPowerAction: ""
   property string wifiPasswordTarget: ""
   property string wifiPassword: ""
+  property bool powerProfileBusy: false
   property real pendingAudioVolume: 0
   property real pendingScreenBrightness: 0
   property bool panelOpen: false
@@ -237,14 +238,21 @@ FocusScope {
   }
 
   function profileShortLabel() {
-    if (PowerProfiles.profile === PowerProfile.PowerSaver) return "Saver";
+    if (PowerProfiles.profile === PowerProfile.PowerSaver) return "Power Saver";
     if (PowerProfiles.profile === PowerProfile.Performance) return "Performance";
     return "Balanced";
   }
 
+  function profileCommandValue(profile) {
+    if (profile === PowerProfile.PowerSaver) return "quiet";
+    if (profile === PowerProfile.Performance) return "performance";
+    return "balanced";
+  }
+
   function selectPowerProfile(profile) {
-    PowerProfiles.profile = profile;
+    powerProfileBusy = true;
     expandedSection = "";
+    powerProfileWriteProcess.exec(["z13ctl", "profile", "--set", profileCommandValue(profile)]);
   }
 
   function lightingTileTitle() {
@@ -531,6 +539,21 @@ FocusScope {
 
   SessionActions {
     id: sessionActions
+  }
+
+  StdioCollector {
+    id: powerProfileWriteStderr
+    waitForEnd: true
+  }
+
+  Process {
+    id: powerProfileWriteProcess
+
+    stderr: powerProfileWriteStderr
+
+    onExited: function(exitCode) {
+      root.powerProfileBusy = false;
+    }
   }
 
   component StatusChip: UiSurface {
@@ -2151,7 +2174,7 @@ FocusScope {
           activeStyle: "indicator"
           compact: true
           dividerVisible: true
-          enabled: PowerProfiles.hasPerformanceProfile
+          enabled: PowerProfiles.hasPerformanceProfile && !root.powerProfileBusy
           onClicked: root.selectPowerProfile(PowerProfile.Performance)
         }
 
@@ -2164,6 +2187,7 @@ FocusScope {
           activeStyle: "indicator"
           compact: true
           dividerVisible: true
+          enabled: !root.powerProfileBusy
           onClicked: root.selectPowerProfile(PowerProfile.Balanced)
         }
 
@@ -2175,6 +2199,7 @@ FocusScope {
           active: PowerProfiles.profile === PowerProfile.PowerSaver
           activeStyle: "indicator"
           compact: true
+          enabled: !root.powerProfileBusy
           onClicked: root.selectPowerProfile(PowerProfile.PowerSaver)
         }
       }

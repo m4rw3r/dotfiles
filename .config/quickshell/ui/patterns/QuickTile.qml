@@ -17,6 +17,7 @@ Item {
 
   implicitWidth: parent ? Math.floor((parent.width - 10) / 2) : 180
   implicitHeight: root.subtitle === "" ? 44 : 58
+  opacity: enabled ? 1 : 0.5
 
   readonly property bool highlighted: active || (highlightExpanded && expanded)
   readonly property real splitWidth: expandable ? 52 : 0
@@ -113,6 +114,7 @@ Item {
     anchors.bottom: parent.bottom
     anchors.right: parent.right
     anchors.rightMargin: root.splitWidth
+    enabled: root.enabled
     onClicked: root.primaryClicked()
   }
 
@@ -123,7 +125,7 @@ Item {
     anchors.bottom: parent.bottom
     anchors.right: parent.right
     width: root.expandable ? 52 : 0
-    enabled: root.expandable
+    enabled: root.enabled && root.expandable
     onClicked: root.secondaryClicked()
   }
 }

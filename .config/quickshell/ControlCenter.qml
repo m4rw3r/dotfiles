@@ -27,14 +27,17 @@ FocusScope {
   property real pendingAudioVolume: 0
   property real pendingScreenBrightness: 0
   property bool panelOpen: false
-  property bool hasInitialSnapshot: false
+  property bool initialLoadDeadlineElapsed: false
+  property int initialLoadDeadlineMs: 50
   readonly property var audioSink: Pipewire.defaultAudioSink
   readonly property var audioNode: audioSink && audioSink.audio ? audioSink.audio : null
   readonly property var battery: UPower.displayDevice
   readonly property var bluetoothAdapter: Bluetooth.defaultAdapter
   readonly property bool batteryAvailable: battery && battery.isPresent && battery.isLaptopBattery
   readonly property bool audioReady: audioService.ready
-  readonly property bool panelDataReady: audioService.ready && brightnessService.settled && wifiService.ready
+  readonly property bool audioLoading: panelOpen && !audioService.settled
+  readonly property bool brightnessLoading: panelOpen && !brightnessService.settled
+  readonly property bool wifiLoading: panelOpen && !wifiService.ready
 
   Component.onCompleted: {
     refreshPanelData();
@@ -161,11 +164,14 @@ FocusScope {
   }
 
   function wifiTileTitle() {
+    if (!wifiService.ready) return "Wi-Fi";
     if (!wifiService.enabled || wifiService.connectedSsid === "") return "Wi-Fi";
     return wifiService.connectedSsid;
   }
 
   function wifiTileSubtitle() {
+    if (!wifiService.ready) return initialLoadDeadlineElapsed ? "Loading..." : "";
+    if (wifiService.lastError !== "") return "Unavailable";
     if (!wifiService.hardwareEnabled) return "Blocked";
     if (!wifiService.enabled) return "Off";
     if (wifiService.connectedSsid !== "") return `${wifiService.connectedSignal}%`;
@@ -337,20 +343,19 @@ FocusScope {
   onPanelOpenChanged: {
     if (panelOpen) {
       forceActiveFocus();
+      initialLoadDeadlineElapsed = false;
+      initialLoadDeadline.restart();
       refreshPanelData();
       panelRefreshTimer.restart();
     } else {
+      initialLoadDeadline.stop();
+      initialLoadDeadlineElapsed = false;
       expandedSection = "";
       pendingPowerAction = "";
       wifiPasswordTarget = "";
       wifiPassword = "";
       if (bluetoothAdapter) bluetoothAdapter.discovering = false;
     }
-  }
-
-  onPanelDataReadyChanged: {
-    if (!panelDataReady) return;
-    hasInitialSnapshot = true;
   }
 
   Keys.onEscapePressed: root.closeRequested()
@@ -360,6 +365,13 @@ FocusScope {
     interval: 2200
     repeat: false
     onTriggered: root.pendingPowerAction = ""
+  }
+
+  Timer {
+    id: initialLoadDeadline
+    interval: root.initialLoadDeadlineMs
+    repeat: false
+    onTriggered: root.initialLoadDeadlineElapsed = true
   }
 
   Timer {
@@ -383,6 +395,7 @@ FocusScope {
     property real volume: 0
     property bool muted: false
     property bool ready: false
+    property bool settled: false
     property string lastError: ""
 
     function refresh() {
@@ -409,8 +422,11 @@ FocusScope {
 
     function parseState(text) {
       const match = String(text || "").match(/Volume:\s+([0-9.]+)(?:\s+\[(MUTED)\])?/i);
+      settled = true;
+
       if (!match) {
         ready = false;
+        lastError = "Unable to parse current volume.";
         return;
       }
 
@@ -440,8 +456,10 @@ FocusScope {
       stderr: audioReadStderr
 
       onExited: function(exitCode) {
+        audioService.settled = true;
         audioService.lastError = exitCode === 0 ? "" : String(audioReadStderr.text || "").trim();
         if (exitCode === 0) audioService.parseState(audioReadStdout.text);
+        else audioService.ready = false;
       }
     }
 
@@ -1079,7 +1097,6 @@ FocusScope {
     Column {
       id: content
 
-      visible: !root.panelOpen || root.hasInitialSnapshot || root.panelDataReady
       width: parent.width - 28
       anchors.left: parent.left
       anchors.leftMargin: 14
@@ -1258,6 +1275,21 @@ FocusScope {
         }
       }
 
+      UiText {
+        visible: root.audioLoading && root.initialLoadDeadlineElapsed
+        text: "Loading audio..."
+        size: "xs"
+        tone: "subtle"
+      }
+
+      UiText {
+        visible: audioService.settled && !root.audioReady && !root.audioLoading
+        text: audioService.lastError !== "" ? audioService.lastError : "Audio unavailable."
+        size: "xs"
+        tone: "accent"
+        wrapMode: Text.WordWrap
+      }
+
       UiSurface {
         visible: root.expandedSection === "outputs"
         width: parent.width
@@ -1347,6 +1379,28 @@ FocusScope {
         }
       }
 
+      UiText {
+        visible: root.brightnessLoading && root.initialLoadDeadlineElapsed
+        text: "Loading brightness..."
+        size: "xs"
+        tone: "subtle"
+      }
+
+      UiText {
+        visible: brightnessService.settled && brightnessService.lastError === "" && !brightnessService.screenAvailable
+        text: "No brightness device detected."
+        size: "xs"
+        tone: "subtle"
+      }
+
+      UiText {
+        visible: brightnessService.lastError !== "" && !root.brightnessLoading
+        text: brightnessService.lastError
+        size: "xs"
+        tone: "accent"
+        wrapMode: Text.WordWrap
+      }
+
       Column {
         width: parent.width
         spacing: 8
@@ -1361,9 +1415,10 @@ FocusScope {
             iconName: "wifi"
             title: root.wifiTileTitle()
             subtitle: root.wifiTileSubtitle()
-            active: wifiService.enabled
+            active: wifiService.ready && wifiService.enabled
             expanded: root.expandedSection === "wifi"
             highlightExpanded: true
+            enabled: wifiService.ready
             onPrimaryClicked: root.toggleWifiEnabled()
             onSecondaryClicked: root.toggleSection("wifi")
           }
@@ -1409,6 +1464,13 @@ FocusScope {
             }
 
             UiText {
+              visible: root.wifiLoading && root.initialLoadDeadlineElapsed
+              text: "Loading Wi-Fi..."
+              size: "xs"
+              tone: "subtle"
+            }
+
+            UiText {
               visible: !wifiService.hardwareEnabled
               text: "WiFi hardware is blocked."
               size: "xs"
@@ -1417,7 +1479,7 @@ FocusScope {
 
             Controls.Menu {
               width: parent.width
-              visible: wifiService.enabled && wifiService.networks.length > 0
+              visible: wifiService.ready && wifiService.enabled && wifiService.networks.length > 0
 
               Repeater {
                 model: wifiService.enabled ? Math.min(6, wifiService.networks.length) : 0
@@ -1526,7 +1588,7 @@ FocusScope {
             }
 
             UiText {
-              visible: wifiService.enabled && wifiService.networks.length === 0 && !wifiService.busy
+              visible: wifiService.ready && wifiService.enabled && wifiService.networks.length === 0 && !wifiService.busy
               text: "No networks available."
               size: "xs"
               tone: "subtle"
@@ -1546,12 +1608,13 @@ FocusScope {
 
               Controls.Button {
                 text: wifiService.enabled ? "Turn Off" : "Turn On"
+                enabled: wifiService.ready
                 onClicked: wifiService.setEnabledState(!wifiService.enabled)
               }
 
               Controls.Button {
                 text: wifiService.busy ? "Refreshing" : "Rescan"
-                enabled: wifiService.enabled && !wifiService.busy
+                enabled: wifiService.ready && wifiService.enabled && !wifiService.busy
                 onClicked: wifiService.scan()
               }
             }
@@ -1809,21 +1872,6 @@ FocusScope {
         }
       }
 
-      UiText {
-        visible: audioService.lastError !== ""
-        text: audioService.lastError
-        size: "xs"
-        tone: "accent"
-        wrapMode: Text.WordWrap
-      }
-
-      UiText {
-        visible: brightnessService.lastError !== ""
-        text: brightnessService.lastError
-        size: "xs"
-        tone: "accent"
-        wrapMode: Text.WordWrap
-      }
     }
 
     Item {

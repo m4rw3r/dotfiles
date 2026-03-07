@@ -15,6 +15,7 @@ FocusScope {
   property bool wifiEnabled: true
   property bool bluetoothEnabled: false
   property bool doNotDisturb: true
+  property bool galleryProfilePopoverOpen: false
   property real mediaLevel: 0.68
   property real brightnessLevel: 82
   property real keyboardLevel: 2
@@ -79,6 +80,37 @@ FocusScope {
         width: parent.width
         spacing: 12
       }
+    }
+  }
+
+  component PopoverSurface: UiSurface {
+    id: popover
+
+    default property alias content: popoverColumn.data
+    property int horizontalPadding: 10
+    property int verticalPadding: 10
+
+    width: implicitWidth
+    height: implicitHeight
+    implicitWidth: 196
+    implicitHeight: popoverColumn.implicitHeight + verticalPadding * 2
+    tone: "submenu"
+    outlined: false
+    radius: 18
+    clip: true
+
+    border.width: 1
+    border.color: Qt.rgba(1, 1, 1, 0.08)
+
+    Column {
+      id: popoverColumn
+
+      width: parent.width - popover.horizontalPadding * 2
+      anchors.left: parent.left
+      anchors.leftMargin: popover.horizontalPadding
+      anchors.top: parent.top
+      anchors.topMargin: popover.verticalPadding
+      spacing: 2
     }
   }
 
@@ -486,6 +518,82 @@ FocusScope {
                   width: parent.width
                   iconName: "logout"
                   title: "Log Out"
+                  compact: true
+                }
+              }
+            }
+
+            UiSurface {
+              id: popoverPreview
+
+              width: Math.max(240, Math.floor((parent.width - 14) / 2))
+              implicitHeight: popoverPreviewProfileTile.implicitHeight + 36
+              tone: "panel"
+              outlined: false
+              radius: 26
+
+              border.width: 1
+              border.color: Qt.rgba(1, 1, 1, 0.12)
+
+              UiScrim {
+                anchors.fill: parent
+                radius: popoverPreview.radius
+                visible: root.galleryProfilePopoverOpen
+              }
+
+              MouseArea {
+                anchors.fill: parent
+                enabled: root.galleryProfilePopoverOpen
+                onClicked: root.galleryProfilePopoverOpen = false
+              }
+
+              Patterns.QuickTile {
+                id: popoverPreviewProfileTile
+
+                width: parent.width - 36
+                anchors.left: parent.left
+                anchors.leftMargin: 18
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 18
+                iconName: "gauge"
+                title: "Saver"
+                subtitle: "Power Mode"
+                expanded: root.galleryProfilePopoverOpen
+                highlightExpanded: true
+                onPrimaryClicked: root.galleryProfilePopoverOpen = !root.galleryProfilePopoverOpen
+                onSecondaryClicked: root.galleryProfilePopoverOpen = !root.galleryProfilePopoverOpen
+              }
+
+              PopoverSurface {
+                visible: root.galleryProfilePopoverOpen
+                width: implicitWidth
+                x: popoverPreviewProfileTile.x
+                y: popoverPreviewProfileTile.y + (popoverPreviewProfileTile.height - height) / 2 + 12
+                z: 2
+
+                Controls.MenuItem {
+                  width: parent.width
+                  iconName: "gauge"
+                  title: "Performance"
+                  compact: true
+                  dividerVisible: true
+                }
+
+                Controls.MenuItem {
+                  width: parent.width
+                  iconName: "gauge"
+                  title: "Balanced"
+                  compact: true
+                  dividerVisible: true
+                }
+
+                Controls.MenuItem {
+                  width: parent.width
+                  iconName: "gauge"
+                  title: "Power Saver"
+                  trailingIconName: "check"
+                  active: true
+                  activeStyle: "indicator"
                   compact: true
                 }
               }

@@ -19,7 +19,7 @@ Item {
   signal valueCommitted(real value)
 
   implicitWidth: parent ? parent.width : 0
-  implicitHeight: 46
+  implicitHeight: 40
 
   onValueChanged: {
     if (!control.pressed) dragValue = value;
@@ -27,7 +27,7 @@ Item {
 
   Row {
     anchors.fill: parent
-    spacing: 12
+    spacing: 10
 
     Ui.UiIcon {
       id: startIcon
@@ -66,8 +66,8 @@ Item {
           x: control.leftPadding
           y: control.topPadding + control.availableHeight / 2 - height / 2
           width: control.availableWidth
-          height: 6
-          radius: 3
+          height: 7
+          radius: 3.5
           color: Theme.sliderTrack
 
           Rectangle {
@@ -81,12 +81,12 @@ Item {
         handle: Rectangle {
           x: control.leftPadding + control.visualPosition * (control.availableWidth - width)
           y: control.topPadding + control.availableHeight / 2 - height / 2
-          width: 18
-          height: 18
-          radius: 9
+          width: 20
+          height: 20
+          radius: 10
           color: Theme.text
           border.width: 1
-          border.color: Theme.panelRaised
+          border.color: Qt.rgba(0, 0, 0, 0.18)
         }
       }
     }

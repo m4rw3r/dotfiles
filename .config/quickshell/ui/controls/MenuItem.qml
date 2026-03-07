@@ -12,6 +12,7 @@ Item {
   property bool actionTextOnHover: true
   property string trailingIconName: ""
   property bool active: false
+  property string activeStyle: "accent"
   property bool dividerVisible: false
   property bool compact: false
   signal clicked()
@@ -20,13 +21,17 @@ Item {
   implicitWidth: 1
   implicitHeight: compact || subtitle === "" ? 42 : 50
   opacity: enabled ? 1 : 0.45
+  readonly property bool accentActive: active && activeStyle !== "subtle"
+  readonly property bool subtleActive: active && activeStyle === "subtle"
 
   Rectangle {
     anchors.fill: parent
     radius: 12
-    color: root.active ? Theme.toggleOn : (touchArea.pressed ? Theme.fieldAlt : "transparent")
-    border.width: root.active ? 1 : 0
-    border.color: root.active ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+    color: root.accentActive
+      ? Theme.toggleOn
+      : (root.subtleActive ? Theme.field : (touchArea.pressed ? Theme.fieldAlt : "transparent"))
+    border.width: root.accentActive || root.subtleActive ? 1 : 0
+    border.color: root.accentActive ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08)
   }
 
   Row {
@@ -35,21 +40,27 @@ Item {
     anchors.rightMargin: 14
     spacing: 14
 
-    Ui.UiIcon {
-      anchors.verticalCenter: parent.verticalCenter
-      name: root.iconName
-      strokeColor: root.active ? Theme.textOnAccent : Theme.iconSecondary
+    Item {
+      width: root.iconName !== "" ? 20 : 0
+      height: parent.height
+
+      Ui.UiIcon {
+        anchors.verticalCenter: parent.verticalCenter
+        visible: root.iconName !== ""
+        name: root.iconName
+        strokeColor: root.accentActive ? Theme.textOnAccent : Theme.iconSecondary
+      }
     }
 
     Column {
-      width: Math.max(0, parent.width - trailingSlot.width - 42)
+      width: Math.max(0, parent.width - trailingSlot.width - (root.iconName !== "" ? 56 : 22))
       anchors.verticalCenter: parent.verticalCenter
       spacing: root.compact ? 0 : 1
 
       Ui.UiText {
         text: root.title
         size: "sm"
-        tone: root.active ? "onAccent" : "primary"
+        tone: root.accentActive ? "onAccent" : "primary"
         font.weight: Font.DemiBold
         elide: Text.ElideRight
       }
@@ -58,8 +69,8 @@ Item {
         text: root.subtitle
         visible: !root.compact && text !== ""
         size: "xs"
-        tone: root.active ? "onAccent" : "muted"
-        opacity: root.active ? 0.9 : 0.96
+        tone: root.accentActive ? "onAccent" : "muted"
+        opacity: root.accentActive ? 0.9 : 0.96
         elide: Text.ElideRight
       }
     }
@@ -78,7 +89,7 @@ Item {
         text: root.actionText
         visible: text !== "" && (!root.actionTextOnHover || touchArea.containsMouse)
         size: "xs"
-        tone: root.active ? "onAccent" : "muted"
+        tone: root.accentActive ? "onAccent" : "muted"
         font.weight: Font.DemiBold
       }
 
@@ -89,7 +100,7 @@ Item {
         anchors.right: parent.right
         name: root.trailingIconName
         visible: name !== ""
-        strokeColor: root.active ? Theme.textOnAccent : Theme.iconSecondary
+        strokeColor: root.accentActive ? Theme.textOnAccent : Theme.iconSecondary
       }
     }
   }

@@ -9,20 +9,30 @@ Ui.UiSurface {
   property bool active: false
   property bool circular: false
   property bool interactive: true
-  property color iconColor: active ? Theme.textOnAccent : Theme.iconSecondary
+  property string variant: "filled"
+  property color iconColor: {
+    if (!enabled) return Theme.textSubtle;
+    if (variant === "minimal") return active ? Theme.text : Theme.textMuted;
+    return active ? Theme.textOnAccent : Theme.iconSecondary;
+  }
   signal clicked()
 
   width: implicitWidth
-  implicitWidth: circular ? 46 : 44
-  implicitHeight: circular ? 46 : 44
-  tone: active ? "toggleOn" : "fieldAlt"
+  implicitWidth: variant === "minimal" ? 24 : (circular ? 46 : 44)
+  implicitHeight: variant === "minimal" ? 24 : (circular ? 46 : 44)
+  tone: "field"
   outlined: false
-  radius: circular ? width / 2 : 19
+  radius: variant === "minimal" ? 0 : (circular ? width / 2 : 19)
   pressed: interactive && touchArea.pressed
   opacity: enabled ? 1 : 0.45
+  color: {
+    if (variant === "minimal") return "transparent";
+    if (active) return Theme.toggleOn;
+    return touchArea.pressed ? Theme.fieldPressed : Theme.field;
+  }
 
-  border.width: 1
-  border.color: active ? Qt.rgba(1, 1, 1, 0.08) : Theme.divider
+  border.width: variant === "minimal" ? 0 : 1
+  border.color: active ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08)
 
   Ui.UiIcon {
     anchors.centerIn: parent

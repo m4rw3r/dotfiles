@@ -123,6 +123,30 @@ Canvas {
       return;
     }
 
+    if (name === "battery" || name === "battery-charging") {
+      roundedRect(w * 0.18, h * 0.28, w * 0.56, h * 0.44, h * 0.06);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(w * 0.74, h * 0.42);
+      ctx.lineTo(w * 0.82, h * 0.42);
+      ctx.lineTo(w * 0.82, h * 0.58);
+      ctx.lineTo(w * 0.74, h * 0.58);
+      ctx.stroke();
+
+      if (name === "battery-charging") {
+        ctx.beginPath();
+        ctx.moveTo(w * 0.5, h * 0.32);
+        ctx.lineTo(w * 0.4, h * 0.5);
+        ctx.lineTo(w * 0.5, h * 0.5);
+        ctx.lineTo(w * 0.44, h * 0.68);
+        ctx.lineTo(w * 0.6, h * 0.46);
+        ctx.lineTo(w * 0.5, h * 0.46);
+        ctx.closePath();
+        ctx.stroke();
+      }
+      return;
+    }
+
     if (name === "power") {
       ctx.beginPath();
       ctx.arc(w * 0.5, h * 0.55, h * 0.22, Math.PI * 0.8, Math.PI * 2.2, false);

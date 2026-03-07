@@ -17,7 +17,7 @@ FocusScope {
 
   signal closeRequested()
 
-  implicitWidth: 332
+  implicitWidth: 344
   implicitHeight: panel.implicitHeight
 
   property string expandedSection: ""
@@ -124,6 +124,46 @@ FocusScope {
     if (state === UPowerDeviceState.Charging || state === UPowerDeviceState.PendingCharge) return `${percent} Charging`;
     if (state === UPowerDeviceState.Empty) return `${percent} Empty`;
     return percent;
+  }
+
+  function batteryIconName() {
+    if (!batteryAvailable) return "battery";
+
+    const state = battery.state;
+    if (state === UPowerDeviceState.Charging || state === UPowerDeviceState.PendingCharge) return "battery-charging";
+    return "battery";
+  }
+
+  function normalizePowerAction(action) {
+    if (action === "sleep") return "suspend";
+    return action;
+  }
+
+  function powerActionTitle(action) {
+    if (action === "lock") return "Lock";
+    if (action === "suspend" || action === "sleep") return "Suspend";
+    if (action === "restart") return "Restart";
+    if (action === "logout") return "Log Out";
+    return "Power Off";
+  }
+
+  function powerActionIcon(action) {
+    if (action === "lock") return "lock";
+    if (action === "suspend" || action === "sleep") return "moon";
+    if (action === "restart") return "restart";
+    if (action === "logout") return "logout";
+    return "power";
+  }
+
+  function powerHeroAction() {
+    if (sessionActions.busyAction !== "") return normalizePowerAction(sessionActions.busyAction);
+    return pendingPowerAction !== "" ? pendingPowerAction : "shutdown";
+  }
+
+  function powerHeroHint() {
+    if (sessionActions.busyAction !== "") return `${powerActionTitle(sessionActions.busyAction)} in progress...`;
+    if (pendingPowerAction !== "") return "Press the highlighted action again to confirm";
+    return "";
   }
 
   function wifiSummary() {
@@ -520,24 +560,39 @@ FocusScope {
     id: chip
 
     property string text: ""
+    property string iconName: ""
 
-    implicitWidth: chipLabel.implicitWidth + 32
-    implicitHeight: 38
-    tone: "chip"
+    implicitWidth: chipRow.implicitWidth + 24
+    implicitHeight: 40
+    tone: "field"
     outlined: false
-    radius: 19
+    radius: 20
 
     border.width: 1
-    border.color: Theme.divider
+    border.color: Qt.rgba(1, 1, 1, 0.08)
 
-    UiText {
-      id: chipLabel
+    Row {
+      id: chipRow
 
       anchors.centerIn: parent
-      text: chip.text
-      size: "sm"
-      tone: "muted"
-      font.weight: Font.DemiBold
+      spacing: chip.iconName === "" ? 0 : 8
+
+      UiIcon {
+        visible: chip.iconName !== ""
+        anchors.verticalCenter: parent.verticalCenter
+        name: chip.iconName
+        strokeColor: Theme.textMuted
+      }
+
+      UiText {
+        id: chipLabel
+
+        anchors.verticalCenter: parent.verticalCenter
+        text: chip.text
+        size: "sm"
+        tone: "primary"
+        font.weight: Font.DemiBold
+      }
     }
   }
 
@@ -553,11 +608,11 @@ FocusScope {
     implicitHeight: popoverColumn.implicitHeight + verticalPadding * 2
     tone: "submenu"
     outlined: false
-    radius: 18
+    radius: 22
     z: 8
 
     border.width: 1
-    border.color: Theme.divider
+    border.color: Qt.rgba(1, 1, 1, 0.08)
 
     Column {
       id: popoverColumn
@@ -1111,13 +1166,13 @@ FocusScope {
     id: panel
 
     width: root.implicitWidth
-    implicitHeight: content.implicitHeight + 28
+    implicitHeight: content.implicitHeight + 32
     tone: "panelOverlay"
     outlined: false
-    radius: 28
+    radius: 30
 
     border.width: 1
-    border.color: Theme.divider
+    border.color: Qt.rgba(1, 1, 1, 0.12)
 
     MouseArea {
       anchors.fill: parent
@@ -1138,27 +1193,29 @@ FocusScope {
     Column {
       id: content
 
-      width: parent.width - 28
+      width: parent.width - 32
       anchors.left: parent.left
-      anchors.leftMargin: 14
+      anchors.leftMargin: 16
       anchors.top: parent.top
-      anchors.topMargin: 14
-      spacing: 10
+      anchors.topMargin: 16
+      spacing: 12
 
       Row {
-        width: parent.width
-        height: 46
-        spacing: 10
+        width: parent.width - 8
+        anchors.horizontalCenter: parent.horizontalCenter
+        height: 48
+        spacing: 12
 
         StatusChip {
           id: batteryChip
           visible: root.batteryAvailable
           anchors.verticalCenter: parent.verticalCenter
+          iconName: root.batteryIconName()
           text: root.batterySummary()
         }
 
         Item {
-          width: Math.max(0, parent.width - (batteryChip.visible ? batteryChip.implicitWidth : 0) - lockButton.implicitWidth - powerToggleButton.implicitWidth - 20)
+          width: Math.max(0, parent.width - (batteryChip.visible ? batteryChip.implicitWidth : 0) - lockButton.implicitWidth - powerToggleButton.implicitWidth - 24)
           height: parent.height
         }
 
@@ -1181,103 +1238,150 @@ FocusScope {
       }
 
       UiSurface {
-        id: powerPopover
+          id: powerPopover
 
-        visible: root.expandedSection === "power"
-        width: parent.width
-        implicitHeight: powerColumn.implicitHeight + 20
-        tone: "submenu"
-        outlined: false
-        radius: 18
-        border.width: 1
-        border.color: Theme.divider
+          visible: root.expandedSection === "power"
+          width: parent.width
+          implicitHeight: powerColumn.implicitHeight + 24
+          tone: "raised"
+          outlined: false
+          radius: 26
+          border.width: 1
+          border.color: Qt.rgba(1, 1, 1, 0.1)
 
-        Column {
-          id: powerColumn
+          Column {
+            id: powerColumn
 
-          width: parent.width - 20
-          anchors.left: parent.left
-          anchors.leftMargin: 10
-          anchors.top: parent.top
-          anchors.topMargin: 10
-          spacing: 8
+            width: parent.width - 24
+            anchors.left: parent.left
+            anchors.leftMargin: 12
+            anchors.top: parent.top
+            anchors.topMargin: 12
+            spacing: 12
 
-          UiText {
-            text: "Power"
-            size: "sm"
-            font.weight: Font.DemiBold
-          }
-
-          Controls.Menu {
-            width: parent.width
-
-            Controls.MenuItem {
+            Row {
               width: parent.width
-              iconName: "lock"
-              title: "Lock"
-              compact: true
-              dividerVisible: true
-              onClicked: sessionActions.lock()
+              spacing: 14
+
+              Rectangle {
+                width: 56
+                height: 56
+                radius: 28
+                color: "#f2f4f7"
+
+                UiIcon {
+                  anchors.centerIn: parent
+                  name: root.powerActionIcon(root.powerHeroAction())
+                  strokeColor: Theme.panelOverlay
+                  stroke: 2.2
+                }
+              }
+
+              Column {
+                width: Math.max(0, parent.width - 70)
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 3
+
+                UiText {
+                  width: parent.width
+                  text: root.powerActionTitle(root.powerHeroAction())
+                  size: "xl"
+                  font.weight: Font.Bold
+                  elide: Text.ElideRight
+                }
+
+                UiText {
+                  width: parent.width
+                  visible: root.powerHeroHint() !== ""
+                  text: root.powerHeroHint()
+                  size: "xs"
+                  tone: "subtle"
+                  wrapMode: Text.WordWrap
+                }
+              }
             }
 
-            Controls.MenuItem {
+            Column {
               width: parent.width
-              iconName: "moon"
-              title: "Suspend"
-              compact: true
-              dividerVisible: true
-              onClicked: sessionActions.sleep()
+              spacing: 0
+
+              Controls.MenuItem {
+                width: parent.width
+                iconName: ""
+                title: "Lock"
+                compact: true
+                dividerVisible: true
+                onClicked: sessionActions.lock()
+              }
+
+              Controls.MenuItem {
+                width: parent.width
+                iconName: ""
+                title: "Suspend"
+                compact: true
+                dividerVisible: true
+                onClicked: sessionActions.sleep()
+              }
+
+              Controls.MenuItem {
+                width: parent.width
+                iconName: ""
+                title: "Restart"
+                compact: true
+                activeStyle: "subtle"
+                actionText: root.pendingPowerAction === "restart" ? "Confirm" : ""
+                actionTextOnHover: false
+                dividerVisible: true
+                active: root.pendingPowerAction === "restart"
+                onClicked: root.triggerPowerAction("restart")
+              }
+
+              Controls.MenuItem {
+                width: parent.width
+                iconName: ""
+                title: "Power Off"
+                compact: true
+                activeStyle: "subtle"
+                actionText: root.pendingPowerAction === "shutdown" ? "Confirm" : ""
+                actionTextOnHover: false
+                dividerVisible: true
+                active: root.pendingPowerAction === "shutdown"
+                onClicked: root.triggerPowerAction("shutdown")
+              }
+
+              Controls.MenuItem {
+                width: parent.width
+                iconName: ""
+                title: "Log Out"
+                compact: true
+                activeStyle: "subtle"
+                actionText: root.pendingPowerAction === "logout" ? "Confirm" : ""
+                actionTextOnHover: false
+                active: root.pendingPowerAction === "logout"
+                onClicked: root.triggerPowerAction("logout")
+              }
             }
 
-            Controls.MenuItem {
-              width: parent.width
-              iconName: "restart"
-              title: root.powerActionLabel("restart", "Restart")
-              compact: true
-              dividerVisible: true
-              active: root.pendingPowerAction === "restart"
-              onClicked: root.triggerPowerAction("restart")
+            UiText {
+              visible: sessionActions.lastError !== ""
+              text: sessionActions.lastError
+              size: "xs"
+              tone: "accent"
+              wrapMode: Text.WordWrap
             }
-
-            Controls.MenuItem {
-              width: parent.width
-              iconName: "power"
-              title: root.powerActionLabel("shutdown", "Power Off")
-              compact: true
-              dividerVisible: true
-              active: root.pendingPowerAction === "shutdown"
-              onClicked: root.triggerPowerAction("shutdown")
-            }
-
-            Controls.MenuItem {
-              width: parent.width
-              iconName: "logout"
-              title: root.powerActionLabel("logout", "Log Out")
-              compact: true
-              active: root.pendingPowerAction === "logout"
-              onClicked: root.triggerPowerAction("logout")
-            }
-          }
-
-          UiText {
-            visible: sessionActions.lastError !== ""
-            text: sessionActions.lastError
-            size: "xs"
-            tone: "accent"
-            wrapMode: Text.WordWrap
-          }
         }
       }
 
       Row {
         width: parent.width
-        height: 44
+        height: 40
         spacing: 10
 
         Controls.IconButton {
           id: muteButton
           anchors.verticalCenter: parent.verticalCenter
           width: implicitWidth
+          variant: "minimal"
           iconName: root.audioReady && audioService.muted ? "speaker-muted" : "speaker"
           active: root.audioReady && audioService.muted
           enabled: root.audioReady
@@ -1309,6 +1413,7 @@ FocusScope {
           id: outputButton
           anchors.verticalCenter: parent.verticalCenter
           width: implicitWidth
+          variant: "minimal"
           iconName: root.expandedSection === "outputs" ? "chevron-down" : "chevron-right"
           active: root.expandedSection === "outputs"
           enabled: Pipewire.ready
@@ -1388,13 +1493,14 @@ FocusScope {
 
       Row {
         width: parent.width
-        height: 44
+        height: 40
         spacing: 10
 
         Controls.IconButton {
           id: brightnessBadge
           anchors.verticalCenter: parent.verticalCenter
           interactive: false
+          variant: "minimal"
           iconName: "sun"
         }
 

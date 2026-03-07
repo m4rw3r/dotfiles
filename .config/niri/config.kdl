@@ -353,11 +353,10 @@ window-rule {
     clip-to-geometry true
 }
 
-// layer-rule {
-//     match namespace="^wallpaper$"
-//
-//     place-within-backdrop true
-// }
+layer-rule {
+    match namespace="^swww-daemonbackdrop$"
+    place-within-backdrop true
+}
 
 binds {
     Mod+Space { spawn "qs" "ipc" "call" "ui" "toggleShade"; }

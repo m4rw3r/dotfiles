@@ -24,6 +24,12 @@ Item {
   property int launcherPageSize: launcherColumns * launcherRows
   property int launcherSelectedIndex: 0
   property var activeScreen: null
+  property string activeScreenName: ""
+  property int activeScreenIndexHint: -1
+  property string pendingLauncherQuery: ""
+  property int focusedOutputLookupDeadlineMs: 90
+  property int openRequestSerial: 0
+  property int pendingOpenRequestId: 0
   readonly property var inputMethod: Qt.inputMethod
   readonly property real inputMethodHeight: inputMethod ? inputMethod.keyboardRectangle.height : 0
   readonly property bool inputMethodVisible: inputMethod
@@ -45,18 +51,92 @@ Item {
     if (inputMethod) inputMethod.hide();
   }
 
-  function ensureActiveScreen() {
+  function screenName(screen) {
+    return screen && screen.name ? String(screen.name) : "";
+  }
+
+  function indexOfScreen(screen) {
     const screens = Quickshell.screens;
-    if (screens.length === 0) {
-      activeScreen = null;
-      return;
-    }
-
     for (let i = 0; i < screens.length; i += 1) {
-      if (screens[i] === activeScreen) return;
+      if (screens[i] === screen) return i;
     }
 
-    activeScreen = screens[0];
+    return -1;
+  }
+
+  function screenByName(name) {
+    if (name === "") return null;
+
+    const screens = Quickshell.screens;
+    for (let i = 0; i < screens.length; i += 1) {
+      if (screenName(screens[i]) === name) return screens[i];
+    }
+
+    return null;
+  }
+
+  function rememberActiveScreen(screen) {
+    if (!screen) return;
+
+    const index = indexOfScreen(screen);
+    if (index >= 0) activeScreenIndexHint = index;
+
+    const name = screenName(screen);
+    if (name !== "") activeScreenName = name;
+  }
+
+  function resolveActiveScreen(preferredScreen) {
+    const screens = Quickshell.screens;
+    if (screens.length === 0) return null;
+
+    if (preferredScreen && indexOfScreen(preferredScreen) >= 0) return preferredScreen;
+
+    if (activeScreen && indexOfScreen(activeScreen) >= 0) return activeScreen;
+
+    const namedScreen = screenByName(activeScreenName);
+    if (namedScreen) return namedScreen;
+
+    if (activeScreenIndexHint >= 0) {
+      return screens[Math.min(activeScreenIndexHint, screens.length - 1)];
+    }
+
+    return screens[0];
+  }
+
+  function ensureActiveScreen(preferredScreen) {
+    const nextScreen = resolveActiveScreen(preferredScreen);
+    activeScreen = nextScreen;
+    rememberActiveScreen(nextScreen);
+    return nextScreen;
+  }
+
+  function setActiveScreen(screen) {
+    return ensureActiveScreen(screen);
+  }
+
+  function parseFocusedOutput(text) {
+    const payload = String(text || "").trim();
+    if (payload === "") return null;
+
+    try {
+      const parsed = JSON.parse(payload);
+      return screenByName(parsed && parsed.name ? String(parsed.name) : "");
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function finishPendingLauncherOpen(requestId, preferredScreen) {
+    if (requestId === 0 || requestId !== pendingOpenRequestId) return;
+
+    pendingOpenRequestId = 0;
+    focusedOutputLookupTimer.stop();
+    ensureActiveScreen(preferredScreen);
+    launcherOpen = true;
+    launcherQuery = pendingLauncherQuery;
+    launcherPage = 0;
+    launcherSelectedIndex = 0;
+    refreshLauncherResults();
   }
 
   function clampLauncherSelection() {
@@ -150,16 +230,25 @@ Item {
 
   function openLauncher(query) {
     launcherOpening();
-    ensureActiveScreen();
-    launcherOpen = true;
-    launcherQuery = query === undefined ? "" : String(query);
-    launcherPage = 0;
-    launcherSelectedIndex = 0;
-    refreshLauncherResults();
+    pendingLauncherQuery = query === undefined ? "" : String(query);
+    openRequestSerial += 1;
+    pendingOpenRequestId = openRequestSerial;
+
+    if (Quickshell.screens.length === 0) {
+      finishPendingLauncherOpen(pendingOpenRequestId, null);
+      return;
+    }
+
+    focusedOutputProcess.requestId = pendingOpenRequestId;
+    focusedOutputLookupTimer.restart();
+    focusedOutputProcess.exec(["niri", "msg", "-j", "focused-output"]);
   }
 
   function closeLauncher() {
+    pendingOpenRequestId = 0;
+    focusedOutputLookupTimer.stop();
     launcherOpen = false;
+    pendingLauncherQuery = "";
     launcherQuery = "";
     launcherPage = 0;
     launcherSelectedIndex = 0;
@@ -193,6 +282,13 @@ Item {
     }
   }
 
+  Connections {
+    target: Quickshell
+    function onScreensChanged() {
+      root.ensureActiveScreen();
+    }
+  }
+
   IpcHandler {
     target: "launcher"
     function toggle(): void {
@@ -207,6 +303,36 @@ Item {
     function search(query: string): void {
       root.openLauncher(query);
     }
+  }
+
+  StdioCollector {
+    id: focusedOutputStdout
+    waitForEnd: true
+  }
+
+  StdioCollector {
+    id: focusedOutputStderr
+    waitForEnd: true
+  }
+
+  Process {
+    id: focusedOutputProcess
+
+    property int requestId: 0
+    stdout: focusedOutputStdout
+    stderr: focusedOutputStderr
+
+    onExited: function(exitCode) {
+      const preferredScreen = exitCode === 0 ? root.parseFocusedOutput(focusedOutputStdout.text) : null;
+      root.finishPendingLauncherOpen(focusedOutputProcess.requestId, preferredScreen);
+    }
+  }
+
+  Timer {
+    id: focusedOutputLookupTimer
+    interval: root.focusedOutputLookupDeadlineMs
+    repeat: false
+    onTriggered: root.finishPendingLauncherOpen(root.pendingOpenRequestId, null)
   }
 
   Variants {
@@ -240,7 +366,7 @@ Item {
         : WlrKeyboardFocus.None
 
       function focusSearch(fromTouch) {
-        root.activeScreen = launcherWindow.modelData;
+        root.setActiveScreen(launcherWindow.modelData);
         oskFromTouch = fromTouch;
         searchInput.forceActiveFocus();
         if (!fromTouch) return;
@@ -342,7 +468,7 @@ Item {
       }
 
       function focusGrid() {
-        root.activeScreen = launcherWindow.modelData;
+        root.setActiveScreen(launcherWindow.modelData);
         launcherContent.forceActiveFocus();
       }
 
@@ -748,7 +874,7 @@ Item {
                     stripSnapAnimation.stop();
                     pageFrame.dragStartPage = root.launcherPage;
                     pageFrame.dragStartX = pageStrip.x;
-                    root.activeScreen = launcherWindow.modelData;
+                    root.setActiveScreen(launcherWindow.modelData);
                     return;
                   }
 
@@ -807,7 +933,7 @@ Item {
                             id: tileTouch
                             anchors.fill: parent
                             onPressed: {
-                              root.activeScreen = launcherWindow.modelData;
+                              root.setActiveScreen(launcherWindow.modelData);
                               root.setLauncherSelection(tile.absoluteIndex);
                             }
                             onClicked: root.launchEntry(tile.entry)

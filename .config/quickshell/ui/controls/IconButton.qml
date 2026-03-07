@@ -10,6 +10,7 @@ Ui.UiSurface {
   property bool circular: false
   property bool interactive: true
   property string variant: "filled"
+  property int iconSize: 20
   property color iconColor: {
     if (!enabled) return Theme.textSubtle;
     if (variant === "minimal") return active ? Theme.text : Theme.textMuted;
@@ -36,6 +37,8 @@ Ui.UiSurface {
 
   Ui.UiIcon {
     anchors.centerIn: parent
+    width: root.iconSize
+    height: root.iconSize
     name: root.iconName
     strokeColor: root.iconColor
   }

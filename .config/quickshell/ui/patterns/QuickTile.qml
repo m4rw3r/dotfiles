@@ -16,17 +16,18 @@ Item {
   signal secondaryClicked()
 
   implicitWidth: parent ? Math.floor((parent.width - 10) / 2) : 180
-  implicitHeight: root.subtitle === "" ? 46 : 60
+  implicitHeight: root.subtitle === "" ? 44 : 56
   opacity: enabled ? 1 : 0.5
 
   readonly property bool highlighted: active || (highlightExpanded && expanded)
-  readonly property real tileRadius: 20
-  readonly property real splitWidth: expandable ? 54 : 0
+  readonly property real tileRadius: 18
+  readonly property real splitWidth: expandable ? (highlighted ? 38 : 42) : 0
+  readonly property real splitInset: expandable ? 1 : 0
   readonly property bool pressed: primaryTouch.pressed || (expandable && secondaryTouch.pressed)
   readonly property color tileColor: highlighted
     ? (pressed ? Theme.toggleOnStrong : Theme.toggleOn)
     : (pressed ? Theme.fieldPressed : Theme.field)
-  readonly property color splitColor: highlighted ? Qt.lighter(root.tileColor, 1.18) : root.tileColor
+  readonly property color splitColor: highlighted ? Qt.lighter(root.tileColor, 1.06) : Qt.lighter(root.tileColor, 1.05)
 
   Rectangle {
     anchors.fill: parent
@@ -38,9 +39,12 @@ Item {
 
   Item {
     anchors.top: parent.top
+    anchors.topMargin: root.splitInset
     anchors.bottom: parent.bottom
+    anchors.bottomMargin: root.splitInset
     anchors.right: parent.right
-    width: root.splitWidth
+    anchors.rightMargin: root.splitInset
+    width: Math.max(0, root.splitWidth - root.splitInset)
     visible: root.expandable
     clip: true
 
@@ -48,7 +52,7 @@ Item {
       x: -root.tileRadius
       width: parent.width + root.tileRadius
       height: parent.height
-      radius: root.tileRadius
+      radius: root.tileRadius - root.splitInset
       color: root.splitColor
     }
   }
@@ -65,9 +69,9 @@ Item {
 
   Row {
     anchors.fill: parent
-    anchors.leftMargin: 14
-    anchors.rightMargin: 12
-    spacing: 12
+    anchors.leftMargin: 13
+    anchors.rightMargin: 10
+    spacing: 10
 
     Ui.UiIcon {
       anchors.verticalCenter: parent.verticalCenter
@@ -76,7 +80,7 @@ Item {
     }
 
     Column {
-      width: Math.max(0, parent.width - (root.expandable ? 80 : 34))
+      width: Math.max(0, parent.width - (root.expandable ? (root.splitWidth + 24) : 32))
       anchors.verticalCenter: parent.verticalCenter
       spacing: root.subtitle === "" ? 0 : 2
 
@@ -102,12 +106,14 @@ Item {
 
     Item {
       visible: root.expandable
-      width: 42
+      width: 30
       height: parent.height
 
       Ui.UiIcon {
         anchors.centerIn: parent
         visible: root.expandable
+        width: 18
+        height: 18
         name: root.expanded ? "chevron-down" : "chevron-right"
         strokeColor: root.highlighted ? Theme.textOnAccent : Theme.iconSecondary
       }

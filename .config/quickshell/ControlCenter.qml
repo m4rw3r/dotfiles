@@ -1238,137 +1238,134 @@ FocusScope {
       }
 
       UiSurface {
-          id: powerPopover
+        id: powerPopover
 
-          visible: root.expandedSection === "power"
-          width: parent.width
-          implicitHeight: powerColumn.implicitHeight + 24
-          tone: "raised"
-          outlined: false
-          radius: 26
-          border.width: 1
-          border.color: Qt.rgba(1, 1, 1, 0.1)
+        visible: root.expandedSection === "power"
+        width: parent.width
+        implicitHeight: powerColumn.implicitHeight + 28
+        tone: "submenu"
+        outlined: false
+        radius: 24
+        color: Qt.darker(Theme.submenu, 1.06)
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.08)
 
-          Column {
-            id: powerColumn
+        Column {
+          id: powerColumn
 
-            width: parent.width - 24
-            anchors.left: parent.left
-            anchors.leftMargin: 12
-            anchors.top: parent.top
-            anchors.topMargin: 12
+          width: parent.width - 32
+          anchors.left: parent.left
+          anchors.leftMargin: 16
+          anchors.top: parent.top
+          anchors.topMargin: 16
+          spacing: 14
+
+          Row {
+            width: parent.width
             spacing: 12
 
-            Row {
-              width: parent.width
-              spacing: 14
+            Rectangle {
+              width: 52
+              height: 52
+              radius: 26
+              color: "#f2f4f7"
 
-              Rectangle {
-                width: 56
-                height: 56
-                radius: 28
-                color: "#f2f4f7"
-
-                UiIcon {
-                  anchors.centerIn: parent
-                  name: root.powerActionIcon(root.powerHeroAction())
-                  strokeColor: Theme.panelOverlay
-                  stroke: 2.2
-                }
-              }
-
-              Column {
-                width: Math.max(0, parent.width - 70)
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 3
-
-                UiText {
-                  width: parent.width
-                  text: root.powerActionTitle(root.powerHeroAction())
-                  size: "xl"
-                  font.weight: Font.Bold
-                  elide: Text.ElideRight
-                }
-
-                UiText {
-                  width: parent.width
-                  visible: root.powerHeroHint() !== ""
-                  text: root.powerHeroHint()
-                  size: "xs"
-                  tone: "subtle"
-                  wrapMode: Text.WordWrap
-                }
+              UiIcon {
+                anchors.centerIn: parent
+                name: root.powerActionIcon(root.powerHeroAction())
+                strokeColor: Theme.panelOverlay
+                stroke: 2.1
               }
             }
 
             Column {
+              width: Math.max(0, parent.width - 64)
+              anchors.verticalCenter: parent.verticalCenter
+              spacing: 2
+
+              UiText {
+                width: parent.width
+                text: root.powerActionTitle(root.powerHeroAction())
+                size: "lg"
+                font.weight: Font.Bold
+                elide: Text.ElideRight
+              }
+
+              UiText {
+                width: parent.width
+                visible: root.powerHeroHint() !== ""
+                text: root.powerHeroHint()
+                size: "xs"
+                tone: "subtle"
+                wrapMode: Text.WordWrap
+              }
+            }
+          }
+
+          Column {
+            width: parent.width
+            spacing: 2
+
+            Controls.MenuItem {
               width: parent.width
-              spacing: 0
-
-              Controls.MenuItem {
-                width: parent.width
-                iconName: ""
-                title: "Lock"
-                compact: true
-                dividerVisible: true
-                onClicked: sessionActions.lock()
-              }
-
-              Controls.MenuItem {
-                width: parent.width
-                iconName: ""
-                title: "Suspend"
-                compact: true
-                dividerVisible: true
-                onClicked: sessionActions.sleep()
-              }
-
-              Controls.MenuItem {
-                width: parent.width
-                iconName: ""
-                title: "Restart"
-                compact: true
-                activeStyle: "subtle"
-                actionText: root.pendingPowerAction === "restart" ? "Confirm" : ""
-                actionTextOnHover: false
-                dividerVisible: true
-                active: root.pendingPowerAction === "restart"
-                onClicked: root.triggerPowerAction("restart")
-              }
-
-              Controls.MenuItem {
-                width: parent.width
-                iconName: ""
-                title: "Power Off"
-                compact: true
-                activeStyle: "subtle"
-                actionText: root.pendingPowerAction === "shutdown" ? "Confirm" : ""
-                actionTextOnHover: false
-                dividerVisible: true
-                active: root.pendingPowerAction === "shutdown"
-                onClicked: root.triggerPowerAction("shutdown")
-              }
-
-              Controls.MenuItem {
-                width: parent.width
-                iconName: ""
-                title: "Log Out"
-                compact: true
-                activeStyle: "subtle"
-                actionText: root.pendingPowerAction === "logout" ? "Confirm" : ""
-                actionTextOnHover: false
-                active: root.pendingPowerAction === "logout"
-                onClicked: root.triggerPowerAction("logout")
-              }
+              iconName: ""
+              title: "Lock"
+              compact: true
+              onClicked: sessionActions.lock()
             }
 
-            UiText {
-              visible: sessionActions.lastError !== ""
-              text: sessionActions.lastError
-              size: "xs"
-              tone: "accent"
-              wrapMode: Text.WordWrap
+            Controls.MenuItem {
+              width: parent.width
+              iconName: ""
+              title: "Suspend"
+              compact: true
+              onClicked: sessionActions.sleep()
             }
+
+            Controls.MenuItem {
+              width: parent.width
+              iconName: ""
+              title: "Restart"
+              compact: true
+              activeStyle: "subtle"
+              actionText: root.pendingPowerAction === "restart" ? "Confirm" : ""
+              actionTextOnHover: false
+              active: root.pendingPowerAction === "restart"
+              onClicked: root.triggerPowerAction("restart")
+            }
+
+            Controls.MenuItem {
+              width: parent.width
+              iconName: ""
+              title: "Power Off"
+              compact: true
+              activeStyle: "subtle"
+              actionText: root.pendingPowerAction === "shutdown" ? "Confirm" : ""
+              actionTextOnHover: false
+              active: root.pendingPowerAction === "shutdown"
+              onClicked: root.triggerPowerAction("shutdown")
+            }
+
+            Controls.MenuItem {
+              width: parent.width
+              iconName: ""
+              title: "Log Out"
+              compact: true
+              activeStyle: "subtle"
+              actionText: root.pendingPowerAction === "logout" ? "Confirm" : ""
+              actionTextOnHover: false
+              active: root.pendingPowerAction === "logout"
+              onClicked: root.triggerPowerAction("logout")
+            }
+          }
+
+          UiText {
+            visible: sessionActions.lastError !== ""
+            text: sessionActions.lastError
+            size: "xs"
+            tone: "accent"
+            wrapMode: Text.WordWrap
+          }
         }
       }
 
@@ -1414,6 +1411,7 @@ FocusScope {
           anchors.verticalCenter: parent.verticalCenter
           width: implicitWidth
           variant: "minimal"
+          iconSize: 18
           iconName: root.expandedSection === "outputs" ? "chevron-down" : "chevron-right"
           active: root.expandedSection === "outputs"
           enabled: Pipewire.ready

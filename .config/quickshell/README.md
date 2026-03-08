@@ -33,9 +33,9 @@ Small Quickshell setup with two overlays: an app launcher and a top control pane
 ## IPC targets
 
 `ui`
-- `toggleShade()`
-- `openShade()`
-- `closeShade()`
+- `toggleControlCenter()`
+- `showControlCenter()`
+- `hideControlCenter()`
 
 `launcher`
 - `toggle()`

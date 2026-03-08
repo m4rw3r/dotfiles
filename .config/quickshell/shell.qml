@@ -15,17 +15,17 @@ ShellRoot {
 
   IpcHandler {
     target: "ui"
-    function toggleShade() {
+    function toggleControlCenter() {
       root.shadeOpen = !root.shadeOpen;
       if (root.shadeOpen) root.galleryOpen = false;
       if (root.shadeOpen) launcher.closeLauncher();
     }
-    function openShade() {
+    function showControlCenter() {
       root.shadeOpen = true;
       root.galleryOpen = false;
       launcher.closeLauncher();
     }
-    function closeShade() {
+    function hideControlCenter() {
       root.shadeOpen = false;
     }
   }

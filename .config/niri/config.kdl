@@ -359,7 +359,7 @@ layer-rule {
 }
 
 binds {
-    Mod+Space { spawn "qs" "ipc" "call" "ui" "toggleShade"; }
+    Mod+Space { spawn "qs" "ipc" "call" "ui" "toggleControlCenter"; }
     Mod+D { spawn "qs" "ipc" "call" "launcher" "toggle"; }
     Mod+Shift+G { spawn "qs" "ipc" "call" "gallery" "toggle"; }
     Mod+T hotkey-overlay-title="Open a Terminal: Alacritty" { spawn "alacritty"; }

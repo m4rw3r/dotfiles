@@ -827,6 +827,60 @@ FocusScope {
     }
   }
 
+  component PowerMenuAction: Item {
+    id: actionRow
+
+    property string title: ""
+    property string actionText: ""
+    property bool active: false
+    signal clicked()
+
+    width: parent ? parent.width : implicitWidth
+    implicitWidth: 1
+    implicitHeight: 54
+    opacity: enabled ? 1 : 0.5
+
+    Rectangle {
+      anchors.fill: parent
+      radius: 18
+      color: actionRow.active
+        ? Qt.rgba(1, 1, 1, 0.06)
+        : (actionTouch.pressed ? Qt.rgba(1, 1, 1, 0.035) : "transparent")
+      border.width: actionRow.active ? 1 : 0
+      border.color: Qt.rgba(1, 1, 1, 0.1)
+    }
+
+    UiText {
+      anchors.left: parent.left
+      anchors.leftMargin: 18
+      anchors.verticalCenter: parent.verticalCenter
+      text: actionRow.title
+      size: "md"
+      font.pixelSize: 17
+      font.weight: Font.Medium
+    }
+
+    UiText {
+      anchors.right: parent.right
+      anchors.rightMargin: 18
+      anchors.verticalCenter: parent.verticalCenter
+      visible: text !== ""
+      text: actionRow.actionText
+      size: "xs"
+      tone: "muted"
+      font.weight: Font.DemiBold
+    }
+
+    MouseArea {
+      id: actionTouch
+
+      anchors.fill: parent
+      enabled: actionRow.enabled
+      hoverEnabled: true
+      onClicked: actionRow.clicked()
+    }
+  }
+
   component BrightnessController: Item {
     id: brightnessController
 
@@ -1875,51 +1929,53 @@ FocusScope {
         x: content.x
         y: content.y + powerPopoverSpacer.y
         z: 1
-        implicitHeight: powerColumn.implicitHeight + 28
+        implicitHeight: powerColumn.implicitHeight + 36
         tone: "submenu"
         outlined: false
-        radius: 24
-        color: Qt.darker(Theme.submenu, 1.06)
+        radius: 28
+        color: Theme.submenu
         border.width: 1
         border.color: Qt.rgba(1, 1, 1, 0.08)
 
         Column {
           id: powerColumn
 
-          width: parent.width - 32
+          width: parent.width - 40
           anchors.left: parent.left
-          anchors.leftMargin: 16
+          anchors.leftMargin: 20
           anchors.top: parent.top
-          anchors.topMargin: 16
-          spacing: 14
+          anchors.topMargin: 20
+          spacing: 18
 
           Row {
             width: parent.width
-            spacing: 12
+            spacing: 14
 
             Rectangle {
-              width: 52
-              height: 52
-              radius: 26
-              color: "#f2f4f7"
+              width: 56
+              height: 56
+              radius: 28
+              color: Qt.rgba(1, 1, 1, 0.16)
 
               UiIcon {
                 anchors.centerIn: parent
+                width: 26
+                height: 26
                 name: root.powerActionIcon(root.powerHeroAction())
-                strokeColor: Theme.panelOverlay
+                strokeColor: Theme.text
                 stroke: 2.1
               }
             }
 
             Column {
-              width: Math.max(0, parent.width - 64)
+              width: Math.max(0, parent.width - 70)
               anchors.verticalCenter: parent.verticalCenter
-              spacing: 2
+              spacing: 4
 
               UiText {
                 width: parent.width
                 text: root.powerActionTitle(root.powerHeroAction())
-                size: "lg"
+                size: "xl"
                 font.weight: Font.Bold
                 elide: Text.ElideRight
               }
@@ -1937,56 +1993,43 @@ FocusScope {
 
           Column {
             width: parent.width
-            spacing: 2
+            spacing: 4
 
-            Controls.MenuItem {
+            PowerMenuAction {
               width: parent.width
-              iconName: ""
-              title: "Lock"
-              compact: true
-              onClicked: sessionActions.lock()
-            }
-
-            Controls.MenuItem {
-              width: parent.width
-              iconName: ""
               title: "Suspend"
-              compact: true
               onClicked: sessionActions.sleep()
             }
 
-            Controls.MenuItem {
+            PowerMenuAction {
               width: parent.width
-              iconName: ""
               title: "Restart"
-              compact: true
-              activeStyle: "subtle"
               actionText: root.pendingPowerAction === "restart" ? "Confirm" : ""
-              actionTextOnHover: false
               active: root.pendingPowerAction === "restart"
               onClicked: root.triggerPowerAction("restart")
             }
 
-            Controls.MenuItem {
+            PowerMenuAction {
               width: parent.width
-              iconName: ""
               title: "Power Off"
-              compact: true
-              activeStyle: "subtle"
               actionText: root.pendingPowerAction === "shutdown" ? "Confirm" : ""
-              actionTextOnHover: false
               active: root.pendingPowerAction === "shutdown"
               onClicked: root.triggerPowerAction("shutdown")
             }
 
-            Controls.MenuItem {
+            Rectangle {
+              width: parent.width - 36
+              height: 1
+              radius: 0.5
+              anchors.horizontalCenter: parent.horizontalCenter
+              color: Theme.divider
+              opacity: 0.72
+            }
+
+            PowerMenuAction {
               width: parent.width
-              iconName: ""
               title: "Log Out"
-              compact: true
-              activeStyle: "subtle"
               actionText: root.pendingPowerAction === "logout" ? "Confirm" : ""
-              actionTextOnHover: false
               active: root.pendingPowerAction === "logout"
               onClicked: root.triggerPowerAction("logout")
             }

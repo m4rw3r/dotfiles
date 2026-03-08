@@ -24,6 +24,15 @@ FocusScope {
   property string pendingPowerAction: ""
   property string wifiPasswordTarget: ""
   property string wifiPassword: ""
+  property bool bluetoothBusy: false
+  property bool bluetoothEnableAfterUnblock: false
+  property bool bluetoothRfkillKnown: false
+  property bool bluetoothRfkillRefreshing: false
+  property bool bluetoothRfkillRefreshQueued: false
+  property bool bluetoothSoftBlocked: false
+  property bool bluetoothHardBlocked: false
+  property bool bluetoothLastErrorFromRefresh: false
+  property string bluetoothLastError: ""
   property bool powerProfileBusy: false
   property real pendingAudioVolume: 0
   property real pendingScreenBrightness: 0
@@ -39,6 +48,8 @@ FocusScope {
   readonly property var audioNode: audioSink && audioSink.audio ? audioSink.audio : null
   readonly property var battery: UPower.displayDevice
   readonly property var bluetoothAdapter: Bluetooth.defaultAdapter
+  readonly property bool bluetoothBlocked: !!bluetoothAdapter
+    && (bluetoothAdapter.state === BluetoothAdapterState.Blocked || bluetoothSoftBlocked || bluetoothHardBlocked)
   readonly property bool batteryAvailable: battery && battery.isPresent && battery.isLaptopBattery
   readonly property bool audioReady: audioService.ready
   readonly property bool audioLoading: panelOpen && !audioService.settled
@@ -49,6 +60,8 @@ FocusScope {
     refreshPanelData();
     panelRefreshTimer.restart();
   }
+
+  onBluetoothAdapterChanged: refreshBluetoothRfkillState()
 
   function clamp(value, minValue, maxValue) {
     return Math.max(minValue, Math.min(maxValue, value));
@@ -62,6 +75,7 @@ FocusScope {
     }
     if (expandedSection !== "power") pendingPowerAction = "";
     if (expandedSection === "wifi") wifiService.refresh();
+    if (expandedSection === "bluetooth") refreshBluetoothRfkillState();
     if (expandedSection !== "bluetooth" && bluetoothAdapter) bluetoothAdapter.discovering = false;
   }
 
@@ -139,6 +153,43 @@ FocusScope {
     return "battery";
   }
 
+  function bluetoothRfkillCommand(prefix) {
+    const scriptPrefix = prefix || "";
+    const script = `${scriptPrefix}for d in /sys/class/rfkill/rfkill*; do [ -r "$d/type" ] || continue; type=$(cat "$d/type"); [ "$type" = "bluetooth" ] || continue; name=$(cat "$d/name" 2>/dev/null || printf ''); soft=$(cat "$d/soft" 2>/dev/null || printf '0'); hard=$(cat "$d/hard" 2>/dev/null || printf '0'); printf '%s\t%s\t%s\n' "$name" "$soft" "$hard"; done`;
+    return ["sh", "-lc", script];
+  }
+
+  function parseBluetoothRfkillState(text) {
+    let softBlocked = false;
+    let hardBlocked = false;
+
+    const lines = String(text || "").split("\n");
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i].trim();
+      if (line === "") continue;
+
+      const fields = line.split("\t");
+      if (fields.length < 3) continue;
+
+      if (fields[1] === "1") softBlocked = true;
+      if (fields[2] === "1") hardBlocked = true;
+    }
+
+    bluetoothSoftBlocked = softBlocked;
+    bluetoothHardBlocked = hardBlocked;
+    bluetoothRfkillKnown = true;
+  }
+
+  function refreshBluetoothRfkillState() {
+    if (bluetoothRfkillRefreshing) {
+      bluetoothRfkillRefreshQueued = true;
+      return;
+    }
+
+    bluetoothRfkillRefreshing = true;
+    bluetoothRfkillStateProcess.exec(bluetoothRfkillCommand(""));
+  }
+
   function normalizePowerAction(action) {
     if (action === "sleep") return "suspend";
     return action;
@@ -183,7 +234,9 @@ FocusScope {
 
   function bluetoothSummary() {
     if (!bluetoothAdapter) return "Unavailable";
-    if (bluetoothAdapter.state === BluetoothAdapterState.Blocked) return "Blocked";
+    if (bluetoothBusy && bluetoothEnableAfterUnblock) return "Unblocking";
+    if (bluetoothHardBlocked) return "Hardware Blocked";
+    if (bluetoothBlocked) return "Blocked";
     if (!bluetoothAdapter.enabled) return "Off";
     return bluetoothAdapter.discovering ? "Scanning" : "On";
   }
@@ -232,9 +285,26 @@ FocusScope {
 
   function bluetoothTileSubtitle() {
     if (!bluetoothAdapter) return "Unavailable";
-    if (bluetoothAdapter.state === BluetoothAdapterState.Blocked) return "Blocked";
+    if (bluetoothBusy && bluetoothEnableAfterUnblock) return "Unblocking...";
+    if (bluetoothHardBlocked) return "Hardware Blocked";
+    if (bluetoothBlocked) return "Blocked";
     if (!bluetoothAdapter.enabled) return "Off";
     return bluetoothAdapter.discovering ? "Scanning" : "Ready";
+  }
+
+  function bluetoothBlockedMessage() {
+    if (!bluetoothBlocked) return "";
+    if (bluetoothBusy && bluetoothEnableAfterUnblock) return "Unblocking Bluetooth...";
+    if (bluetoothHardBlocked) return "Bluetooth is blocked by hardware or firmware airplane mode.";
+    if (bluetoothSoftBlocked) return "Bluetooth is blocked by rfkill. Turn On will unblock it.";
+    if (!bluetoothRfkillKnown) return "Bluetooth is blocked. Turn On will try to unblock it.";
+    return "Bluetooth is blocked.";
+  }
+
+  function bluetoothPrimaryActionText() {
+    if (bluetoothBusy && bluetoothEnableAfterUnblock) return "Unblocking...";
+    if (bluetoothHardBlocked) return "Blocked";
+    return bluetoothAdapter && bluetoothAdapter.enabled ? "Turn Off" : "Turn On";
   }
 
   function profileShortLabel() {
@@ -308,6 +378,7 @@ FocusScope {
     brightnessService.refresh();
     lightingService.refresh();
     wifiService.refresh();
+    refreshBluetoothRfkillState();
     pendingAudioVolume = audioService.volume;
     pendingScreenBrightness = brightnessService.screenPercent;
   }
@@ -356,9 +427,28 @@ FocusScope {
   }
 
   function toggleBluetoothEnabled() {
-    if (!bluetoothAdapter || bluetoothAdapter.state === BluetoothAdapterState.Blocked) return;
+    if (!bluetoothAdapter || bluetoothBusy) return;
+
+    bluetoothLastErrorFromRefresh = false;
+    bluetoothLastError = "";
+
+    if (bluetoothHardBlocked) {
+      bluetoothLastErrorFromRefresh = false;
+      bluetoothLastError = "Bluetooth is hard blocked by hardware or firmware airplane mode.";
+      refreshBluetoothRfkillState();
+      return;
+    }
+
+    if (bluetoothBlocked) {
+      bluetoothBusy = true;
+      bluetoothEnableAfterUnblock = true;
+      bluetoothUnblockProcess.exec(bluetoothRfkillCommand("rfkill unblock bluetooth && "));
+      return;
+    }
+
     bluetoothAdapter.enabled = !bluetoothAdapter.enabled;
     if (!bluetoothAdapter.enabled) bluetoothAdapter.discovering = false;
+    refreshBluetoothRfkillState();
   }
 
   onPanelOpenChanged: {
@@ -376,6 +466,19 @@ FocusScope {
       wifiPasswordTarget = "";
       wifiPassword = "";
       if (bluetoothAdapter) bluetoothAdapter.discovering = false;
+    }
+  }
+
+  Connections {
+    target: root.bluetoothAdapter
+    ignoreUnknownSignals: true
+
+    function onStateChanged() {
+      root.refreshBluetoothRfkillState();
+    }
+
+    function onEnabledChanged() {
+      root.refreshBluetoothRfkillState();
     }
   }
 
@@ -553,6 +656,102 @@ FocusScope {
 
     onExited: function(exitCode) {
       root.powerProfileBusy = false;
+    }
+  }
+
+  StdioCollector {
+    id: bluetoothRfkillStateStdout
+    waitForEnd: true
+  }
+
+  StdioCollector {
+    id: bluetoothRfkillStateStderr
+    waitForEnd: true
+  }
+
+  Process {
+    id: bluetoothRfkillStateProcess
+
+    stdout: bluetoothRfkillStateStdout
+    stderr: bluetoothRfkillStateStderr
+
+    onExited: function(exitCode) {
+      root.bluetoothRfkillRefreshing = false;
+
+      const stderrText = String(bluetoothRfkillStateStderr.text || "").trim();
+      const stdoutText = bluetoothRfkillStateStdout.text;
+
+      if (exitCode === 0) {
+        root.parseBluetoothRfkillState(stdoutText);
+        if (root.bluetoothLastErrorFromRefresh) {
+          root.bluetoothLastError = "";
+          root.bluetoothLastErrorFromRefresh = false;
+        }
+      } else {
+        root.bluetoothRfkillKnown = false;
+        root.bluetoothSoftBlocked = false;
+        root.bluetoothHardBlocked = false;
+        if (root.bluetoothLastError === "") {
+          root.bluetoothLastErrorFromRefresh = true;
+          root.bluetoothLastError = stderrText !== "" ? stderrText : "Unable to inspect Bluetooth block state.";
+        }
+      }
+
+      if (root.bluetoothRfkillRefreshQueued) {
+        root.bluetoothRfkillRefreshQueued = false;
+        root.refreshBluetoothRfkillState();
+      }
+    }
+  }
+
+  StdioCollector {
+    id: bluetoothUnblockStdout
+    waitForEnd: true
+  }
+
+  StdioCollector {
+    id: bluetoothUnblockStderr
+    waitForEnd: true
+  }
+
+  Process {
+    id: bluetoothUnblockProcess
+
+    stdout: bluetoothUnblockStdout
+    stderr: bluetoothUnblockStderr
+
+    onExited: function(exitCode) {
+      root.bluetoothBusy = false;
+      root.bluetoothEnableAfterUnblock = false;
+
+      const stderrText = String(bluetoothUnblockStderr.text || "").trim();
+      const stdoutText = bluetoothUnblockStdout.text;
+
+      if (exitCode === 0) {
+        root.parseBluetoothRfkillState(stdoutText);
+
+        if (root.bluetoothHardBlocked) {
+          root.bluetoothLastErrorFromRefresh = false;
+          root.bluetoothLastError = "Bluetooth is hard blocked by hardware or firmware airplane mode.";
+          return;
+        }
+
+        if (root.bluetoothSoftBlocked) {
+          root.bluetoothLastErrorFromRefresh = false;
+          root.bluetoothLastError = "Bluetooth is still soft blocked after the unblock attempt.";
+          return;
+        }
+
+        root.bluetoothLastErrorFromRefresh = false;
+        root.bluetoothLastError = "";
+        if (root.bluetoothAdapter) root.bluetoothAdapter.enabled = true;
+        root.refreshBluetoothRfkillState();
+        return;
+      }
+
+      root.bluetoothLastErrorFromRefresh = false;
+      root.bluetoothLastError = stderrText !== "" ? stderrText : "Unable to unblock Bluetooth.";
+      root.refreshBluetoothRfkillState();
     }
   }
 
@@ -2011,10 +2210,19 @@ FocusScope {
         }
 
         UiText {
-          visible: !!root.bluetoothAdapter && root.bluetoothAdapter.state === BluetoothAdapterState.Blocked
-          text: "Bluetooth is blocked by hardware or rfkill."
+          visible: root.bluetoothBlockedMessage() !== ""
+          text: root.bluetoothBlockedMessage()
           size: "xs"
           tone: "accent"
+          wrapMode: Text.WordWrap
+        }
+
+        UiText {
+          visible: root.bluetoothLastError !== ""
+          text: root.bluetoothLastError
+          size: "xs"
+          tone: "accent"
+          wrapMode: Text.WordWrap
         }
 
         UiText {
@@ -2130,14 +2338,14 @@ FocusScope {
           spacing: 8
 
           Controls.Button {
-            text: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? "Turn Off" : "Turn On"
-            enabled: !!root.bluetoothAdapter && root.bluetoothAdapter.state !== BluetoothAdapterState.Blocked
+            text: root.bluetoothPrimaryActionText()
+            enabled: !!root.bluetoothAdapter && !root.bluetoothBusy && !root.bluetoothHardBlocked
             onClicked: root.toggleBluetoothEnabled()
           }
 
           Controls.Button {
             text: root.bluetoothAdapter && root.bluetoothAdapter.discovering ? "Stop Scan" : "Scan"
-            enabled: !!root.bluetoothAdapter && root.bluetoothAdapter.enabled
+            enabled: !!root.bluetoothAdapter && root.bluetoothAdapter.enabled && !root.bluetoothBusy
             onClicked: {
               if (root.bluetoothAdapter) root.bluetoothAdapter.discovering = !root.bluetoothAdapter.discovering;
             }

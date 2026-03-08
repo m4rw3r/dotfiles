@@ -34,7 +34,7 @@ Ui.UiSurface {
       anchors.verticalCenter: parent.verticalCenter
       visible: root.iconName !== ""
       name: root.iconName
-      strokeColor: Theme.iconSecondary
+      strokeColor: Theme.text
     }
 
     Column {

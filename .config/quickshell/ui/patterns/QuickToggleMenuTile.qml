@@ -17,7 +17,7 @@ Item {
   opacity: enabled ? 1 : 0.5
 
   readonly property real tileRadius: 18
-  readonly property real splitWidth: active ? 56 : 60
+  readonly property real splitWidth: 36
   readonly property real splitInset: 1
   readonly property bool primaryPressed: primaryTouch.pressed
   readonly property bool secondaryPressed: secondaryTouch.pressed
@@ -69,17 +69,19 @@ Item {
   Row {
     anchors.fill: parent
     anchors.leftMargin: 13
-    anchors.rightMargin: 10
+    anchors.rightMargin: 13
     spacing: 10
 
     Ui.UiIcon {
+      id: primaryIcon
+
       anchors.verticalCenter: parent.verticalCenter
       name: root.iconName
-      strokeColor: root.active ? Theme.textOnAccent : Theme.textMuted
+      strokeColor: root.active ? Theme.textOnAccent : Theme.text
     }
 
     Ui.UiText {
-      width: Math.max(0, parent.width - (root.splitWidth + 34))
+      width: Math.max(0, parent.width - root.splitWidth - primaryIcon.implicitWidth)
       anchors.verticalCenter: parent.verticalCenter
       text: root.title
       size: "sm"
@@ -89,15 +91,16 @@ Item {
     }
 
     Item {
-      width: root.splitWidth - 12
+      width: root.splitWidth
       height: parent.height
 
       Ui.UiIcon {
         anchors.centerIn: parent
+		anchors.horizontalCenterOffset: -9
         width: 18
         height: 18
         name: root.menuOpen ? "chevron-down" : "chevron-right"
-        strokeColor: root.active ? Theme.textOnAccent : Theme.iconSecondary
+        strokeColor: root.active ? Theme.textOnAccent : Theme.text
       }
     }
   }

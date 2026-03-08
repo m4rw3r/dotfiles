@@ -49,7 +49,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         visible: root.iconName !== ""
         name: root.iconName
-        strokeColor: root.accentActive ? Theme.textOnAccent : Theme.iconSecondary
+        strokeColor: root.accentActive ? Theme.textOnAccent : Theme.text
       }
     }
 
@@ -103,7 +103,7 @@ Item {
         visible: name !== ""
         strokeColor: root.accentActive
           ? Theme.textOnAccent
-          : (root.indicatorActive ? Theme.accent : Theme.iconSecondary)
+          : (root.indicatorActive ? Theme.accent : Theme.text)
       }
     }
   }

@@ -780,7 +780,7 @@ FocusScope {
         visible: chip.iconName !== ""
         anchors.verticalCenter: parent.verticalCenter
         name: chip.iconName
-        strokeColor: Theme.textMuted
+        strokeColor: Theme.text
       }
 
       UiText {
@@ -1630,6 +1630,7 @@ FocusScope {
           width: parent.width
           anchors.verticalCenter: parent.verticalCenter
           showIcon: false
+          trailingSlotWidth: Theme.controlAccessorySlot - 4
           leadingAccessory: [
             Controls.IconButton {
               anchors.centerIn: parent
@@ -1704,7 +1705,7 @@ FocusScope {
           width: parent.width
           anchors.verticalCenter: parent.verticalCenter
           showIcon: false
-          trailingSlotWidth: Theme.controlAccessorySlot
+          trailingSlotWidth: Theme.controlAccessorySlot - 4
           leadingAccessory: [
             Controls.IconButton {
               anchors.centerIn: parent

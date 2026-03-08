@@ -46,7 +46,7 @@ Ui.UiSurface {
         Ui.UiIcon {
           anchors.centerIn: parent
           name: root.iconName
-          strokeColor: Theme.textMuted
+          strokeColor: Theme.text
         }
       }
 

@@ -37,7 +37,7 @@ Item {
     Ui.UiIcon {
       anchors.verticalCenter: parent.verticalCenter
       name: root.iconName
-      strokeColor: root.active ? Theme.textOnAccent : Theme.textMuted
+      strokeColor: root.active ? Theme.textOnAccent : Theme.text
     }
 
     Ui.UiText {

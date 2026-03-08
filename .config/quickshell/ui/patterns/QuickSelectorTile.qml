@@ -42,7 +42,7 @@ Item {
     Ui.UiIcon {
       anchors.verticalCenter: parent.verticalCenter
       name: root.iconName
-      strokeColor: root.highlighted ? Theme.textOnAccent : Theme.textMuted
+      strokeColor: root.highlighted ? Theme.textOnAccent : Theme.text
     }
 
     Ui.UiText {

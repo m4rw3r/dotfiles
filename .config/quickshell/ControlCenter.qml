@@ -381,17 +381,6 @@ FocusScope {
     return audioVolumePercentText();
   }
 
-  function outputDeviceCount() {
-    if (!Pipewire.nodes || !Pipewire.nodes.values) return 0;
-
-    let count = 0;
-    for (let i = 0; i < Pipewire.nodes.values.length; i += 1) {
-      const node = Pipewire.nodes.values[i];
-      if (node && node.audio && node.isSink && !node.isStream) count += 1;
-    }
-    return count;
-  }
-
   function audioVolumeValue() {
     if (!audioReady) return 0;
     return clamp(Number(audioService.volume), 0, 1);
@@ -1944,6 +1933,10 @@ FocusScope {
         iconName: root.audioReady && audioService.muted ? "speaker-muted" : "speaker"
         title: root.outputMenuTitle()
         subtitle: root.outputMenuSubtitle()
+        hasStatus: root.audioReady
+        statusActive: root.audioReady && !audioService.muted
+        statusToggleEnabled: root.audioReady
+        onStatusClicked: audioService.toggleMuted()
 
         Column {
           width: parent.width
@@ -1955,13 +1948,6 @@ FocusScope {
             size: "xs"
             tone: "accent"
             wrapMode: Text.WordWrap
-          }
-
-          UiText {
-            visible: Pipewire.ready && root.outputDeviceCount() === 0
-            text: "No sound outputs available."
-            size: "xs"
-            tone: "subtle"
           }
 
           Column {
@@ -2073,6 +2059,11 @@ FocusScope {
         iconName: "wifi"
         title: root.wifiTileTitle()
         subtitle: root.wifiHeroHint()
+        hasStatus: wifiService.ready
+        statusActive: wifiService.ready && wifiService.enabled && wifiService.hardwareEnabled
+        statusBusy: wifiService.busy
+        statusToggleEnabled: wifiService.ready && !wifiService.busy && wifiService.hardwareEnabled
+        onStatusClicked: root.toggleWifiEnabled()
 
         Column {
           width: parent.width
@@ -2262,6 +2253,11 @@ FocusScope {
         iconName: "bluetooth"
         title: root.bluetoothTileTitle()
         subtitle: root.bluetoothTileSubtitle()
+        hasStatus: !!root.bluetoothAdapter
+        statusActive: !!(root.bluetoothAdapter && root.bluetoothAdapter.enabled && !root.bluetoothBlocked)
+        statusBusy: root.bluetoothBusy
+        statusToggleEnabled: !!root.bluetoothAdapter && !root.bluetoothHardBlocked
+        onStatusClicked: root.toggleBluetoothEnabled()
 
         Column {
           width: parent.width

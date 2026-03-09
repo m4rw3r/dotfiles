@@ -8,10 +8,17 @@ Ui.UiSurface {
   property string iconName: ""
   property string title: ""
   property string subtitle: ""
+  property bool hasStatus: false
+  property bool statusActive: false
+  property bool statusBusy: false
+  property bool statusToggleEnabled: hasStatus
   property int horizontalPadding: 12
   property int verticalPadding: 12
   property int sectionSpacing: 12
   default property alias content: bodyColumn.data
+  signal statusClicked()
+
+  readonly property bool statusInteractive: hasStatus && statusToggleEnabled && !statusBusy
 
   width: implicitWidth
   implicitWidth: 1
@@ -41,18 +48,35 @@ Ui.UiSurface {
       spacing: 6
 
       Rectangle {
+        id: heroBadge
+
         width: 48
         height: 48
         radius: 48 / 2
-        color: Qt.rgba(1, 1, 1, 0.16)
+        color: {
+          if (!root.hasStatus) return Qt.rgba(1, 1, 1, 0.16);
+          if (root.statusActive) return heroTouch.pressed ? Theme.toggleOnStrong : Theme.toggleOn;
+          if (!root.statusToggleEnabled) return Theme.field;
+          return heroTouch.pressed ? Theme.fieldPressed : Theme.toggleOff;
+        }
+        border.width: root.hasStatus && !root.statusActive ? 1 : 0
+        border.color: Qt.rgba(1, 1, 1, 0.08)
 
         Ui.UiIcon {
           anchors.centerIn: parent
           width: 22
           height: 22
           name: root.iconName
-          strokeColor: Theme.text
+          strokeColor: root.hasStatus && root.statusActive ? Theme.textOnAccent : Theme.text
           stroke: 2.1
+        }
+
+        MouseArea {
+          id: heroTouch
+
+          anchors.fill: parent
+          enabled: root.statusInteractive
+          onClicked: root.statusClicked()
         }
       }
 

@@ -1972,7 +1972,7 @@ FocusScope {
         }
       }
 
-      UiSurface {
+      Patterns.HeroSheetPopover {
         id: powerPopover
 
         visible: root.powerMenuOpen
@@ -1980,67 +1980,13 @@ FocusScope {
         x: content.x
         y: content.y + powerPopoverSpacer.y
         z: 1
-        implicitHeight: powerColumn.implicitHeight + 36
-        tone: "submenu"
-        outlined: false
-        radius: 28
-        color: Theme.submenu
-        border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.08)
+        iconName: root.powerActionIcon(root.powerHeroAction())
+        title: root.powerActionTitle(root.powerHeroAction())
+        subtitle: root.powerHeroHint()
 
         Column {
-          id: powerColumn
-
-          width: parent.width - 40
-          anchors.left: parent.left
-          anchors.leftMargin: 20
-          anchors.top: parent.top
-          anchors.topMargin: 20
-          spacing: 18
-
-          Row {
-            width: parent.width
-            spacing: 14
-
-            Rectangle {
-              width: 56
-              height: 56
-              radius: 28
-              color: Qt.rgba(1, 1, 1, 0.16)
-
-              UiIcon {
-                anchors.centerIn: parent
-                width: 26
-                height: 26
-                name: root.powerActionIcon(root.powerHeroAction())
-                strokeColor: Theme.text
-                stroke: 2.1
-              }
-            }
-
-            Column {
-              width: Math.max(0, parent.width - 70)
-              anchors.verticalCenter: parent.verticalCenter
-              spacing: 4
-
-              UiText {
-                width: parent.width
-                text: root.powerActionTitle(root.powerHeroAction())
-                size: "xl"
-                font.weight: Font.Bold
-                elide: Text.ElideRight
-              }
-
-              UiText {
-                width: parent.width
-                visible: root.powerHeroHint() !== ""
-                text: root.powerHeroHint()
-                size: "xs"
-                tone: "subtle"
-                wrapMode: Text.WordWrap
-              }
-            }
-          }
+          width: parent.width
+          spacing: 4
 
           Column {
             width: parent.width
@@ -2096,7 +2042,7 @@ FocusScope {
         }
       }
 
-      UiSurface {
+      Patterns.HeroSheetPopover {
         id: wifiMenuPanel
 
         visible: root.expandedSection === "wifi"
@@ -2104,67 +2050,13 @@ FocusScope {
         x: content.x
         y: content.y + quickTileStack.y + quickTileSection.y
         z: 1
-        implicitHeight: wifiColumn.implicitHeight + 36
-        tone: "submenu"
-        outlined: false
-        radius: 28
-        color: Theme.submenu
-        border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.08)
+        iconName: "wifi"
+        title: root.wifiTileTitle()
+        subtitle: root.wifiHeroHint()
 
         Column {
-          id: wifiColumn
-
-          width: parent.width - 40
-          anchors.left: parent.left
-          anchors.leftMargin: 20
-          anchors.top: parent.top
-          anchors.topMargin: 20
+          width: parent.width
           spacing: 18
-
-          Row {
-            width: parent.width
-            spacing: 14
-
-            Rectangle {
-              width: 56
-              height: 56
-              radius: 28
-              color: Qt.rgba(1, 1, 1, 0.16)
-
-              UiIcon {
-                anchors.centerIn: parent
-                width: 26
-                height: 26
-                name: "wifi"
-                strokeColor: Theme.text
-                stroke: 2.1
-              }
-            }
-
-            Column {
-              width: Math.max(0, parent.width - 70)
-              anchors.verticalCenter: parent.verticalCenter
-              spacing: 4
-
-              UiText {
-                width: parent.width
-                text: root.wifiTileTitle()
-                size: "xl"
-                font.weight: Font.Bold
-                elide: Text.ElideRight
-              }
-
-              UiText {
-                width: parent.width
-                visible: root.wifiHeroHint() !== ""
-                text: root.wifiHeroHint()
-                size: "xs"
-                tone: "subtle"
-                wrapMode: Text.WordWrap
-              }
-            }
-          }
 
           Column {
             width: parent.width
@@ -2339,7 +2231,7 @@ FocusScope {
         }
       }
 
-      UiSurface {
+      Patterns.HeroSheetPopover {
         id: bluetoothMenuPanel
 
         visible: root.expandedSection === "bluetooth"
@@ -2347,67 +2239,13 @@ FocusScope {
         x: content.x
         y: content.y + quickTileStack.y + quickTileSection.y
         z: 1
-        implicitHeight: bluetoothColumn.implicitHeight + 36
-        tone: "submenu"
-        outlined: false
-        radius: 28
-        color: Theme.submenu
-        border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.08)
+        iconName: "bluetooth"
+        title: root.bluetoothTileTitle()
+        subtitle: root.bluetoothTileSubtitle()
 
         Column {
-          id: bluetoothColumn
-
-          width: parent.width - 40
-          anchors.left: parent.left
-          anchors.leftMargin: 20
-          anchors.top: parent.top
-          anchors.topMargin: 20
+          width: parent.width
           spacing: 18
-
-          Row {
-            width: parent.width
-            spacing: 14
-
-            Rectangle {
-              width: 56
-              height: 56
-              radius: 28
-              color: Qt.rgba(1, 1, 1, 0.16)
-
-              UiIcon {
-                anchors.centerIn: parent
-                width: 26
-                height: 26
-                name: "bluetooth"
-                strokeColor: Theme.text
-                stroke: 2.1
-              }
-            }
-
-            Column {
-              width: Math.max(0, parent.width - 70)
-              anchors.verticalCenter: parent.verticalCenter
-              spacing: 4
-
-              UiText {
-                width: parent.width
-                text: root.bluetoothTileTitle()
-                size: "xl"
-                font.weight: Font.Bold
-                elide: Text.ElideRight
-              }
-
-              UiText {
-                width: parent.width
-                visible: root.bluetoothTileSubtitle() !== ""
-                text: root.bluetoothTileSubtitle()
-                size: "xs"
-                tone: "subtle"
-                wrapMode: Text.WordWrap
-              }
-            }
-          }
 
           Column {
             width: parent.width

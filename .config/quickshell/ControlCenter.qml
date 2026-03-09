@@ -277,6 +277,14 @@ FocusScope {
     return "No networks available";
   }
 
+  function wifiNetworkSubtitle(network) {
+    if (!network) return "";
+
+    const securityLabel = network.security !== "" ? network.security : "open";
+    const savedLabel = network.known ? ", saved" : "";
+    return `${network.signal}%, ${securityLabel}${savedLabel}`;
+  }
+
   function bluetoothTileTitle() {
     const count = bluetoothConnectedCount();
     if (count > 0) return count === 1 ? "1 Device" : `${count} Devices`;
@@ -827,17 +835,20 @@ FocusScope {
     }
   }
 
-  component PowerMenuAction: Item {
+  component PopoverMenuAction: Item {
     id: actionRow
 
     property string title: ""
+    property string subtitle: ""
     property string actionText: ""
+    property string trailingIconName: ""
+    property color trailingIconColor: Theme.textMuted
     property bool active: false
     signal clicked()
 
     width: parent ? parent.width : implicitWidth
     implicitWidth: 1
-    implicitHeight: 54
+    implicitHeight: subtitle !== "" ? 62 : 54
     opacity: enabled ? 1 : 0.5
 
     Rectangle {
@@ -850,25 +861,64 @@ FocusScope {
       border.color: Qt.rgba(1, 1, 1, 0.1)
     }
 
-    UiText {
+    Column {
+      width: Math.max(0, parent.width - trailingSlot.width - 46)
       anchors.left: parent.left
       anchors.leftMargin: 18
       anchors.verticalCenter: parent.verticalCenter
-      text: actionRow.title
-      size: "md"
-      font.pixelSize: 17
-      font.weight: Font.Medium
+      spacing: actionRow.subtitle !== "" ? 2 : 0
+
+      UiText {
+        width: parent.width
+        text: actionRow.title
+        size: "md"
+        font.pixelSize: 17
+        font.weight: Font.Medium
+        elide: Text.ElideRight
+      }
+
+      UiText {
+        width: parent.width
+        visible: text !== ""
+        text: actionRow.subtitle
+        size: "xs"
+        tone: "muted"
+        elide: Text.ElideRight
+      }
     }
 
-    UiText {
+    Item {
+      id: trailingSlot
+
       anchors.right: parent.right
       anchors.rightMargin: 18
       anchors.verticalCenter: parent.verticalCenter
-      visible: text !== ""
-      text: actionRow.actionText
-      size: "xs"
-      tone: "muted"
-      font.weight: Font.DemiBold
+      width: Math.max(actionLabel.visible ? actionLabel.implicitWidth : 0, trailingGlyph.visible ? trailingGlyph.implicitWidth : 0)
+      height: parent.height
+
+      UiText {
+        id: actionLabel
+
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        visible: text !== ""
+        text: actionRow.actionText
+        size: "xs"
+        tone: "muted"
+        font.weight: Font.DemiBold
+      }
+
+      UiIcon {
+        id: trailingGlyph
+
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        visible: name !== ""
+        width: 18
+        height: 18
+        name: actionRow.trailingIconName
+        strokeColor: actionRow.trailingIconColor
+      }
     }
 
     MouseArea {
@@ -1996,13 +2046,13 @@ FocusScope {
             width: parent.width
             spacing: 4
 
-            PowerMenuAction {
+            PopoverMenuAction {
               width: parent.width
               title: "Suspend"
               onClicked: sessionActions.sleep()
             }
 
-            PowerMenuAction {
+            PopoverMenuAction {
               width: parent.width
               title: "Restart"
               actionText: root.pendingPowerAction === "restart" ? "Confirm" : ""
@@ -2010,7 +2060,7 @@ FocusScope {
               onClicked: root.triggerPowerAction("restart")
             }
 
-            PowerMenuAction {
+            PopoverMenuAction {
               width: parent.width
               title: "Power Off"
               actionText: root.pendingPowerAction === "shutdown" ? "Confirm" : ""
@@ -2027,7 +2077,7 @@ FocusScope {
               opacity: 0.72
             }
 
-            PowerMenuAction {
+            PopoverMenuAction {
               width: parent.width
               title: "Log Out"
               actionText: root.pendingPowerAction === "logout" ? "Confirm" : ""
@@ -2046,7 +2096,7 @@ FocusScope {
         }
       }
 
-      Patterns.QuickTileMenuPanel {
+      UiSurface {
         id: wifiMenuPanel
 
         visible: root.expandedSection === "wifi"
@@ -2054,179 +2104,242 @@ FocusScope {
         x: content.x
         y: content.y + quickTileStack.y + quickTileSection.y
         z: 1
-        iconName: "wifi"
-        title: root.wifiTileTitle()
+        implicitHeight: wifiColumn.implicitHeight + 36
+        tone: "submenu"
+        outlined: false
+        radius: 28
+        color: Theme.submenu
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.08)
 
-        UiText {
-          width: parent.width
-          visible: root.wifiHeroHint() !== ""
-          text: root.wifiHeroHint()
-          size: "xs"
-          tone: "subtle"
-          wrapMode: Text.WordWrap
-        }
+        Column {
+          id: wifiColumn
 
-        UiText {
-          visible: root.wifiLoading && root.initialLoadDeadlineElapsed
-          text: "Loading Wi-Fi..."
-          size: "xs"
-          tone: "subtle"
-        }
+          width: parent.width - 40
+          anchors.left: parent.left
+          anchors.leftMargin: 20
+          anchors.top: parent.top
+          anchors.topMargin: 20
+          spacing: 18
 
-        UiText {
-          visible: !wifiService.hardwareEnabled
-          text: "WiFi hardware is blocked."
-          size: "xs"
-          tone: "accent"
-        }
+          Row {
+            width: parent.width
+            spacing: 14
 
-        Controls.Menu {
-          id: wifiNetworksMenu
+            Rectangle {
+              width: 56
+              height: 56
+              radius: 28
+              color: Qt.rgba(1, 1, 1, 0.16)
 
-          width: parent.width
-          visible: wifiService.ready && wifiService.enabled && wifiService.networks.length > 0
+              UiIcon {
+                anchors.centerIn: parent
+                width: 26
+                height: 26
+                name: "wifi"
+                strokeColor: Theme.text
+                stroke: 2.1
+              }
+            }
 
-          Repeater {
-            model: wifiService.enabled ? Math.min(6, wifiService.networks.length) : 0
+            Column {
+              width: Math.max(0, parent.width - 70)
+              anchors.verticalCenter: parent.verticalCenter
+              spacing: 4
 
-            delegate: Controls.MenuItem {
-              id: wifiRow
+              UiText {
+                width: parent.width
+                text: root.wifiTileTitle()
+                size: "xl"
+                font.weight: Font.Bold
+                elide: Text.ElideRight
+              }
 
-              required property int index
-              readonly property var network: wifiService.networks[index]
-
-              width: wifiNetworksMenu.width
-              implicitHeight: 52
-              height: implicitHeight
-              iconName: "wifi"
-              title: wifiRow.network ? wifiRow.network.ssid : ""
-              subtitle: wifiRow.network
-                ? `${wifiRow.network.signal}%${wifiRow.network.security !== "" ? `, ${wifiRow.network.security}` : ", open"}${wifiRow.network.known ? ", saved" : ""}`
-                : ""
-              actionText: wifiRow.network && !wifiRow.network.active ? "Connect" : ""
-              trailingIconName: wifiRow.network && wifiRow.network.active ? "check" : ""
-              active: wifiRow.network && wifiRow.network.active
-              activeStyle: "subtle"
-              enabled: !!wifiRow.network && !wifiService.busy
-              onClicked: root.beginWifiConnect(wifiRow.network)
+              UiText {
+                width: parent.width
+                visible: root.wifiHeroHint() !== ""
+                text: root.wifiHeroHint()
+                size: "xs"
+                tone: "subtle"
+                wrapMode: Text.WordWrap
+              }
             }
           }
-        }
-
-        UiSurface {
-          visible: root.wifiPasswordTarget !== ""
-          width: parent.width
-          implicitHeight: passwordColumn.implicitHeight + 20
-          tone: "panelOverlay"
-          outlined: false
-          radius: 16
-          border.width: 1
-          border.color: Theme.divider
 
           Column {
-            id: passwordColumn
-
-            width: parent.width - 20
-            anchors.left: parent.left
-            anchors.leftMargin: 10
-            anchors.top: parent.top
-            anchors.topMargin: 10
+            width: parent.width
             spacing: 8
 
             UiText {
-              text: `Password required for ${root.wifiPasswordTarget}`
+              visible: root.wifiLoading && root.initialLoadDeadlineElapsed
+              text: "Loading Wi-Fi..."
               size: "xs"
-              font.weight: Font.DemiBold
+              tone: "subtle"
+            }
+
+            UiText {
+              visible: !wifiService.hardwareEnabled
+              text: "Wi-Fi hardware is blocked."
+              size: "xs"
+              tone: "accent"
               wrapMode: Text.WordWrap
             }
 
-            TextField {
-              id: wifiPasswordField
+            UiText {
+              visible: wifiService.lastError !== ""
+              text: wifiService.lastError
+              size: "xs"
+              tone: "accent"
+              wrapMode: Text.WordWrap
+            }
+          }
 
+          Column {
+            width: parent.width
+            spacing: 4
+            visible: wifiService.ready && wifiService.enabled && wifiService.networks.length > 0
+
+            Repeater {
+              model: wifiService.enabled ? Math.min(6, wifiService.networks.length) : 0
+
+              delegate: PopoverMenuAction {
+                id: wifiRow
+
+                required property int index
+                readonly property var network: wifiService.networks[index]
+
+                width: parent.width
+                visible: !!network
+                title: network ? network.ssid : ""
+                subtitle: network ? root.wifiNetworkSubtitle(network) : ""
+                actionText: network && !network.active ? "Connect" : ""
+                trailingIconName: network && network.active ? "check" : ""
+                trailingIconColor: Theme.text
+                active: network && network.active
+                enabled: !!network && !wifiService.busy
+                onClicked: root.beginWifiConnect(network)
+              }
+            }
+          }
+
+          UiSurface {
+            visible: root.wifiPasswordTarget !== ""
+            width: parent.width
+            implicitHeight: passwordColumn.implicitHeight + 24
+            tone: "panelOverlay"
+            outlined: false
+            radius: 22
+            border.width: 1
+            border.color: Qt.rgba(1, 1, 1, 0.08)
+
+            Column {
+              id: passwordColumn
+
+              width: parent.width - 24
+              anchors.left: parent.left
+              anchors.leftMargin: 12
+              anchors.top: parent.top
+              anchors.topMargin: 12
+              spacing: 10
+
+              UiText {
+                text: `Password required for ${root.wifiPasswordTarget}`
+                size: "xs"
+                font.weight: Font.DemiBold
+                wrapMode: Text.WordWrap
+              }
+
+              TextField {
+                id: wifiPasswordField
+
+                width: parent.width
+                height: 40
+                echoMode: TextInput.Password
+                color: Theme.text
+                placeholderText: "Network password"
+                placeholderTextColor: Theme.textSubtle
+                selectionColor: Theme.selection
+                selectedTextColor: Theme.textOnAccent
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.textSm
+                onTextChanged: root.wifiPassword = text
+                onVisibleChanged: {
+                  if (visible) {
+                    text = root.wifiPassword;
+                    forceActiveFocus();
+                  }
+                }
+                Binding on text {
+                  when: !wifiPasswordField.activeFocus
+                  value: root.wifiPassword
+                }
+                background: Rectangle {
+                  radius: 16
+                  color: Theme.fieldAlt
+                  border.width: 1
+                  border.color: Theme.divider
+                }
+              }
+
+              Row {
+                spacing: 8
+
+                Controls.Button {
+                  text: "Connect"
+                  active: true
+                  enabled: root.wifiPassword !== "" && !wifiService.busy
+                  onClicked: root.submitWifiPassword()
+                }
+
+                Controls.Button {
+                  text: "Cancel"
+                  onClicked: {
+                    root.wifiPasswordTarget = "";
+                    root.wifiPassword = "";
+                  }
+                }
+              }
+            }
+          }
+
+          UiText {
+            visible: wifiService.ready && wifiService.enabled && wifiService.networks.length === 0 && !wifiService.busy
+            text: "No networks available."
+            size: "xs"
+            tone: "subtle"
+          }
+
+          Column {
+            width: parent.width
+            spacing: 4
+
+            Rectangle {
+              width: parent.width - 36
+              height: 1
+              radius: 0.5
+              anchors.horizontalCenter: parent.horizontalCenter
+              color: Theme.divider
+              opacity: 0.72
+            }
+
+            PopoverMenuAction {
               width: parent.width
-              height: 38
-              echoMode: TextInput.Password
-              color: Theme.text
-              placeholderText: "Network password"
-              placeholderTextColor: Theme.textSubtle
-              selectionColor: Theme.selection
-              selectedTextColor: Theme.textOnAccent
-              font.family: Theme.fontFamily
-              font.pixelSize: Theme.textSm
-              onTextChanged: root.wifiPassword = text
-              onVisibleChanged: {
-                if (visible) {
-                  text = root.wifiPassword;
-                  forceActiveFocus();
-                }
-              }
-              Binding on text {
-                when: !wifiPasswordField.activeFocus
-                value: root.wifiPassword
-              }
-              background: Rectangle {
-                radius: 14
-                color: Theme.fieldAlt
-                border.width: 1
-                border.color: Theme.divider
-              }
+              title: wifiService.enabled ? "Turn Off" : "Turn On"
+              enabled: wifiService.ready && !wifiService.busy
+              onClicked: wifiService.setEnabledState(!wifiService.enabled)
             }
 
-            Row {
-              spacing: 8
-
-              Controls.Button {
-                text: "Connect"
-                active: true
-                enabled: root.wifiPassword !== "" && !wifiService.busy
-                onClicked: root.submitWifiPassword()
-              }
-
-              Controls.Button {
-                text: "Cancel"
-                onClicked: {
-                  root.wifiPasswordTarget = "";
-                  root.wifiPassword = "";
-                }
-              }
+            PopoverMenuAction {
+              width: parent.width
+              title: wifiService.busy ? "Refreshing" : "Rescan"
+              enabled: wifiService.ready && wifiService.enabled && !wifiService.busy
+              onClicked: wifiService.scan()
             }
-          }
-        }
-
-        UiText {
-          visible: wifiService.ready && wifiService.enabled && wifiService.networks.length === 0 && !wifiService.busy
-          text: "No networks available."
-          size: "xs"
-          tone: "subtle"
-        }
-
-        UiText {
-          visible: wifiService.lastError !== ""
-          text: wifiService.lastError
-          size: "xs"
-          tone: "accent"
-          wrapMode: Text.WordWrap
-        }
-
-        Row {
-          width: parent.width
-          spacing: 8
-
-          Controls.Button {
-            text: wifiService.enabled ? "Turn Off" : "Turn On"
-            enabled: wifiService.ready
-            onClicked: wifiService.setEnabledState(!wifiService.enabled)
-          }
-
-          Controls.Button {
-            text: wifiService.busy ? "Refreshing" : "Rescan"
-            enabled: wifiService.ready && wifiService.enabled && !wifiService.busy
-            onClicked: wifiService.scan()
           }
         }
       }
 
-      Patterns.QuickTileMenuPanel {
+      UiSurface {
         id: bluetoothMenuPanel
 
         visible: root.expandedSection === "bluetooth"
@@ -2234,164 +2347,209 @@ FocusScope {
         x: content.x
         y: content.y + quickTileStack.y + quickTileSection.y
         z: 1
-        iconName: "bluetooth"
-        title: root.bluetoothTileTitle()
+        implicitHeight: bluetoothColumn.implicitHeight + 36
+        tone: "submenu"
+        outlined: false
+        radius: 28
+        color: Theme.submenu
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.08)
 
-        UiText {
-          width: parent.width
-          visible: root.bluetoothTileSubtitle() !== ""
-          text: root.bluetoothTileSubtitle()
-          size: "xs"
-          tone: "subtle"
-          wrapMode: Text.WordWrap
-        }
+        Column {
+          id: bluetoothColumn
 
-        UiText {
-          visible: !root.bluetoothAdapter
-          text: "No Bluetooth adapter found."
-          size: "xs"
-          tone: "accent"
-        }
+          width: parent.width - 40
+          anchors.left: parent.left
+          anchors.leftMargin: 20
+          anchors.top: parent.top
+          anchors.topMargin: 20
+          spacing: 18
 
-        UiText {
-          visible: root.bluetoothBlockedMessage() !== ""
-          text: root.bluetoothBlockedMessage()
-          size: "xs"
-          tone: "accent"
-          wrapMode: Text.WordWrap
-        }
+          Row {
+            width: parent.width
+            spacing: 14
 
-        UiText {
-          visible: root.bluetoothLastError !== ""
-          text: root.bluetoothLastError
-          size: "xs"
-          tone: "accent"
-          wrapMode: Text.WordWrap
-        }
+            Rectangle {
+              width: 56
+              height: 56
+              radius: 28
+              color: Qt.rgba(1, 1, 1, 0.16)
 
-        UiText {
-          visible: root.bluetoothAdapter && root.bluetoothAdapter.enabled && root.bluetoothConnectedCount() > 0
-          text: "Connected Devices"
-          size: "xs"
-          tone: "muted"
-          font.weight: Font.DemiBold
-        }
+              UiIcon {
+                anchors.centerIn: parent
+                width: 26
+                height: 26
+                name: "bluetooth"
+                strokeColor: Theme.text
+                stroke: 2.1
+              }
+            }
 
-        Controls.Menu {
-          id: bluetoothConnectedMenu
+            Column {
+              width: Math.max(0, parent.width - 70)
+              anchors.verticalCenter: parent.verticalCenter
+              spacing: 4
 
-          width: parent.width
-          visible: root.bluetoothAdapter && root.bluetoothAdapter.enabled && root.bluetoothConnectedCount() > 0
-
-          Repeater {
-            model: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? root.bluetoothAdapter.devices : null
-
-            delegate: Controls.MenuItem {
-              id: connectedDeviceRow
-
-              required property int index
-              required property var modelData
-              readonly property var device: modelData
-              readonly property bool busyState: !!(device && (device.pairing || device.state === BluetoothDeviceState.Connecting))
-              readonly property bool hasNextVisible: {
-                if (!root.bluetoothAdapter || !root.bluetoothAdapter.devices) return false;
-                for (let i = index + 1; i < root.bluetoothAdapter.devices.count; i += 1) {
-                  const nextDevice = root.bluetoothAdapter.devices.get(i);
-                  if (nextDevice && nextDevice.connected) return true;
-                }
-                return false;
+              UiText {
+                width: parent.width
+                text: root.bluetoothTileTitle()
+                size: "xl"
+                font.weight: Font.Bold
+                elide: Text.ElideRight
               }
 
-              visible: device && device.connected
-              width: bluetoothConnectedMenu.width
-              implicitHeight: visible ? 52 : 0
-              height: visible ? implicitHeight : 0
-              iconName: "bluetooth"
-              title: connectedDeviceRow.device.deviceName || connectedDeviceRow.device.name || connectedDeviceRow.device.address
-              subtitle: connectedDeviceRow.device.batteryAvailable
-                ? `${Math.round(connectedDeviceRow.device.battery)}% battery`
-                : "Connected"
-              actionText: connectedDeviceRow.busyState ? "Working" : "Disconnect"
-              active: true
-              dividerVisible: visible && hasNextVisible
-              enabled: visible && !connectedDeviceRow.busyState
-              onClicked: {
-                if (connectedDeviceRow.busyState) return;
-                connectedDeviceRow.device.disconnect();
+              UiText {
+                width: parent.width
+                visible: root.bluetoothTileSubtitle() !== ""
+                text: root.bluetoothTileSubtitle()
+                size: "xs"
+                tone: "subtle"
+                wrapMode: Text.WordWrap
               }
             }
           }
-        }
 
-        UiText {
-          visible: root.bluetoothAdapter && root.bluetoothAdapter.enabled && root.bluetoothAvailableCount() > 0
-          text: "Available Devices"
-          size: "xs"
-          tone: "muted"
-          font.weight: Font.DemiBold
-        }
+          Column {
+            width: parent.width
+            spacing: 8
 
-        Controls.Menu {
-          id: bluetoothAvailableMenu
+            UiText {
+              visible: !root.bluetoothAdapter
+              text: "No Bluetooth adapter found."
+              size: "xs"
+              tone: "accent"
+            }
 
-          width: parent.width
-          visible: root.bluetoothAdapter && root.bluetoothAdapter.enabled && root.bluetoothAvailableCount() > 0
+            UiText {
+              visible: root.bluetoothBlockedMessage() !== ""
+              text: root.bluetoothBlockedMessage()
+              size: "xs"
+              tone: "accent"
+              wrapMode: Text.WordWrap
+            }
 
-          Repeater {
-            model: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? root.bluetoothAdapter.devices : null
+            UiText {
+              visible: root.bluetoothLastError !== ""
+              text: root.bluetoothLastError
+              size: "xs"
+              tone: "accent"
+              wrapMode: Text.WordWrap
+            }
+          }
 
-            delegate: Controls.MenuItem {
-              id: otherDeviceRow
+          Column {
+            width: parent.width
+            spacing: 6
+            visible: root.bluetoothAdapter && root.bluetoothAdapter.enabled && root.bluetoothConnectedCount() > 0
 
-              required property int index
-              required property var modelData
-              readonly property var device: modelData
-              readonly property bool busyState: !!(device && (device.pairing || device.state === BluetoothDeviceState.Connecting))
-              readonly property bool hasNextVisible: {
-                if (!root.bluetoothAdapter || !root.bluetoothAdapter.devices) return false;
-                for (let i = index + 1; i < root.bluetoothAdapter.devices.count; i += 1) {
-                  const nextDevice = root.bluetoothAdapter.devices.get(i);
-                  if (nextDevice && !nextDevice.connected) return true;
+            UiText {
+              text: "Connected Devices"
+              size: "xs"
+              tone: "muted"
+              font.weight: Font.DemiBold
+            }
+
+            Column {
+              width: parent.width
+              spacing: 4
+
+              Repeater {
+                model: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? root.bluetoothAdapter.devices : null
+
+                delegate: PopoverMenuAction {
+                  id: connectedDeviceRow
+
+                  required property var modelData
+                  readonly property var device: modelData
+                  readonly property bool busyState: !!(device && (device.pairing || device.state === BluetoothDeviceState.Connecting))
+
+                  visible: !!(device && device.connected)
+                  width: parent.width
+                  title: device ? (device.deviceName || device.name || device.address) : ""
+                  subtitle: device
+                    ? (device.batteryAvailable ? `${Math.round(device.battery)}% battery` : "Connected")
+                    : ""
+                  actionText: busyState ? "Working" : "Disconnect"
+                  active: true
+                  enabled: visible && !busyState
+                  onClicked: {
+                    if (busyState) return;
+                    device.disconnect();
+                  }
                 }
-                return false;
-              }
-
-              visible: device && !device.connected
-              width: bluetoothAvailableMenu.width
-              implicitHeight: visible ? 52 : 0
-              height: visible ? implicitHeight : 0
-              iconName: "bluetooth"
-              title: otherDeviceRow.device.deviceName || otherDeviceRow.device.name || otherDeviceRow.device.address
-              subtitle: otherDeviceRow.device.paired || otherDeviceRow.device.bonded ? "Paired" : "Available"
-              actionText: otherDeviceRow.busyState
-                ? "Working"
-                : (otherDeviceRow.device.paired || otherDeviceRow.device.bonded ? "Connect" : "Pair")
-              dividerVisible: visible && hasNextVisible
-              enabled: visible && !otherDeviceRow.busyState
-              onClicked: {
-                if (otherDeviceRow.busyState) return;
-                if (otherDeviceRow.device.paired || otherDeviceRow.device.bonded) otherDeviceRow.device.connect();
-                else otherDeviceRow.device.pair();
               }
             }
           }
-        }
 
-        Row {
-          width: parent.width
-          spacing: 8
+          Column {
+            width: parent.width
+            spacing: 6
+            visible: root.bluetoothAdapter && root.bluetoothAdapter.enabled && root.bluetoothAvailableCount() > 0
 
-          Controls.Button {
-            text: root.bluetoothPrimaryActionText()
-            enabled: !!root.bluetoothAdapter && !root.bluetoothBusy && !root.bluetoothHardBlocked
-            onClicked: root.toggleBluetoothEnabled()
+            UiText {
+              text: "Available Devices"
+              size: "xs"
+              tone: "muted"
+              font.weight: Font.DemiBold
+            }
+
+            Column {
+              width: parent.width
+              spacing: 4
+
+              Repeater {
+                model: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? root.bluetoothAdapter.devices : null
+
+                delegate: PopoverMenuAction {
+                  id: otherDeviceRow
+
+                  required property var modelData
+                  readonly property var device: modelData
+                  readonly property bool busyState: !!(device && (device.pairing || device.state === BluetoothDeviceState.Connecting))
+
+                  visible: !!(device && !device.connected)
+                  width: parent.width
+                  title: device ? (device.deviceName || device.name || device.address) : ""
+                  subtitle: device ? (device.paired || device.bonded ? "Paired" : "Available") : ""
+                  actionText: busyState ? "Working" : (device && (device.paired || device.bonded) ? "Connect" : "Pair")
+                  enabled: visible && !busyState
+                  onClicked: {
+                    if (busyState) return;
+                    if (device.paired || device.bonded) device.connect();
+                    else device.pair();
+                  }
+                }
+              }
+            }
           }
 
-          Controls.Button {
-            text: root.bluetoothAdapter && root.bluetoothAdapter.discovering ? "Stop Scan" : "Scan"
-            enabled: !!root.bluetoothAdapter && root.bluetoothAdapter.enabled && !root.bluetoothBusy
-            onClicked: {
-              if (root.bluetoothAdapter) root.bluetoothAdapter.discovering = !root.bluetoothAdapter.discovering;
+          Column {
+            width: parent.width
+            spacing: 4
+
+            Rectangle {
+              width: parent.width - 36
+              height: 1
+              radius: 0.5
+              anchors.horizontalCenter: parent.horizontalCenter
+              color: Theme.divider
+              opacity: 0.72
+            }
+
+            PopoverMenuAction {
+              width: parent.width
+              title: root.bluetoothPrimaryActionText()
+              enabled: !!root.bluetoothAdapter && !root.bluetoothBusy && !root.bluetoothHardBlocked
+              onClicked: root.toggleBluetoothEnabled()
+            }
+
+            PopoverMenuAction {
+              width: parent.width
+              title: root.bluetoothAdapter && root.bluetoothAdapter.discovering ? "Stop Scan" : "Scan"
+              enabled: !!root.bluetoothAdapter && root.bluetoothAdapter.enabled && !root.bluetoothBusy
+              onClicked: {
+                if (root.bluetoothAdapter) root.bluetoothAdapter.discovering = !root.bluetoothAdapter.discovering;
+              }
             }
           }
         }

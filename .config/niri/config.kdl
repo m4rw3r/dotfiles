@@ -90,6 +90,15 @@ input {
     // focus-follows-mouse max-scroll-amount="0%"
 }
 
+// ASUS ROG Flow Z13 does not trigger the tablet mode automatically when
+// removed, it lacks a udev switch. Instead we rely on a rust program detecting
+// the presence of the keyboard and sending synthetic events. Sysboard is used
+// as the keyboard, via a systemd service.
+switch-events {
+    tablet-mode-on { spawn "bash" "-c" "gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled true; notify-send -t 3000 'Tablet Mode: ON' 'Z13 Keyboard was removed'; systemctl --user start on-screen-keyboard;"; }
+    tablet-mode-off { spawn "bash" "-c" "gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled false; notify-send -t 3000 'Tablet Mode: OFF' 'Z13 Keyboard was attached'; systemctl --user stop on-screen-keyboard;"; }
+}
+
 // You can configure outputs by their name, which you can find
 // by running `niri msg outputs` while inside a niri instance.
 // The built-in laptop monitor is usually called "eDP-1".

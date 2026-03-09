@@ -40,8 +40,10 @@ FocusScope {
   property real pendingAudioVolume: 0
   property real pendingScreenBrightness: 0
   property bool panelOpen: false
+  property var sessionActions: null
   property bool initialLoadDeadlineElapsed: false
   property int initialLoadDeadlineMs: 50
+  readonly property bool sessionActionBusy: !!sessionActions && sessionActions.busyAction !== ""
   readonly property bool powerMenuOpen: expandedSection === "power"
   readonly property bool outputMenuOpen: expandedSection === "outputs"
   readonly property bool selectorPopoverOpen: expandedSection === "profile" || (expandedSection === "lighting" && lightingService.commandAvailable)
@@ -219,12 +221,12 @@ FocusScope {
   }
 
   function powerHeroAction() {
-    if (sessionActions.busyAction !== "") return normalizePowerAction(sessionActions.busyAction);
+    if (sessionActionBusy) return normalizePowerAction(sessionActions.busyAction);
     return pendingPowerAction !== "" ? pendingPowerAction : "shutdown";
   }
 
   function powerHeroHint() {
-    if (sessionActions.busyAction !== "") return `${powerActionTitle(sessionActions.busyAction)} in progress...`;
+    if (sessionActionBusy) return `${powerActionTitle(sessionActions.busyAction)} in progress...`;
     if (pendingPowerAction !== "") return "Press the highlighted action again to confirm";
     return "";
   }
@@ -431,12 +433,20 @@ FocusScope {
     wifiService.connectNetwork(wifiPasswordTarget, wifiPassword);
   }
 
+  function runSessionAction(action) {
+    if (!sessionActions || sessionActionBusy) return;
+
+    pendingPowerAction = "";
+    root.closeRequested();
+
+    Qt.callLater(function() {
+      sessionActions.run(action);
+    });
+  }
+
   function triggerPowerAction(action) {
     if (pendingPowerAction === action) {
-      pendingPowerAction = "";
-      if (action === "logout") sessionActions.logout();
-      else if (action === "restart") sessionActions.restart();
-      else if (action === "shutdown") sessionActions.shutdown();
+      runSessionAction(action);
       return;
     }
 
@@ -675,10 +685,6 @@ FocusScope {
       root.wifiPasswordTarget = "";
       root.wifiPassword = "";
     }
-  }
-
-  SessionActions {
-    id: sessionActions
   }
 
   StdioCollector {
@@ -1556,65 +1562,6 @@ FocusScope {
     }
   }
 
-  component SessionActions: Item {
-    id: sessionActionsController
-
-    property string busyAction: ""
-    property string lastError: ""
-
-    function runAction(name, command) {
-      busyAction = name;
-      lastError = "";
-      actionProcess.exec(command);
-    }
-
-    function lock() {
-      lockProcess.command = ["swaylock"];
-      lockProcess.startDetached();
-      lastError = "";
-    }
-
-    function sleep() {
-      runAction("sleep", ["systemctl", "suspend"]);
-    }
-
-    function restart() {
-      runAction("restart", ["systemctl", "reboot"]);
-    }
-
-    function shutdown() {
-      runAction("shutdown", ["systemctl", "poweroff"]);
-    }
-
-    function logout() {
-      runAction("logout", [
-        "sh",
-        "-lc",
-        "if [ -n \"$XDG_SESSION_ID\" ]; then exec loginctl terminate-session \"$XDG_SESSION_ID\"; fi; session=\"$(loginctl show-user \"$USER\" -p Display --value 2>/dev/null)\"; if [ -n \"$session\" ]; then exec loginctl terminate-session \"$session\"; fi; printf 'Unable to determine current session.\n' >&2; exit 1"
-      ]);
-    }
-
-    StdioCollector {
-      id: actionStderr
-      waitForEnd: true
-    }
-
-    Process {
-      id: actionProcess
-
-      stderr: actionStderr
-
-      onExited: function(exitCode) {
-        sessionActionsController.lastError = exitCode === 0 ? "" : String(actionStderr.text || "").trim();
-        sessionActionsController.busyAction = "";
-      }
-    }
-
-    Process {
-      id: lockProcess
-    }
-  }
-
   StdioCollector {
     id: keyboardRecoveryStderr
     waitForEnd: true
@@ -1712,7 +1659,8 @@ FocusScope {
           iconSize: 16
           circular: true
           iconName: "lock"
-          onClicked: sessionActions.lock()
+          enabled: !root.sessionActionBusy
+          onClicked: root.runSessionAction("lock")
         }
 
         Controls.IconButton {
@@ -1722,6 +1670,7 @@ FocusScope {
           circular: true
           iconName: "power"
           active: root.expandedSection === "power"
+          enabled: !root.sessionActionBusy
           onClicked: root.toggleSection("power")
         }
       }
@@ -2062,7 +2011,8 @@ FocusScope {
             PopoverMenuAction {
               width: parent.width
               title: "Suspend"
-              onClicked: sessionActions.sleep()
+              enabled: !root.sessionActionBusy
+              onClicked: root.runSessionAction("sleep")
             }
 
             PopoverMenuAction {
@@ -2070,6 +2020,7 @@ FocusScope {
               title: "Restart"
               actionText: root.pendingPowerAction === "restart" ? "Confirm" : ""
               active: root.pendingPowerAction === "restart"
+              enabled: !root.sessionActionBusy
               onClicked: root.triggerPowerAction("restart")
             }
 
@@ -2078,6 +2029,7 @@ FocusScope {
               title: "Power Off"
               actionText: root.pendingPowerAction === "shutdown" ? "Confirm" : ""
               active: root.pendingPowerAction === "shutdown"
+              enabled: !root.sessionActionBusy
               onClicked: root.triggerPowerAction("shutdown")
             }
 
@@ -2095,16 +2047,9 @@ FocusScope {
               title: "Log Out"
               actionText: root.pendingPowerAction === "logout" ? "Confirm" : ""
               active: root.pendingPowerAction === "logout"
+              enabled: !root.sessionActionBusy
               onClicked: root.triggerPowerAction("logout")
             }
-          }
-
-          UiText {
-            visible: sessionActions.lastError !== ""
-            text: sessionActions.lastError
-            size: "xs"
-            tone: "accent"
-            wrapMode: Text.WordWrap
           }
         }
       }

@@ -19,8 +19,8 @@ Ui.UiSurface {
   signal clicked()
 
   width: implicitWidth
-  implicitWidth: variant === "minimal" ? 24 : (circular ? 46 : 44)
-  implicitHeight: variant === "minimal" ? 24 : (circular ? 46 : 44)
+  implicitWidth: variant === "minimal" ? 24 : (circular ? 36 : 44)
+  implicitHeight: variant === "minimal" ? 24 : (circular ? 36 : 44)
   tone: "field"
   outlined: false
   radius: variant === "minimal" ? 0 : (circular ? width / 2 : 19)

@@ -34,6 +34,9 @@ FocusScope {
   property bool bluetoothLastErrorFromRefresh: false
   property string bluetoothLastError: ""
   property bool powerProfileBusy: false
+  property bool keyboardRecoveryBusy: false
+  property bool keyboardRecoveryFailed: false
+  property string keyboardRecoveryMessage: ""
   property real pendingAudioVolume: 0
   property real pendingScreenBrightness: 0
   property bool panelOpen: false
@@ -41,7 +44,7 @@ FocusScope {
   property int initialLoadDeadlineMs: 50
   readonly property bool powerMenuOpen: expandedSection === "power"
   readonly property bool outputMenuOpen: expandedSection === "outputs"
-  readonly property bool selectorPopoverOpen: expandedSection === "profile" || (expandedSection === "lighting" && lightingService.available)
+  readonly property bool selectorPopoverOpen: expandedSection === "profile" || (expandedSection === "lighting" && lightingService.commandAvailable)
   readonly property bool tileMenuOpen: expandedSection === "wifi" || expandedSection === "bluetooth"
   readonly property bool overlayDismissActive: selectorPopoverOpen || tileMenuOpen || powerMenuOpen || outputMenuOpen
   readonly property var audioSink: Pipewire.defaultAudioSink
@@ -132,17 +135,21 @@ FocusScope {
   }
 
   function batterySummary() {
-    if (!batteryAvailable) return "No battery";
+    if (!batteryAvailable) return "N/A";
 
     const rawPercent = Number(battery.percentage || 0);
     const scaledPercent = rawPercent <= 1.5 ? rawPercent * 100 : rawPercent;
     const percent = `${Math.round(scaledPercent)}%`;
-    const state = battery.state;
 
+    return percent;
+
+    /*
+    // const state = battery.state;
     if (state === UPowerDeviceState.FullyCharged) return `${percent} Full`;
     if (state === UPowerDeviceState.Charging || state === UPowerDeviceState.PendingCharge) return `${percent} Charging`;
     if (state === UPowerDeviceState.Empty) return `${percent} Empty`;
     return percent;
+    */
   }
 
   function batteryIconName() {
@@ -470,6 +477,15 @@ FocusScope {
     refreshBluetoothRfkillState();
   }
 
+  function recoverKeyboard() {
+    if (keyboardRecoveryBusy) return;
+
+    keyboardRecoveryBusy = true;
+    keyboardRecoveryFailed = false;
+    keyboardRecoveryMessage = "";
+    keyboardRecoveryProcess.exec(["/home/m4rw3r/.local/bin/recover-z13-keyboard.sh"]);
+  }
+
   onPanelOpenChanged: {
     if (panelOpen) {
       forceActiveFocus();
@@ -484,6 +500,8 @@ FocusScope {
       pendingPowerAction = "";
       wifiPasswordTarget = "";
       wifiPassword = "";
+      keyboardRecoveryMessage = "";
+      keyboardRecoveryFailed = false;
       if (bluetoothAdapter) bluetoothAdapter.discovering = false;
     }
   }
@@ -780,8 +798,8 @@ FocusScope {
     property string text: ""
     property string iconName: ""
 
-    implicitWidth: chipRow.implicitWidth + 24
-    implicitHeight: 40
+    implicitWidth: chipRow.implicitWidth + 26
+    implicitHeight: 36
     tone: "field"
     outlined: false
     radius: 20
@@ -1597,6 +1615,28 @@ FocusScope {
     }
   }
 
+  StdioCollector {
+    id: keyboardRecoveryStderr
+    waitForEnd: true
+  }
+
+  Process {
+    id: keyboardRecoveryProcess
+
+    stderr: keyboardRecoveryStderr
+
+    onExited: function(exitCode) {
+      root.keyboardRecoveryBusy = false;
+      root.keyboardRecoveryFailed = exitCode !== 0;
+      root.keyboardRecoveryMessage = exitCode === 0
+        ? "Keyboard recovery complete."
+        : (String(keyboardRecoveryStderr.text || "").trim() || "Unable to recover the detachable keyboard.");
+
+      brightnessService.refresh();
+      lightingService.refresh();
+    }
+  }
+
   Timer {
     id: audioCommitTimer
     interval: 75
@@ -1632,7 +1672,7 @@ FocusScope {
 
       width: parent.width - 32
       anchors.left: parent.left
-      anchors.leftMargin: 16
+      anchors.leftMargin: 12
       anchors.top: parent.top
       anchors.topMargin: 16
       spacing: 12
@@ -1640,8 +1680,8 @@ FocusScope {
       Row {
         width: parent.width - 8
         anchors.horizontalCenter: parent.horizontalCenter
-        height: 48
-        spacing: 12
+        height: 36
+        spacing: 8
 
         StatusChip {
           id: batteryChip
@@ -1652,13 +1692,24 @@ FocusScope {
         }
 
         Item {
-          width: Math.max(0, parent.width - (batteryChip.visible ? batteryChip.implicitWidth : 0) - lockButton.implicitWidth - powerToggleButton.implicitWidth - 24)
+          width: Math.max(0, parent.width - (batteryChip.visible ? batteryChip.implicitWidth : 0) - keyboardRecoveryButton.implicitWidth - lockButton.implicitWidth - powerToggleButton.implicitWidth - 26)
           height: parent.height
+        }
+
+        Controls.IconButton {
+          id: keyboardRecoveryButton
+          anchors.verticalCenter: parent.verticalCenter
+          iconSize: 16
+          circular: true
+          iconName: "keyboard"
+          active: root.keyboardRecoveryBusy
+          onClicked: root.recoverKeyboard()
         }
 
         Controls.IconButton {
           id: lockButton
           anchors.verticalCenter: parent.verticalCenter
+          iconSize: 16
           circular: true
           iconName: "lock"
           onClicked: sessionActions.lock()
@@ -1667,11 +1718,21 @@ FocusScope {
         Controls.IconButton {
           id: powerToggleButton
           anchors.verticalCenter: parent.verticalCenter
+          iconSize: 16
           circular: true
           iconName: "power"
           active: root.expandedSection === "power"
           onClicked: root.toggleSection("power")
         }
+      }
+
+      UiText {
+        width: parent.width
+        visible: root.keyboardRecoveryMessage !== ""
+        text: root.keyboardRecoveryMessage
+        size: "xs"
+        tone: root.keyboardRecoveryFailed ? "accent" : "subtle"
+        wrapMode: Text.WordWrap
       }
 
       Item {
@@ -1683,7 +1744,7 @@ FocusScope {
 
       Row {
         width: parent.width
-        height: 40
+        height: 28
         spacing: 0
 
         Controls.Slider {
@@ -1756,7 +1817,7 @@ FocusScope {
 
       Row {
         width: parent.width
-        height: 40
+        height: 28
         spacing: 0
 
         Controls.Slider {
@@ -1890,7 +1951,7 @@ FocusScope {
               iconName: "sun"
               title: root.lightingTileTitle()
               active: lightingService.available && root.lightingLevelIndex() > 0
-              enabled: lightingService.available
+              enabled: lightingService.commandAvailable
               useActiveStyling: true
               open: root.expandedSection === "lighting"
               onClicked: root.toggleSection("lighting")
@@ -2469,7 +2530,7 @@ FocusScope {
       }
 
       PopoverSurface {
-        visible: root.expandedSection === "lighting" && lightingService.available
+        visible: root.expandedSection === "lighting" && lightingService.commandAvailable
         width: lightingTile.width
         x: root.popupX(lightingTile, width, false)
         y: root.popupOverlayY(lightingTile, height)
@@ -2520,6 +2581,7 @@ FocusScope {
           compact: true
           onClicked: root.setLightingLevel(3)
         }
+
       }
 
     }

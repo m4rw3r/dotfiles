@@ -25,7 +25,7 @@ Item {
   signal valueCommitted(real value)
 
   implicitWidth: parent ? parent.width : 0
-  implicitHeight: 40
+  implicitHeight: 28
 
   onValueChanged: {
     if (!control.pressed) dragValue = value;

@@ -370,6 +370,28 @@ FocusScope {
     return node.description || node.nickname || node.name || "Unknown output";
   }
 
+  function outputMenuTitle() {
+    if (audioSink) return outputLabel(audioSink);
+    return "Sound Output";
+  }
+
+  function outputMenuSubtitle() {
+    if (!Pipewire.ready) return initialLoadDeadlineElapsed ? "Loading audio..." : "";
+    if (!audioReady) return audioService.lastError !== "" ? "Unavailable" : "Audio unavailable";
+    return audioVolumePercentText();
+  }
+
+  function outputDeviceCount() {
+    if (!Pipewire.nodes || !Pipewire.nodes.values) return 0;
+
+    let count = 0;
+    for (let i = 0; i < Pipewire.nodes.values.length; i += 1) {
+      const node = Pipewire.nodes.values[i];
+      if (node && node.audio && node.isSink && !node.isStream) count += 1;
+    }
+    return count;
+  }
+
   function audioVolumeValue() {
     if (!audioReady) return 0;
     return clamp(Number(audioService.volume), 0, 1);
@@ -1911,7 +1933,7 @@ FocusScope {
         onClicked: root.dismissOverlaySection()
       }
 
-      UiSurface {
+      Patterns.HeroSheetPopover {
         id: outputsPopover
 
         visible: root.outputMenuOpen
@@ -1919,36 +1941,37 @@ FocusScope {
         x: content.x
         y: content.y + outputsPopoverSpacer.y
         z: 1
-        implicitHeight: outputsColumn.implicitHeight + 20
-        tone: "submenu"
-        outlined: false
-        radius: 18
-        border.width: 1
-        border.color: Theme.divider
+        iconName: root.audioReady && audioService.muted ? "speaker-muted" : "speaker"
+        title: root.outputMenuTitle()
+        subtitle: root.outputMenuSubtitle()
 
         Column {
-          id: outputsColumn
-
-          width: parent.width - 20
-          anchors.left: parent.left
-          anchors.leftMargin: 10
-          anchors.top: parent.top
-          anchors.topMargin: 10
+          width: parent.width
           spacing: 8
 
           UiText {
-            text: "Sound Output"
-            size: "sm"
-            font.weight: Font.DemiBold
+            visible: audioService.settled && !root.audioReady && !root.audioLoading
+            text: audioService.lastError !== "" ? audioService.lastError : "Audio unavailable."
+            size: "xs"
+            tone: "accent"
+            wrapMode: Text.WordWrap
           }
 
-          Controls.Menu {
+          UiText {
+            visible: Pipewire.ready && root.outputDeviceCount() === 0
+            text: "No sound outputs available."
+            size: "xs"
+            tone: "subtle"
+          }
+
+          Column {
             width: parent.width
+            spacing: 2
 
             Repeater {
               model: Pipewire.nodes
 
-              delegate: Controls.MenuItem {
+              delegate: PopoverMenuAction {
                 id: outputRow
 
                 required property var modelData
@@ -1957,13 +1980,11 @@ FocusScope {
 
                 visible: shown
                 width: parent.width
-                implicitHeight: shown ? 44 : 0
-                height: shown ? implicitHeight : 0
-                iconName: "speaker"
                 title: root.outputLabel(outputRow.outputNode)
                 trailingIconName: root.audioSink === outputRow.outputNode ? "check" : ""
+                trailingIconColor: Theme.text
                 active: root.audioSink === outputRow.outputNode
-                compact: true
+                enabled: shown
                 onClicked: Pipewire.preferredDefaultAudioSink = outputRow.outputNode
               }
             }

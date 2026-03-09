@@ -77,6 +77,11 @@ input {
         // scroll-method "two-finger"
     }
 
+    // Handled by systemd-logind
+    // When niri does this, waking it up using the power button (it is a tablet) immediately
+    // makes it go back into suspend and will cause it to freeze.
+    disable-power-key-handling
+
     // Uncomment this to make the mouse warp to the center of newly focused windows.
     // warp-mouse-to-focus
 

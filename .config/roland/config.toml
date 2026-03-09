@@ -1,0 +1,67 @@
+[[gestures]]
+num_fingers = 1
+kind = "SwipeDown"
+action = "qs ipc call ui showControlCenter"
+min_duration = 30
+min_distance = 30.0
+on_edge = [{right = 200, top = 100 }]
+
+[[gestures]]
+num_fingers = 3
+kind = "SwipeLeft"
+action = "niri msg action focus-column-right"
+min_duration = 50
+min_distance = 200.0
+
+[[gestures]]
+num_fingers = 3
+kind = "SwipeRight"
+action = "niri msg action focus-column-left"
+min_duration = 40
+min_distance = 200.0
+
+[[gestures]]
+num_fingers = 3
+kind = "SwipeDown"
+action = "niri msg action open-overview"
+min_duration = 40
+min_distance = 150.0
+
+[[gestures]]
+num_fingers = 4
+kind = "SwipeRight"
+action = "niri msg action switch-preset-column-width"
+min_duration = 40
+min_distance = 150.0
+
+[[gestures]]
+num_fingers = 4
+kind = "SwipeLeft"
+action = "niri msg action switch-preset-window-height"
+min_duration = 40
+min_distance = 150.0
+
+[[gestures]]
+num_fingers = 3
+kind = "SwipeUp"
+action = "qs ipc call launcher open"
+min_duration = 40
+min_distance = 150.0
+#min_distance = 50.0
+#on_edge = [{ bottom = 100 }]
+
+# Secondary launcher attempt
+[[gestures]]
+num_fingers = 1
+kind = "SwipeDown"
+action = "qs ipc call launcher open"
+min_duration = 30
+min_distance = 30.0
+on_edge = [{left = 400, top = 100 }]
+
+[[gestures]]
+num_fingers = 4
+kind = "SwipeUp"
+action = "niri msg action close-window"
+min_duration = 50
+min_distance = 300.0

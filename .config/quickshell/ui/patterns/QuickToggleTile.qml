@@ -44,7 +44,7 @@ Item {
       width: Math.max(0, parent.width - 32)
       anchors.verticalCenter: parent.verticalCenter
       text: root.title
-      size: "sm"
+      size: "md"
       tone: root.active ? "onAccent" : "primary"
       font.weight: Font.DemiBold
       elide: Text.ElideRight

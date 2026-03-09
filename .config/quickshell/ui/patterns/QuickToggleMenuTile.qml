@@ -84,7 +84,7 @@ Item {
       width: Math.max(0, parent.width - root.splitWidth - primaryIcon.implicitWidth)
       anchors.verticalCenter: parent.verticalCenter
       text: root.title
-      size: "sm"
+      size: "md"
       tone: root.active ? "onAccent" : "primary"
       font.weight: Font.DemiBold
       elide: Text.ElideRight
@@ -96,7 +96,7 @@ Item {
 
       Ui.UiIcon {
         anchors.centerIn: parent
-		anchors.horizontalCenterOffset: -9
+        anchors.horizontalCenterOffset: -9
         width: 18
         height: 18
         name: root.menuOpen ? "chevron-down" : "chevron-right"

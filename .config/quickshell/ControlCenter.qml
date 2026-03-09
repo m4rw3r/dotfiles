@@ -848,12 +848,12 @@ FocusScope {
 
     width: parent ? parent.width : implicitWidth
     implicitWidth: 1
-    implicitHeight: subtitle !== "" ? 62 : 54
+    implicitHeight: subtitle !== "" ? 48 : 38
     opacity: enabled ? 1 : 0.5
 
     Rectangle {
       anchors.fill: parent
-      radius: 18
+      radius: 16
       color: actionRow.active
         ? Qt.rgba(1, 1, 1, 0.06)
         : (actionTouch.pressed ? Qt.rgba(1, 1, 1, 0.035) : "transparent")
@@ -862,9 +862,9 @@ FocusScope {
     }
 
     Column {
-      width: Math.max(0, parent.width - trailingSlot.width - 46)
+      width: Math.max(0, parent.width - trailingSlot.width - 40)
       anchors.left: parent.left
-      anchors.leftMargin: 18
+      anchors.leftMargin: 12
       anchors.verticalCenter: parent.verticalCenter
       spacing: actionRow.subtitle !== "" ? 2 : 0
 
@@ -872,7 +872,6 @@ FocusScope {
         width: parent.width
         text: actionRow.title
         size: "md"
-        font.pixelSize: 17
         font.weight: Font.Medium
         elide: Text.ElideRight
       }
@@ -891,7 +890,7 @@ FocusScope {
       id: trailingSlot
 
       anchors.right: parent.right
-      anchors.rightMargin: 18
+      anchors.rightMargin: 12
       anchors.verticalCenter: parent.verticalCenter
       width: Math.max(actionLabel.visible ? actionLabel.implicitWidth : 0, trailingGlyph.visible ? trailingGlyph.implicitWidth : 0)
       height: parent.height
@@ -914,8 +913,8 @@ FocusScope {
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
         visible: name !== ""
-        width: 18
-        height: 18
+        width: 16
+        height: 16
         name: actionRow.trailingIconName
         strokeColor: actionRow.trailingIconColor
       }
@@ -1990,7 +1989,7 @@ FocusScope {
 
           Column {
             width: parent.width
-            spacing: 4
+            spacing: 2
 
             PopoverMenuAction {
               width: parent.width

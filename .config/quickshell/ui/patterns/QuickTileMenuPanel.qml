@@ -54,7 +54,7 @@ Ui.UiSurface {
         width: Math.max(0, parent.width - 46)
         anchors.verticalCenter: parent.verticalCenter
         text: root.title
-        size: "sm"
+        size: "md"
         font.weight: Font.DemiBold
         elide: Text.ElideRight
       }

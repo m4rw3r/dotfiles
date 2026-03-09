@@ -8,9 +8,9 @@ Ui.UiSurface {
   property string iconName: ""
   property string title: ""
   property string subtitle: ""
-  property int horizontalPadding: 20
-  property int verticalPadding: 20
-  property int sectionSpacing: 18
+  property int horizontalPadding: 12
+  property int verticalPadding: 12
+  property int sectionSpacing: 12
   default property alias content: bodyColumn.data
 
   width: implicitWidth
@@ -18,7 +18,7 @@ Ui.UiSurface {
   implicitHeight: sheetColumn.implicitHeight + verticalPadding * 2
   tone: "submenu"
   outlined: false
-  radius: 28
+  radius: 18
   color: Theme.submenu
   z: 8
   clip: true
@@ -38,18 +38,18 @@ Ui.UiSurface {
 
     Row {
       width: parent.width
-      spacing: 14
+      spacing: 6
 
       Rectangle {
-        width: 56
-        height: 56
-        radius: 28
+        width: 48
+        height: 48
+        radius: 48 / 2
         color: Qt.rgba(1, 1, 1, 0.16)
 
         Ui.UiIcon {
           anchors.centerIn: parent
-          width: 26
-          height: 26
+          width: 22
+          height: 22
           name: root.iconName
           strokeColor: Theme.text
           stroke: 2.1
@@ -57,14 +57,14 @@ Ui.UiSurface {
       }
 
       Column {
-        width: Math.max(0, parent.width - 70)
+        width: Math.max(0, parent.width - 64)
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 4
+        spacing: 3
 
         Ui.UiText {
           width: parent.width
           text: root.title
-          size: "xl"
+          size: "lg"
           font.weight: Font.Bold
           elide: Text.ElideRight
         }

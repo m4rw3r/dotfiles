@@ -101,11 +101,11 @@ Singleton {
   readonly property int radiusMd: 18
   readonly property int radiusLg: 22
 
-  readonly property int textXs: 12
-  readonly property int textSm: 14
-  readonly property int textMd: 16
-  readonly property int textLg: 22
-  readonly property int textXl: 24
+  readonly property int textXs: 10
+  readonly property int textSm: 12
+  readonly property int textMd: 14
+  readonly property int textLg: 18
+  readonly property int textXl: 22
 
   readonly property int iconSm: 42
   readonly property int iconMd: 46

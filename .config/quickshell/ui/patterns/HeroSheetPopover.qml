@@ -12,9 +12,9 @@ Ui.UiSurface {
   property bool statusActive: false
   property bool statusBusy: false
   property bool statusToggleEnabled: hasStatus
-  property int horizontalPadding: 12
-  property int verticalPadding: 12
-  property int sectionSpacing: 12
+  property int horizontalPadding: Theme.insetSm
+  property int verticalPadding: Theme.insetSm
+  property int sectionSpacing: Theme.gapSm
   default property alias content: bodyColumn.data
   signal statusClicked()
 
@@ -25,12 +25,12 @@ Ui.UiSurface {
   implicitHeight: sheetColumn.implicitHeight + verticalPadding * 2
   tone: "submenu"
   outlined: false
-  radius: 18
+  radius: Theme.radiusMd
   color: Theme.submenu
   z: 8
   clip: true
 
-  border.width: 1
+  border.width: Theme.stroke
   border.color: Qt.rgba(1, 1, 1, 0.08)
 
   Column {
@@ -45,27 +45,27 @@ Ui.UiSurface {
 
     Row {
       width: parent.width
-      spacing: 6
+      spacing: Theme.gapXs
 
       Rectangle {
         id: heroBadge
 
-        width: 48
-        height: 48
-        radius: 48 / 2
+        width: Theme.controlMd
+        height: Theme.controlMd
+        radius: width / 2
         color: {
           if (!root.hasStatus) return Qt.rgba(1, 1, 1, 0.16);
           if (root.statusActive) return heroTouch.pressed ? Theme.toggleOnStrong : Theme.toggleOn;
           if (!root.statusToggleEnabled) return Theme.field;
           return heroTouch.pressed ? Theme.fieldPressed : Theme.toggleOff;
         }
-        border.width: root.hasStatus && !root.statusActive ? 1 : 0
+        border.width: root.hasStatus && !root.statusActive ? Theme.stroke : 0
         border.color: Qt.rgba(1, 1, 1, 0.08)
 
         Ui.UiIcon {
           anchors.centerIn: parent
-          width: 22
-          height: 22
+          width: Theme.iconGlyphMd
+          height: Theme.iconGlyphMd
           name: root.iconName
           strokeColor: root.hasStatus && root.statusActive ? Theme.textOnAccent : Theme.text
           stroke: 2.1
@@ -81,9 +81,9 @@ Ui.UiSurface {
       }
 
       Column {
-        width: Math.max(0, parent.width - 64)
+        width: Math.max(0, parent.width - Theme.controlMd - Theme.gapSm - Theme.nudge)
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 3
+        spacing: Theme.nudge
 
         Ui.UiText {
           width: parent.width

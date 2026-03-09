@@ -7,20 +7,20 @@ Ui.UiSurface {
 
   property string iconName: "wifi"
   property string title: ""
-  property int horizontalPadding: 14
-  property int verticalPadding: 14
+  property int horizontalPadding: Theme.insetMd
+  property int verticalPadding: Theme.insetMd
   default property alias content: bodyColumn.data
 
   width: implicitWidth
-  implicitWidth: 228
-  implicitHeight: headerRow.implicitHeight + bodyColumn.implicitHeight + verticalPadding * 2 + 12
+  implicitWidth: Theme.popoverWidthMd
+  implicitHeight: headerRow.implicitHeight + bodyColumn.implicitHeight + verticalPadding * 2 + Theme.gapSm
   tone: "submenu"
   outlined: false
-  radius: 24
+  radius: Theme.radiusLg
   z: 8
   clip: true
 
-  border.width: 1
+  border.width: Theme.stroke
   border.color: Qt.rgba(1, 1, 1, 0.08)
 
   Column {
@@ -29,18 +29,18 @@ Ui.UiSurface {
     anchors.leftMargin: root.horizontalPadding
     anchors.top: parent.top
     anchors.topMargin: root.verticalPadding
-    spacing: 12
+    spacing: Theme.gapSm
 
     Row {
       id: headerRow
 
       width: parent.width
-      spacing: 10
+      spacing: Theme.gapXs
 
       Rectangle {
-        width: 36
-        height: 36
-        radius: 18
+        width: Theme.controlSm
+        height: Theme.controlSm
+        radius: Theme.controlSm / 2
         color: Theme.field
 
         Ui.UiIcon {
@@ -51,7 +51,7 @@ Ui.UiSurface {
       }
 
       Ui.UiText {
-        width: Math.max(0, parent.width - 46)
+        width: Math.max(0, parent.width - Theme.controlSm - Theme.gapSm)
         anchors.verticalCenter: parent.verticalCenter
         text: root.title
         size: "md"
@@ -64,7 +64,7 @@ Ui.UiSurface {
       id: bodyColumn
 
       width: parent.width
-      spacing: 8
+      spacing: Theme.gapXs
     }
   }
 }

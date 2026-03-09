@@ -10,8 +10,8 @@ Item {
   property color iconColor: strokeColor
   property real stroke: 1.75
 
-  implicitWidth: 20
-  implicitHeight: 20
+  implicitWidth: Theme.iconGlyphSm
+  implicitHeight: Theme.iconGlyphSm
 
   readonly property var aliases: ({
     "restart": "rotate-cw",
@@ -29,7 +29,7 @@ Item {
     color: root.iconColor
     asynchronous: false
     mipmap: true
-    sourceSize.width: Math.max(24, Math.round(width * 2))
-    sourceSize.height: Math.max(24, Math.round(height * 2))
+    sourceSize.width: Math.max(Theme.iconGlyphMd, Math.round(width * 2))
+    sourceSize.height: Math.max(Theme.iconGlyphMd, Math.round(height * 2))
   }
 }

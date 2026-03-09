@@ -19,7 +19,7 @@ Item {
 
   width: parent ? parent.width : implicitWidth
   implicitWidth: 1
-  implicitHeight: compact || subtitle === "" ? 42 : 50
+  implicitHeight: Theme.controlMd
   opacity: enabled ? 1 : 0.45
   readonly property bool accentActive: active && activeStyle === "accent"
   readonly property bool subtleActive: active && activeStyle === "subtle"
@@ -27,22 +27,22 @@ Item {
 
   Rectangle {
     anchors.fill: parent
-    radius: 12
+    radius: Theme.radiusSm
     color: root.accentActive
       ? Theme.toggleOn
       : (root.subtleActive ? Theme.field : (touchArea.pressed ? Theme.fieldAlt : "transparent"))
-    border.width: root.accentActive || root.subtleActive ? 1 : 0
+    border.width: root.accentActive || root.subtleActive ? Theme.stroke : 0
     border.color: root.accentActive ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08)
   }
 
   Row {
     anchors.fill: parent
-    anchors.leftMargin: 14
-    anchors.rightMargin: 14
-    spacing: 14
+    anchors.leftMargin: Theme.gapSm
+    anchors.rightMargin: Theme.gapSm
+    spacing: Theme.gapSm
 
     Item {
-      width: root.iconName !== "" ? 20 : 0
+      width: root.iconName !== "" ? Theme.iconGlyphMd : 0
       height: parent.height
 
       Ui.UiIcon {
@@ -54,9 +54,13 @@ Item {
     }
 
     Column {
-      width: Math.max(0, parent.width - trailingSlot.width - (root.iconName !== "" ? 56 : 22))
+      width: Math.max(
+        0,
+        parent.width - trailingSlot.width
+        - (root.iconName !== "" ? Theme.iconGlyphMd + Theme.gapLg + Theme.nudge : Theme.gapLg - Theme.nudge)
+      )
       anchors.verticalCenter: parent.verticalCenter
-      spacing: root.compact ? 0 : 1
+      spacing: root.compact ? 0 : Theme.stroke
 
       Ui.UiText {
         text: root.title
@@ -112,9 +116,9 @@ Item {
     anchors.left: parent.left
     anchors.right: parent.right
     anchors.bottom: parent.bottom
-    anchors.leftMargin: 18
-    anchors.rightMargin: 18
-    height: 1
+    anchors.leftMargin: Theme.gapMd
+    anchors.rightMargin: Theme.gapMd
+    height: Theme.stroke
     color: Theme.divider
     visible: root.dividerVisible && !root.accentActive && !root.subtleActive
   }

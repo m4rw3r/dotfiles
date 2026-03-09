@@ -12,13 +12,13 @@ Item {
   property bool open: false
   signal clicked()
 
-  implicitWidth: parent ? Math.floor((parent.width - 10) / 2) : 180
-  implicitHeight: 44
+  implicitWidth: parent ? Math.floor((parent.width - Theme.gapSm) / 2) : Theme.popoverWidthSm
+  implicitHeight: Theme.tileHeight
   opacity: enabled ? 1 : 0.5
 
   readonly property bool pressed: touchArea.pressed
   readonly property bool highlighted: useActiveStyling && active
-  readonly property real tileRadius: 18
+  readonly property real tileRadius: Theme.radiusMd
   readonly property color tileColor: highlighted
     ? (pressed ? Theme.toggleOnStrong : Theme.toggleOn)
     : ((pressed || open) ? Theme.fieldAlt : Theme.field)
@@ -27,7 +27,7 @@ Item {
     anchors.fill: parent
     radius: root.tileRadius
     color: root.tileColor
-    border.width: 1
+    border.width: Theme.stroke
     border.color: root.highlighted
       ? Qt.rgba(1, 1, 1, 0.12)
       : (root.open ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08))
@@ -35,9 +35,9 @@ Item {
 
   Row {
     anchors.fill: parent
-    anchors.leftMargin: 13
-    anchors.rightMargin: 13
-    spacing: 10
+    anchors.leftMargin: Theme.gapSm
+    anchors.rightMargin: Theme.gapSm
+    spacing: Theme.gapXs
 
     Ui.UiIcon {
       anchors.verticalCenter: parent.verticalCenter
@@ -46,7 +46,7 @@ Item {
     }
 
     Ui.UiText {
-      width: Math.max(0, parent.width - 32)
+      width: Math.max(0, parent.width - Theme.iconGlyphMd - Theme.gapLg)
       anchors.verticalCenter: parent.verticalCenter
       text: root.title
       size: "md"

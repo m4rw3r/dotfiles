@@ -10,7 +10,7 @@ Ui.UiSurface {
   property bool circular: false
   property bool interactive: true
   property string variant: "filled"
-  property int iconSize: 20
+  property int iconSize: Theme.iconGlyphSm
   property color iconColor: {
     if (!enabled) return Theme.textSubtle;
     if (variant === "minimal") return active ? Theme.text : Theme.textMuted;
@@ -19,11 +19,11 @@ Ui.UiSurface {
   signal clicked()
 
   width: implicitWidth
-  implicitWidth: variant === "minimal" ? 24 : (circular ? 36 : 44)
-  implicitHeight: variant === "minimal" ? 24 : (circular ? 36 : 44)
+  implicitWidth: variant === "minimal" ? Theme.iconGlyphMd : (circular ? Theme.controlSm : Theme.controlMd)
+  implicitHeight: variant === "minimal" ? Theme.iconGlyphMd : (circular ? Theme.controlSm : Theme.controlMd)
   tone: "field"
   outlined: false
-  radius: variant === "minimal" ? 0 : (circular ? width / 2 : 19)
+  radius: variant === "minimal" ? 0 : (circular ? width / 2 : Theme.radiusMd)
   pressed: interactive && touchArea.pressed
   opacity: enabled ? 1 : 0.45
   color: {
@@ -32,7 +32,7 @@ Ui.UiSurface {
     return touchArea.pressed ? Theme.fieldPressed : Theme.field;
   }
 
-  border.width: variant === "minimal" ? 0 : 1
+  border.width: variant === "minimal" ? 0 : Theme.stroke
   border.color: active ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08)
 
   Ui.UiIcon {

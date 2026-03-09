@@ -37,27 +37,27 @@ FocusScope {
 
     width: parent ? parent.width : implicitWidth
     implicitWidth: 1
-    implicitHeight: container.implicitHeight + 24
+    implicitHeight: container.implicitHeight + Theme.insetLg
     tone: "panelOverlay"
     outlined: false
     radius: Theme.radiusLg
 
-    border.width: 1
+    border.width: Theme.stroke
     border.color: Theme.border
 
     Column {
       id: container
 
-      width: parent.width - 24
+      width: parent.width - Theme.insetLg
       anchors.left: parent.left
-      anchors.leftMargin: 12
+      anchors.leftMargin: Theme.insetSm
       anchors.top: parent.top
-      anchors.topMargin: 12
-      spacing: 14
+      anchors.topMargin: Theme.insetSm
+      spacing: Theme.gapMd
 
       Column {
         width: parent.width
-        spacing: 4
+        spacing: Theme.nudge
 
         UiText {
           text: section.title
@@ -79,7 +79,7 @@ FocusScope {
         id: body
 
         width: parent.width
-        spacing: 12
+        spacing: Theme.gapSm
       }
     }
   }
@@ -88,19 +88,19 @@ FocusScope {
     id: popover
 
     default property alias content: popoverColumn.data
-    property int horizontalPadding: 10
-    property int verticalPadding: 10
+    property int horizontalPadding: Theme.insetSm
+    property int verticalPadding: Theme.insetSm
 
     width: implicitWidth
     height: implicitHeight
-    implicitWidth: 196
+    implicitWidth: Theme.popoverWidthSm
     implicitHeight: popoverColumn.implicitHeight + verticalPadding * 2
     tone: "submenu"
     outlined: false
-    radius: 18
+    radius: Theme.radiusMd
     clip: true
 
-    border.width: 1
+    border.width: Theme.stroke
     border.color: Qt.rgba(1, 1, 1, 0.08)
 
     Column {
@@ -111,7 +111,7 @@ FocusScope {
       anchors.leftMargin: popover.horizontalPadding
       anchors.top: parent.top
       anchors.topMargin: popover.verticalPadding
-      spacing: 2
+      spacing: Theme.nudge
     }
   }
 
@@ -135,7 +135,7 @@ FocusScope {
 
       UiSurface {
         width: parent.width
-        implicitHeight: 84
+        implicitHeight: Theme.controlMd * 2
         tone: "raised"
         radius: 0
         outlined: false
@@ -144,14 +144,14 @@ FocusScope {
 
         Row {
           anchors.fill: parent
-          anchors.leftMargin: 20
-          anchors.rightMargin: 20
-          spacing: 14
+          anchors.leftMargin: Theme.gapMd
+          anchors.rightMargin: Theme.gapMd
+          spacing: Theme.gapMd
 
           Column {
-            width: Math.max(0, parent.width - themeRow.implicitWidth - closeButton.implicitWidth - 32)
+            width: Math.max(0, parent.width - themeRow.implicitWidth - closeButton.implicitWidth - Theme.controlSm)
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 4
+            spacing: Theme.nudge
 
             UiText {
               text: "Widget Gallery"
@@ -202,10 +202,10 @@ FocusScope {
         id: viewport
 
         width: parent.width
-        height: parent.height - 84
+        height: parent.height - Theme.controlMd * 2
         clip: true
         contentWidth: width
-        contentHeight: galleryColumn.implicitHeight + 28
+        contentHeight: galleryColumn.implicitHeight + Theme.gapLg + Theme.nudge
         boundsBehavior: Flickable.StopAtBounds
 
         QtControls.ScrollBar.vertical: QtControls.ScrollBar {
@@ -215,12 +215,12 @@ FocusScope {
         Column {
           id: galleryColumn
 
-          width: viewport.width - 28
+          width: viewport.width - Theme.gapLg - Theme.nudge
           anchors.left: parent.left
-          anchors.leftMargin: 14
+          anchors.leftMargin: Theme.gapMd
           anchors.top: parent.top
-          anchors.topMargin: 14
-          spacing: 14
+          anchors.topMargin: Theme.gapMd
+          spacing: Theme.gapMd
 
           GallerySection {
             title: "Foundations"
@@ -230,7 +230,7 @@ FocusScope {
               id: toneFlow
 
               width: parent.width
-              spacing: 10
+              spacing: Theme.gapXs
 
               Repeater {
                 model: root.surfaceTones
@@ -240,14 +240,14 @@ FocusScope {
 
                   required property var modelData
 
-                  width: 120
-                  height: 88
+                  width: Theme.controlMd * 2 + Theme.gapLg + Theme.gapXs
+                  height: Theme.controlMd * 2
 
                   UiSurface {
                     width: parent.width
-                    height: 58
+                    height: Theme.controlMd + Theme.gapSm
                     tone: String(toneSwatch.modelData)
-                    radius: 16
+                    radius: Theme.radiusMd
                     outlined: false
                   }
 
@@ -263,7 +263,7 @@ FocusScope {
             }
 
             Row {
-              spacing: 14
+              spacing: Theme.gapMd
 
               Repeater {
                 model: ["wifi", "bluetooth", "gauge", "keyboard", "speaker", "power", "check"]
@@ -273,13 +273,13 @@ FocusScope {
 
                   required property var modelData
 
-                  spacing: 6
+                  spacing: Theme.gapXs
 
                   UiSurface {
-                    width: 52
-                    height: 52
+                    width: Theme.controlMd + Theme.gapXs
+                    height: Theme.controlMd + Theme.gapXs
                     tone: "fieldAlt"
-                    radius: 18
+                    radius: Theme.radiusMd
                     outlined: false
 
                     UiIcon {
@@ -290,7 +290,7 @@ FocusScope {
                   }
 
                   UiText {
-                    width: 52
+                    width: Theme.controlMd + Theme.gapXs
                     horizontalAlignment: Text.AlignHCenter
                     text: String(iconSample.modelData)
                     size: "xs"
@@ -328,7 +328,7 @@ FocusScope {
 
             Flow {
               width: parent.width
-              spacing: 10
+              spacing: Theme.gapXs
 
               Controls.Button { text: "Default" }
               Controls.Button { text: "Accent"; variant: "accent" }
@@ -344,7 +344,7 @@ FocusScope {
 
             Flow {
               width: parent.width
-              spacing: 10
+              spacing: Theme.gapXs
 
               Controls.IconButton { iconName: "speaker" }
               Controls.IconButton { iconName: "speaker-muted"; active: true }
@@ -361,7 +361,7 @@ FocusScope {
 
             Column {
               width: parent.width
-              spacing: 10
+              spacing: Theme.gapXs
 
               Controls.Toggle {
                 width: parent.width
@@ -463,7 +463,7 @@ FocusScope {
 
             Row {
               width: parent.width
-              spacing: 14
+              spacing: Theme.gapMd
 
               Controls.Menu {
                 width: Math.max(220, Math.floor((parent.width - parent.spacing) / 2))
@@ -526,7 +526,7 @@ FocusScope {
 
             Row {
               width: parent.width
-              spacing: 14
+              spacing: Theme.gapMd
 
               UiSurface {
                 id: popoverPreview
@@ -535,7 +535,7 @@ FocusScope {
                 implicitHeight: popoverPreviewProfileTile.implicitHeight + 36
                 tone: "panel"
                 outlined: false
-                radius: 26
+                radius: Theme.radiusLg
 
                 border.width: 1
                 border.color: Qt.rgba(1, 1, 1, 0.12)
@@ -555,11 +555,11 @@ FocusScope {
                 Patterns.QuickSelectorTile {
                   id: popoverPreviewProfileTile
 
-                  width: parent.width - 36
+                  width: parent.width - Theme.controlSm
                   anchors.left: parent.left
-                  anchors.leftMargin: 18
+                  anchors.leftMargin: Theme.gapMd
                   anchors.bottom: parent.bottom
-                  anchors.bottomMargin: 18
+                  anchors.bottomMargin: Theme.gapMd
                   iconName: "gauge"
                   title: "Saver"
                   useActiveStyling: false
@@ -609,7 +609,7 @@ FocusScope {
                 implicitHeight: menuPreviewSlot.implicitHeight + 36
                 tone: "panel"
                 outlined: false
-                radius: 26
+                radius: Theme.radiusLg
 
                 border.width: 1
                 border.color: Qt.rgba(1, 1, 1, 0.12)
@@ -634,11 +634,11 @@ FocusScope {
                 Column {
                   id: menuPreviewSlot
 
-                  width: parent.width - 36
+                  width: parent.width - Theme.controlSm
                   anchors.left: parent.left
-                  anchors.leftMargin: 18
+                  anchors.leftMargin: Theme.gapMd
                   anchors.bottom: parent.bottom
-                  anchors.bottomMargin: 18
+                  anchors.bottomMargin: Theme.gapMd
                   spacing: 0
 
                   Patterns.QuickToggleMenuTile {
@@ -712,7 +712,7 @@ FocusScope {
               id: quickTileFlow
 
               width: parent.width
-              spacing: 10
+              spacing: Theme.gapXs
 
               Patterns.QuickToggleTile {
                 width: Math.max(220, Math.floor((parent.width - quickTileFlow.spacing) / 2))

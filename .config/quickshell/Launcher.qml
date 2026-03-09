@@ -567,7 +567,7 @@ Item {
         width: Math.min(parent.width - 36, 980)
         height: launcherColumn.implicitHeight
         anchors.horizontalCenter: parent.horizontalCenter
-        y: Math.max(20, Math.round((parent.height - launcherWindow.keyboardInset - height) / 2))
+        y: Math.max(Theme.gapMd, Math.round((parent.height - launcherWindow.keyboardInset - height) / 2))
         focus: launcherWindow.visible && !searchInput.activeFocus
         LayoutMirroring.enabled: false
         LayoutMirroring.childrenInherit: true
@@ -644,11 +644,11 @@ Item {
         Column {
           id: launcherColumn
           anchors.fill: parent
-          spacing: 18
+          spacing: Theme.gapMd
 
           Item {
             width: parent.width
-            height: 64
+            height: Theme.controlMd + Theme.gapLg - Theme.nudge
 
             UiSurface {
               id: searchBar
@@ -662,8 +662,8 @@ Item {
               TextInput {
                 id: searchInput
                 anchors.fill: parent
-                anchors.leftMargin: 18
-                anchors.rightMargin: searchInput.text === "" ? 18 : 52
+                anchors.leftMargin: Theme.gapMd
+                anchors.rightMargin: searchInput.text === "" ? Theme.gapMd : Theme.controlMd + Theme.gapXs
                 verticalAlignment: TextInput.AlignVCenter
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.textXl
@@ -726,7 +726,7 @@ Item {
               UiText {
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.left: parent.left
-                anchors.leftMargin: 18
+                anchors.leftMargin: Theme.gapMd
                 visible: searchInput.text === "" && !searchInput.activeFocus
                 text: "Search apps"
                 tone: "subtle"
@@ -735,10 +735,10 @@ Item {
 
               Item {
                 id: clearButton
-                width: 34
-                height: 34
+                width: Theme.controlSm
+                height: Theme.controlSm
                 anchors.right: parent.right
-                anchors.rightMargin: 12
+                anchors.rightMargin: Theme.gapSm
                 anchors.verticalCenter: parent.verticalCenter
                 visible: searchInput.text !== ""
 
@@ -773,9 +773,9 @@ Item {
             height: rows * tileHeight + Math.max(0, rows - 1) * tileSpacing
             property int columns: root.launcherColumns
             property int rows: root.launcherRows
-            property int tileHeight: 122
-            property int tileSpacing: 14
-            property int arrowGutter: 76
+            property int tileHeight: Theme.controlMd * 2 + Theme.gapLg + Theme.gapXs
+            property int tileSpacing: Theme.gapSm
+            property int arrowGutter: Theme.controlMd + Theme.gapLg + Theme.gapXs
             property real tileWidth: Math.floor((pageFrame.width - (columns - 1) * tileSpacing) / columns)
             property int pageSize: root.launcherPageSize
             property int pageCount: Math.max(1, Math.ceil(root.launcherResults.length / pageSize))
@@ -879,7 +879,7 @@ Item {
                   }
 
                   const delta = pageStrip.x - pageFrame.dragStartX;
-                  const threshold = Math.max(120, pageFrame.width * 0.22);
+                  const threshold = Math.max(Theme.controlMd * 2 + Theme.gapLg + Theme.gapXs, pageFrame.width * 0.22);
                   let targetPage = pageFrame.dragStartPage;
                   if (Math.abs(delta) >= threshold) targetPage += delta < 0 ? 1 : -1;
                   targetPage = pageFrame.clampPage(targetPage);
@@ -955,7 +955,7 @@ Item {
 
                             IconImage {
                               anchors.horizontalCenter: parent.horizontalCenter
-                              implicitSize: tile.selected ? Theme.iconMd : Theme.iconSm
+                              implicitSize: tile.selected ? Theme.launcherTileIconMd : Theme.launcherTileIconSm
                               asynchronous: true
                               mipmap: true
                               source: tile.entry.icon !== "" ? `image://icon/${tile.entry.icon}` : "image://icon/application-x-executable"

@@ -25,7 +25,7 @@ Item {
   signal valueCommitted(real value)
 
   implicitWidth: parent ? parent.width : 0
-  implicitHeight: 28
+  implicitHeight: Theme.controlSm
 
   onValueChanged: {
     if (!control.pressed) dragValue = value;
@@ -81,9 +81,9 @@ Item {
 
   Item {
     anchors.left: leadingSlot.right
-    anchors.leftMargin: leadingSlot.width > 0 ? 10 : 0
+    anchors.leftMargin: leadingSlot.width > 0 ? Theme.gapXs : 0
     anchors.right: trailingSlot.left
-    anchors.rightMargin: trailingSlot.width > 0 ? 10 : 0
+    anchors.rightMargin: trailingSlot.width > 0 ? Theme.gapXs : 0
     anchors.top: parent.top
     anchors.bottom: parent.bottom
 
@@ -111,8 +111,8 @@ Item {
         x: control.leftPadding
         y: control.topPadding + control.availableHeight / 2 - height / 2
         width: control.availableWidth
-        height: 7
-        radius: 3.5
+        height: Theme.gapXs
+        radius: height / 2
         color: Theme.sliderTrack
 
         Rectangle {
@@ -126,11 +126,11 @@ Item {
       handle: Rectangle {
         x: control.leftPadding + control.visualPosition * (control.availableWidth - width)
         y: control.topPadding + control.availableHeight / 2 - height / 2
-        width: 20
-        height: 20
-        radius: 10
+        width: Theme.iconGlyphMd
+        height: Theme.iconGlyphMd
+        radius: width / 2
         color: Theme.text
-        border.width: 1
+        border.width: Theme.stroke
         border.color: Qt.rgba(0, 0, 0, 0.18)
       }
     }

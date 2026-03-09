@@ -804,20 +804,20 @@ FocusScope {
     property string text: ""
     property string iconName: ""
 
-    implicitWidth: chipRow.implicitWidth + 26
-    implicitHeight: 36
+    implicitWidth: chipRow.implicitWidth + Theme.gapLg
+    implicitHeight: Theme.controlSm
     tone: "field"
     outlined: false
-    radius: 20
+    radius: Theme.radiusMd
 
-    border.width: 1
+    border.width: Theme.stroke
     border.color: Qt.rgba(1, 1, 1, 0.08)
 
     Row {
       id: chipRow
 
       anchors.centerIn: parent
-      spacing: chip.iconName === "" ? 0 : 8
+      spacing: chip.iconName === "" ? 0 : Theme.gapXs
 
       UiIcon {
         visible: chip.iconName !== ""
@@ -842,20 +842,20 @@ FocusScope {
     id: popover
 
     default property alias content: popoverColumn.data
-    property int horizontalPadding: 10
-    property int verticalPadding: 10
+    property int horizontalPadding: Theme.insetSm
+    property int verticalPadding: Theme.insetSm
 
     width: implicitWidth
     height: implicitHeight
-    implicitWidth: 196
+    implicitWidth: Theme.popoverWidthSm
     implicitHeight: popoverColumn.implicitHeight + verticalPadding * 2
     tone: "submenu"
     outlined: false
-    radius: 18
+    radius: Theme.radiusMd
     z: 8
     clip: true
 
-    border.width: 1
+    border.width: Theme.stroke
     border.color: Qt.rgba(1, 1, 1, 0.08)
 
     Column {
@@ -866,7 +866,7 @@ FocusScope {
       anchors.leftMargin: popover.horizontalPadding
       anchors.top: parent.top
       anchors.topMargin: popover.verticalPadding
-      spacing: 2
+      spacing: Theme.nudge
     }
   }
 
@@ -883,25 +883,25 @@ FocusScope {
 
     width: parent ? parent.width : implicitWidth
     implicitWidth: 1
-    implicitHeight: subtitle !== "" ? 48 : 38
+    implicitHeight: subtitle !== "" ? Theme.controlMd : Theme.controlSm
     opacity: enabled ? 1 : 0.5
 
     Rectangle {
       anchors.fill: parent
-      radius: 16
+      radius: Theme.radiusMd
       color: actionRow.active
         ? Qt.rgba(1, 1, 1, 0.06)
         : (actionTouch.pressed ? Qt.rgba(1, 1, 1, 0.035) : "transparent")
-      border.width: actionRow.active ? 1 : 0
+      border.width: actionRow.active ? Theme.stroke : 0
       border.color: Qt.rgba(1, 1, 1, 0.1)
     }
 
     Column {
-      width: Math.max(0, parent.width - trailingSlot.width - 40)
+      width: Math.max(0, parent.width - trailingSlot.width - Theme.controlMd)
       anchors.left: parent.left
-      anchors.leftMargin: 12
+      anchors.leftMargin: Theme.gapSm
       anchors.verticalCenter: parent.verticalCenter
-      spacing: actionRow.subtitle !== "" ? 2 : 0
+      spacing: actionRow.subtitle !== "" ? Theme.nudge : 0
 
       UiText {
         width: parent.width
@@ -925,7 +925,7 @@ FocusScope {
       id: trailingSlot
 
       anchors.right: parent.right
-      anchors.rightMargin: 12
+      anchors.rightMargin: Theme.gapSm
       anchors.verticalCenter: parent.verticalCenter
       width: Math.max(actionLabel.visible ? actionLabel.implicitWidth : 0, trailingGlyph.visible ? trailingGlyph.implicitWidth : 0)
       height: parent.height
@@ -1602,12 +1602,12 @@ FocusScope {
     id: panel
 
     width: root.implicitWidth
-    implicitHeight: content.implicitHeight + 32
+    implicitHeight: content.implicitHeight + Theme.insetMd * 2
     tone: "panelOverlay"
     outlined: false
-    radius: 30
+    radius: Theme.radiusLg
 
-    border.width: 1
+    border.width: Theme.stroke
     border.color: Qt.rgba(1, 1, 1, 0.12)
 
     MouseArea {
@@ -1617,18 +1617,18 @@ FocusScope {
     Column {
       id: content
 
-      width: parent.width - 32
       anchors.left: parent.left
-      anchors.leftMargin: 12
+      anchors.right: parent.right
+      anchors.leftMargin: Theme.insetMd
+      anchors.rightMargin: Theme.insetMd
       anchors.top: parent.top
-      anchors.topMargin: 16
-      spacing: 12
+      anchors.topMargin: Theme.insetMd
+      spacing: Theme.gapSm
 
       Row {
-        width: parent.width - 8
-        anchors.horizontalCenter: parent.horizontalCenter
-        height: 36
-        spacing: 8
+        width: parent.width
+        height: Theme.controlSm
+        spacing: Theme.gapXs
 
         StatusChip {
           id: batteryChip
@@ -1639,14 +1639,18 @@ FocusScope {
         }
 
         Item {
-          width: Math.max(0, parent.width - (batteryChip.visible ? batteryChip.implicitWidth : 0) - keyboardRecoveryButton.implicitWidth - lockButton.implicitWidth - powerToggleButton.implicitWidth - 26)
+          width: Math.max(
+            0,
+            parent.width - (batteryChip.visible ? batteryChip.implicitWidth : 0)
+            - keyboardRecoveryButton.implicitWidth - lockButton.implicitWidth - powerToggleButton.implicitWidth - Theme.gapLg
+          )
           height: parent.height
         }
 
         Controls.IconButton {
           id: keyboardRecoveryButton
           anchors.verticalCenter: parent.verticalCenter
-          iconSize: 16
+          iconSize: Theme.iconGlyphSm
           circular: true
           iconName: "keyboard"
           active: root.keyboardRecoveryBusy
@@ -1656,7 +1660,7 @@ FocusScope {
         Controls.IconButton {
           id: lockButton
           anchors.verticalCenter: parent.verticalCenter
-          iconSize: 16
+          iconSize: Theme.iconGlyphSm
           circular: true
           iconName: "lock"
           enabled: !root.sessionActionBusy
@@ -1666,7 +1670,7 @@ FocusScope {
         Controls.IconButton {
           id: powerToggleButton
           anchors.verticalCenter: parent.verticalCenter
-          iconSize: 16
+          iconSize: Theme.iconGlyphSm
           circular: true
           iconName: "power"
           active: root.expandedSection === "power"
@@ -1693,14 +1697,14 @@ FocusScope {
 
       Row {
         width: parent.width
-        height: 28
+        height: Theme.controlSm
         spacing: 0
 
         Controls.Slider {
           width: parent.width
           anchors.verticalCenter: parent.verticalCenter
           showIcon: false
-          trailingSlotWidth: Theme.controlAccessorySlot - 4
+          trailingSlotWidth: Theme.controlAccessorySlot - Theme.nudge
           leadingAccessory: [
             Controls.IconButton {
               anchors.centerIn: parent
@@ -1719,7 +1723,7 @@ FocusScope {
               anchors.centerIn: parent
               width: implicitWidth
               variant: "minimal"
-              iconSize: 18
+              iconSize: Theme.iconGlyphSm
               iconName: root.expandedSection === "outputs" ? "chevron-down" : "chevron-right"
               active: root.expandedSection === "outputs"
               enabled: Pipewire.ready
@@ -1766,7 +1770,7 @@ FocusScope {
 
       Row {
         width: parent.width
-        height: 28
+        height: Theme.controlSm
         spacing: 0
 
         Controls.Slider {
@@ -1775,7 +1779,7 @@ FocusScope {
           width: parent.width
           anchors.verticalCenter: parent.verticalCenter
           showIcon: false
-          trailingSlotWidth: Theme.controlAccessorySlot - 4
+          trailingSlotWidth: Theme.controlAccessorySlot - Theme.nudge
           leadingAccessory: [
             Controls.IconButton {
               anchors.centerIn: parent
@@ -2073,11 +2077,11 @@ FocusScope {
 
         Column {
           width: parent.width
-          spacing: 18
+          spacing: Theme.gapMd
 
           Column {
             width: parent.width
-            spacing: 8
+            spacing: Theme.gapXs
 
             UiText {
               visible: root.wifiLoading && root.initialLoadDeadlineElapsed
@@ -2105,7 +2109,7 @@ FocusScope {
 
           Column {
             width: parent.width
-            spacing: 4
+            spacing: Theme.nudge
             visible: wifiService.ready && wifiService.enabled && wifiService.networks.length > 0
 
             Repeater {
@@ -2134,22 +2138,22 @@ FocusScope {
           UiSurface {
             visible: root.wifiPasswordTarget !== ""
             width: parent.width
-            implicitHeight: passwordColumn.implicitHeight + 24
+            implicitHeight: passwordColumn.implicitHeight + Theme.insetLg
             tone: "panelOverlay"
             outlined: false
-            radius: 22
-            border.width: 1
+            radius: Theme.radiusLg
+            border.width: Theme.stroke
             border.color: Qt.rgba(1, 1, 1, 0.08)
 
             Column {
               id: passwordColumn
 
-              width: parent.width - 24
+              width: parent.width - Theme.insetLg
               anchors.left: parent.left
-              anchors.leftMargin: 12
+              anchors.leftMargin: Theme.insetSm
               anchors.top: parent.top
-              anchors.topMargin: 12
-              spacing: 10
+              anchors.topMargin: Theme.insetSm
+              spacing: Theme.gapXs
 
               UiText {
                 text: `Password required for ${root.wifiPasswordTarget}`
@@ -2162,7 +2166,7 @@ FocusScope {
                 id: wifiPasswordField
 
                 width: parent.width
-                height: 40
+                height: Theme.controlMd
                 echoMode: TextInput.Password
                 color: Theme.text
                 placeholderText: "Network password"
@@ -2183,15 +2187,15 @@ FocusScope {
                   value: root.wifiPassword
                 }
                 background: Rectangle {
-                  radius: 16
+                  radius: Theme.radiusMd
                   color: Theme.fieldAlt
-                  border.width: 1
+                  border.width: Theme.stroke
                   border.color: Theme.divider
                 }
               }
 
               Row {
-                spacing: 8
+                spacing: Theme.gapXs
 
                 Controls.Button {
                   text: "Connect"
@@ -2223,9 +2227,9 @@ FocusScope {
             spacing: 4
 
             Rectangle {
-              width: parent.width - 36
-              height: 1
-              radius: 0.5
+              width: parent.width - Theme.controlSm
+              height: Theme.stroke
+              radius: height / 2
               anchors.horizontalCenter: parent.horizontalCenter
               color: Theme.divider
               opacity: 0.72
@@ -2267,11 +2271,11 @@ FocusScope {
 
         Column {
           width: parent.width
-          spacing: 18
+          spacing: Theme.gapMd
 
           Column {
             width: parent.width
-            spacing: 8
+            spacing: Theme.gapXs
 
             UiText {
               visible: !root.bluetoothAdapter

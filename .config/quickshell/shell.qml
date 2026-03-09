@@ -181,32 +181,32 @@ ShellRoot {
     required property var controller
 
     width: implicitWidth
-    implicitWidth: 336
-    implicitHeight: contentColumn.implicitHeight + 24
+    implicitWidth: Theme.popoverWidthSm + Theme.controlMd + Theme.gapLg
+    implicitHeight: contentColumn.implicitHeight + Theme.insetLg
     tone: "panelOverlay"
     outlined: false
     radius: Theme.radiusLg
-    border.width: 1
+    border.width: Theme.stroke
     border.color: banner.controller.errorVisible ? Theme.accentStrong : Theme.border
 
     Column {
       id: contentColumn
 
-      width: parent.width - 24
+      width: parent.width - Theme.insetLg
       anchors.left: parent.left
-      anchors.leftMargin: 12
+      anchors.leftMargin: Theme.insetSm
       anchors.top: parent.top
-      anchors.topMargin: 12
-      spacing: 14
+      anchors.topMargin: Theme.insetSm
+      spacing: Theme.gapSm
 
       Row {
         width: parent.width
-        spacing: 12
+        spacing: Theme.gapSm
 
         Rectangle {
-          width: 40
-          height: 40
-          radius: 20
+          width: Theme.controlMd
+          height: Theme.controlMd
+          radius: Theme.controlMd / 2
           color: banner.controller.errorVisible ? Theme.accent : Theme.field
 
           UiIcon {
@@ -217,8 +217,8 @@ ShellRoot {
         }
 
         Column {
-          width: Math.max(0, parent.width - 96)
-          spacing: 4
+          width: Math.max(0, parent.width - Theme.controlMd * 2 - Theme.gapLg)
+          spacing: Theme.nudge
 
           UiText {
             width: parent.width
@@ -249,7 +249,7 @@ ShellRoot {
       Row {
         visible: banner.controller.errorVisible
         width: parent.width
-        spacing: 8
+        spacing: Theme.gapXs
 
         Controls.Button {
           text: "Retry"
@@ -341,8 +341,8 @@ ShellRoot {
   PanelWindow {
     visible: sessionActions.bannerVisible
     anchors { top: true; right: true }
-    implicitWidth: sessionActionBanner.implicitWidth + 28
-    implicitHeight: sessionActionBanner.implicitHeight + 28
+    implicitWidth: sessionActionBanner.implicitWidth + Theme.gapLg + Theme.nudge
+    implicitHeight: sessionActionBanner.implicitHeight + Theme.gapLg + Theme.nudge
     exclusionMode: ExclusionMode.Ignore
     aboveWindows: true
     color: "transparent"
@@ -355,8 +355,8 @@ ShellRoot {
       controller: sessionActions
       anchors.top: parent.top
       anchors.right: parent.right
-      anchors.topMargin: 14
-      anchors.rightMargin: 14
+      anchors.topMargin: Theme.overlayMargin
+      anchors.rightMargin: Theme.overlayMargin
     }
   }
 
@@ -407,8 +407,8 @@ ShellRoot {
       sessionActions: sessionActions
       anchors.top: parent.top
       anchors.right: parent.right
-      anchors.topMargin: 14
-      anchors.rightMargin: 14
+      anchors.topMargin: Theme.overlayMargin
+      anchors.rightMargin: Theme.overlayMargin
 
       onCloseRequested: root.shadeOpen = false
     }

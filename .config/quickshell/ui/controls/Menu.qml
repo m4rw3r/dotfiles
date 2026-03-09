@@ -1,5 +1,6 @@
 import QtQuick
 import "../primitives" as Ui
+import "../../theme"
 
 Ui.UiSurface {
   id: root
@@ -8,22 +9,22 @@ Ui.UiSurface {
 
   width: parent ? parent.width : implicitWidth
   implicitWidth: 1
-  implicitHeight: listColumn.implicitHeight + 16
+  implicitHeight: listColumn.implicitHeight + Theme.gapMd
   tone: "panelOverlay"
   outlined: false
-  radius: 20
+  radius: Theme.radiusMd
 
-  border.width: 1
+  border.width: Theme.stroke
   border.color: Qt.rgba(1, 1, 1, 0.08)
 
   Column {
     id: listColumn
 
-    width: parent.width - 24
+    width: parent.width - Theme.insetLg
     anchors.left: parent.left
-    anchors.leftMargin: 12
+    anchors.leftMargin: Theme.insetSm
     anchors.top: parent.top
-    anchors.topMargin: 8
-    spacing: 2
+    anchors.topMargin: Theme.gapXs
+    spacing: Theme.nudge
   }
 }

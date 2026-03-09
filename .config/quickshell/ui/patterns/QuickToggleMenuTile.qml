@@ -12,13 +12,13 @@ Item {
   signal primaryClicked()
   signal secondaryClicked()
 
-  implicitWidth: parent ? Math.floor((parent.width - 10) / 2) : 180
-  implicitHeight: 44
+  implicitWidth: parent ? Math.floor((parent.width - Theme.gapSm) / 2) : Theme.popoverWidthSm
+  implicitHeight: Theme.tileHeight
   opacity: enabled ? 1 : 0.5
 
-  readonly property real tileRadius: 18
-  readonly property real splitWidth: 36
-  readonly property real splitInset: 1
+  readonly property real tileRadius: Theme.radiusMd
+  readonly property real splitWidth: Theme.tileSplitWidth
+  readonly property real splitInset: Theme.stroke
   readonly property bool primaryPressed: primaryTouch.pressed
   readonly property bool secondaryPressed: secondaryTouch.pressed
   readonly property color tileColor: active
@@ -32,7 +32,7 @@ Item {
     anchors.fill: parent
     radius: root.tileRadius
     color: root.tileColor
-    border.width: 1
+    border.width: Theme.stroke
     border.color: root.active
       ? Qt.rgba(1, 1, 1, 0.12)
       : (root.menuOpen ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08))
@@ -62,15 +62,15 @@ Item {
     anchors.bottom: parent.bottom
     anchors.right: parent.right
     anchors.rightMargin: root.splitWidth
-    width: 1
+    width: Theme.stroke
     color: root.active ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.08)
   }
 
   Row {
     anchors.fill: parent
-    anchors.leftMargin: 13
-    anchors.rightMargin: 13
-    spacing: 10
+    anchors.leftMargin: Theme.gapSm
+    anchors.rightMargin: Theme.gapSm
+    spacing: Theme.gapXs
 
     Ui.UiIcon {
       id: primaryIcon
@@ -81,7 +81,7 @@ Item {
     }
 
     Ui.UiText {
-      width: Math.max(0, parent.width - root.splitWidth - primaryIcon.implicitWidth)
+      width: Math.max(0, parent.width - root.splitWidth - primaryIcon.implicitWidth - Theme.gapXs)
       anchors.verticalCenter: parent.verticalCenter
       text: root.title
       size: "md"
@@ -96,9 +96,9 @@ Item {
 
       Ui.UiIcon {
         anchors.centerIn: parent
-        anchors.horizontalCenterOffset: -9
-        width: 18
-        height: 18
+        anchors.horizontalCenterOffset: -Theme.gapXs
+        width: Theme.iconGlyphSm
+        height: Theme.iconGlyphSm
         name: root.menuOpen ? "chevron-down" : "chevron-right"
         strokeColor: root.active ? Theme.textOnAccent : Theme.text
       }

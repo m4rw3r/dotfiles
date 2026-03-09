@@ -97,9 +97,20 @@ Singleton {
   readonly property color sliderFill: palette.sliderFill
   readonly property color chip: palette.chip
 
+  readonly property int stroke: 1
+  readonly property int nudge: 4
+  readonly property int gapXs: 8
+  readonly property int gapSm: 12
+  readonly property int gapMd: 16
+  readonly property int gapLg: 24
+
+  readonly property int insetSm: gapSm
+  readonly property int insetMd: gapMd
+  readonly property int insetLg: gapLg
+
   readonly property int radiusSm: 12
-  readonly property int radiusMd: 18
-  readonly property int radiusLg: 22
+  readonly property int radiusMd: 16
+  readonly property int radiusLg: 24
 
   readonly property int textXs: 10
   readonly property int textSm: 12
@@ -107,9 +118,25 @@ Singleton {
   readonly property int textLg: 18
   readonly property int textXl: 22
 
-  readonly property int iconSm: 42
-  readonly property int iconMd: 46
-  readonly property int controlAccessorySlot: 32
+  readonly property int iconGlyphSm: 16
+  readonly property int iconGlyphMd: 24
+
+  readonly property int controlSm: 36
+  readonly property int controlMd: 44
+  readonly property int tileHeight: controlMd
+  readonly property int tileSplitWidth: controlSm
+  readonly property int controlAccessorySlot: controlSm
+
+  readonly property int popoverWidthSm: 192
+  readonly property int popoverWidthMd: 224
+  readonly property int overlayMargin: gapMd
+
+  readonly property int launcherTileIconSm: controlSm
+  readonly property int launcherTileIconMd: controlMd
+
+  // Backwards-compatibility aliases while measurements are migrated.
+  readonly property int iconSm: launcherTileIconSm
+  readonly property int iconMd: launcherTileIconMd
 
   readonly property int motionFast: 120
   readonly property int motionBase: 170

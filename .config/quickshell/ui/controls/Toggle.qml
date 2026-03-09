@@ -14,21 +14,21 @@ Ui.UiSurface {
 
   width: parent ? parent.width : implicitWidth
   implicitWidth: 1
-  implicitHeight: description === "" ? 44 : 52
+  implicitHeight: description === "" ? Theme.controlMd : Theme.controlMd + Theme.gapXs
   tone: "fieldAlt"
   outlined: false
-  radius: 18
+  radius: Theme.radiusMd
   pressed: touchArea.pressed
   opacity: enabled ? 1 : 0.45
 
-  border.width: 1
+  border.width: Theme.stroke
   border.color: checked ? Theme.toggleOn : Theme.divider
 
   Row {
     anchors.fill: parent
-    anchors.leftMargin: 14
-    anchors.rightMargin: 14
-    spacing: 12
+    anchors.leftMargin: Theme.gapSm
+    anchors.rightMargin: Theme.gapSm
+    spacing: Theme.gapSm
 
     Ui.UiIcon {
       anchors.verticalCenter: parent.verticalCenter
@@ -38,9 +38,12 @@ Ui.UiSurface {
     }
 
     Column {
-      width: Math.max(0, parent.width - switchTrack.width - (root.iconName !== "" ? 52 : 32))
+      width: Math.max(
+        0,
+        parent.width - switchTrack.width - (root.iconName !== "" ? Theme.controlMd + Theme.gapXs : Theme.controlSm)
+      )
       anchors.verticalCenter: parent.verticalCenter
-      spacing: root.description === "" ? 0 : 2
+      spacing: root.description === "" ? 0 : Theme.stroke
 
       Ui.UiText {
         text: root.text
@@ -61,17 +64,17 @@ Ui.UiSurface {
       id: switchTrack
 
       anchors.verticalCenter: parent.verticalCenter
-      width: 38
-      height: 22
+      width: Theme.controlSm
+      height: Theme.iconGlyphMd
       radius: height / 2
       color: root.checked ? Theme.toggleOn : Theme.toggleOff
 
       Rectangle {
-        width: 16
-        height: 16
+        width: Theme.iconGlyphSm
+        height: Theme.iconGlyphSm
         radius: width / 2
-        x: root.checked ? parent.width - width - 3 : 3
-        y: 3
+        x: root.checked ? parent.width - width - Theme.nudge : Theme.nudge
+        y: Theme.nudge
         color: Theme.textOnAccent
       }
     }

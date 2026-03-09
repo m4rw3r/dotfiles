@@ -96,7 +96,6 @@ Item {
 
       Ui.UiIcon {
         anchors.centerIn: parent
-        anchors.horizontalCenterOffset: -Theme.gapXs
         width: Theme.iconGlyphSm
         height: Theme.iconGlyphSm
         name: root.menuOpen ? "chevron-down" : "chevron-right"

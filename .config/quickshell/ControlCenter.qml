@@ -34,6 +34,9 @@ FocusScope {
   property bool bluetoothLastErrorFromRefresh: false
   property string bluetoothLastError: ""
   property bool powerProfileBusy: false
+  property bool onScreenKeyboardBusy: false
+  property bool onScreenKeyboardFailed: false
+  property string onScreenKeyboardMessage: ""
   property bool keyboardRecoveryBusy: false
   property bool keyboardRecoveryFailed: false
   property string keyboardRecoveryMessage: ""
@@ -496,6 +499,19 @@ FocusScope {
     keyboardRecoveryProcess.exec(["/home/m4rw3r/.local/bin/recover-z13-keyboard.sh"]);
   }
 
+  function toggleOnScreenKeyboard() {
+    if (onScreenKeyboardBusy) return;
+
+    onScreenKeyboardBusy = true;
+    onScreenKeyboardFailed = false;
+    onScreenKeyboardMessage = "";
+    onScreenKeyboardProcess.exec([
+      "sh",
+      "-lc",
+      "if systemctl --user is-active --quiet on-screen-keyboard.service; then pkill -RTMIN sysboard && printf 'toggled\\n'; else systemctl --user start on-screen-keyboard.service && printf 'started\\n'; fi"
+    ]);
+  }
+
   onPanelOpenChanged: {
     if (panelOpen) {
       forceActiveFocus();
@@ -510,6 +526,8 @@ FocusScope {
       pendingPowerAction = "";
       wifiPasswordTarget = "";
       wifiPassword = "";
+      onScreenKeyboardMessage = "";
+      onScreenKeyboardFailed = false;
       keyboardRecoveryMessage = "";
       keyboardRecoveryFailed = false;
       if (bluetoothAdapter) bluetoothAdapter.discovering = false;
@@ -1563,6 +1581,32 @@ FocusScope {
   }
 
   StdioCollector {
+    id: onScreenKeyboardStdout
+    waitForEnd: true
+  }
+
+  StdioCollector {
+    id: onScreenKeyboardStderr
+    waitForEnd: true
+  }
+
+  Process {
+    id: onScreenKeyboardProcess
+
+    stdout: onScreenKeyboardStdout
+    stderr: onScreenKeyboardStderr
+
+    onExited: function(exitCode) {
+      const action = String(onScreenKeyboardStdout.text || "").trim();
+      root.onScreenKeyboardBusy = false;
+      root.onScreenKeyboardFailed = exitCode !== 0;
+      root.onScreenKeyboardMessage = exitCode === 0
+        ? (action === "started" ? "On-screen keyboard started." : "On-screen keyboard toggled.")
+        : (String(onScreenKeyboardStderr.text || "").trim() || "Unable to control the on-screen keyboard.");
+    }
+  }
+
+  StdioCollector {
     id: keyboardRecoveryStderr
     waitForEnd: true
   }
@@ -1642,9 +1686,20 @@ FocusScope {
           width: Math.max(
             0,
             parent.width - (batteryChip.visible ? batteryChip.implicitWidth : 0)
-            - keyboardRecoveryButton.implicitWidth - lockButton.implicitWidth - powerToggleButton.implicitWidth - Theme.gapLg
+            - onScreenKeyboardButton.implicitWidth - keyboardRecoveryButton.implicitWidth - lockButton.implicitWidth - powerToggleButton.implicitWidth
+            - Theme.gapXs * (4 + (batteryChip.visible ? 1 : 0))
           )
           height: parent.height
+        }
+
+        Controls.IconButton {
+          id: onScreenKeyboardButton
+          anchors.verticalCenter: parent.verticalCenter
+          iconSize: Theme.iconGlyphSm
+          circular: true
+          iconName: "keyboard"
+          active: root.onScreenKeyboardBusy
+          onClicked: root.toggleOnScreenKeyboard()
         }
 
         Controls.IconButton {
@@ -1652,7 +1707,7 @@ FocusScope {
           anchors.verticalCenter: parent.verticalCenter
           iconSize: Theme.iconGlyphSm
           circular: true
-          iconName: "keyboard"
+          iconName: "rotate-cw"
           active: root.keyboardRecoveryBusy
           onClicked: root.recoverKeyboard()
         }
@@ -1677,6 +1732,15 @@ FocusScope {
           enabled: !root.sessionActionBusy
           onClicked: root.toggleSection("power")
         }
+      }
+
+      UiText {
+        width: parent.width
+        visible: root.onScreenKeyboardMessage !== ""
+        text: root.onScreenKeyboardMessage
+        size: "xs"
+        tone: root.onScreenKeyboardFailed ? "accent" : "subtle"
+        wrapMode: Text.WordWrap
       }
 
       UiText {

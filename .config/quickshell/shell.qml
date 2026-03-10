@@ -380,6 +380,10 @@ ShellRoot {
     id: sessionActions
   }
 
+  NotificationCenter {
+    id: notifications
+  }
+
   IpcHandler {
     target: "ui"
     function toggleControlCenter() {
@@ -497,6 +501,40 @@ ShellRoot {
 
   // qmllint disable uncreatable-type
   PanelWindow {
+    id: toastWindow
+
+    readonly property real anchorOffsetY: {
+      let offset = 0;
+      if (sessionActions.bannerVisible) offset = Math.max(offset, sessionActionBanner.implicitHeight + Theme.gapSm);
+      if (root.trayMode !== "hidden") offset = Math.max(offset, standaloneTray.implicitHeight + Theme.gapSm);
+      return offset;
+    }
+
+    visible: notifications.toastUids.length > 0 && !root.shadeOpen && !root.galleryOpen && !launcher.launcherOpen
+    anchors { top: true; right: true }
+    implicitWidth: toastStack.implicitWidth + Theme.overlayMargin * 2
+    implicitHeight: toastStack.implicitHeight + Theme.overlayMargin * 2 + anchorOffsetY
+    exclusionMode: ExclusionMode.Ignore
+    aboveWindows: true
+    color: "transparent"
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+    NotificationToastStack {
+      id: toastStack
+
+      notificationCenter: notifications
+      suspended: !toastWindow.visible
+      anchors.top: parent.top
+      anchors.right: parent.right
+      anchors.topMargin: Theme.overlayMargin + toastWindow.anchorOffsetY
+      anchors.rightMargin: Theme.overlayMargin
+    }
+  }
+  // qmllint enable uncreatable-type
+
+  // qmllint disable uncreatable-type
+  PanelWindow {
     id: trayWindow
 
     visible: root.trayMode !== "hidden" && !root.shadeOpen && !root.galleryOpen && !launcher.launcherOpen
@@ -596,6 +634,7 @@ ShellRoot {
       id: controlCenter
 
       panelOpen: root.shadeOpen
+      notificationCenter: notifications
       sessionActions: sessionActions
       trayVisible: root.trayMode !== "hidden"
       trayExpanded: root.trayMode === "expanded"

@@ -49,7 +49,7 @@ FocusScope {
   property bool trayVisible: false
   property bool trayExpanded: false
   property bool trayNeedsAttention: false
-  property var notificationEntries: []
+  property var notificationCenter: null
   property string notificationReturnSection: ""
   property var sessionActions: null
   property string bluetoothAdapterKey: "defaultAdapter"
@@ -57,8 +57,11 @@ FocusScope {
   property int initialLoadDeadlineMs: 50
   readonly property bool sessionActionBusy: !!sessionActions && sessionActions.busyAction !== ""
   readonly property bool notificationsOpen: expandedSection === "notifications"
-  readonly property int notificationCount: notificationEntries.length
-  readonly property var latestNotificationEntry: notificationCount > 0 ? notificationEntries[0] : null
+  readonly property int notificationCount: notificationCenter ? notificationCenter.trackedCount : 0
+  readonly property int unreadNotificationCount: notificationCenter ? notificationCenter.unreadCount : 0
+  readonly property bool notificationsCriticalUnread: notificationCenter ? notificationCenter.hasCriticalUnread : false
+  readonly property var latestNotificationEntry: notificationCenter ? notificationCenter.latestEntry : null
+  readonly property var footerNotificationEntry: notificationCenter ? notificationCenter.footerEntry : null
   readonly property real notificationViewportMaxHeight: Math.max(
     Theme.controlMd * 4,
     Math.min(Theme.controlMd * 8, parent ? parent.height * 0.36 : Theme.controlMd * 6)
@@ -119,6 +122,9 @@ FocusScope {
   }
 
   onBluetoothAdapterChanged: refreshBluetoothRfkillState()
+  onNotificationsOpenChanged: {
+    if (notificationsOpen && notificationCenter) notificationCenter.markAllRead();
+  }
 
   function clamp(value, minValue, maxValue) {
     return Math.max(minValue, Math.min(maxValue, value));
@@ -141,122 +147,6 @@ FocusScope {
     if (expandedSection !== "bluetooth" && bluetoothAdapter) bluetoothAdapter.discovering = false;
   }
 
-  function cleanNotificationText(text) {
-    return String(text || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-  }
-
-  function notificationAppLabel(notification) {
-    if (!notification) return "Notifications";
-
-    const appName = cleanNotificationText(notification.appName);
-    if (appName !== "") return appName;
-
-    const desktopEntry = cleanNotificationText(notification.desktopEntry);
-    if (desktopEntry !== "") return desktopEntry;
-
-    return "Notification";
-  }
-
-  function notificationSummaryLabel(notification) {
-    if (!notification) return "No notifications";
-
-    const summary = cleanNotificationText(notification.summary);
-    if (summary !== "") return summary;
-
-    const body = cleanNotificationText(notification.body);
-    if (body !== "") return body;
-
-    return notificationAppLabel(notification);
-  }
-
-  function notificationBodyLabel(notification) {
-    if (!notification) return "";
-
-    const body = cleanNotificationText(notification.body);
-    const summary = cleanNotificationText(notification.summary);
-    if (body === "" || body === summary) return "";
-    return body;
-  }
-
-  function notificationAgeLabel(entry) {
-    if (!entry || !entry.receivedAt) return "";
-
-    const elapsedSeconds = Math.max(1, Math.floor((Date.now() - entry.receivedAt) / 1000));
-    if (elapsedSeconds < 60) return `${elapsedSeconds}s`;
-
-    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
-    if (elapsedMinutes < 60) return `${elapsedMinutes}m`;
-
-    const elapsedHours = Math.floor(elapsedMinutes / 60);
-    if (elapsedHours < 24) return `${elapsedHours}h`;
-
-    return `${Math.floor(elapsedHours / 24)}d`;
-  }
-
-  function notificationCountLabel() {
-    if (notificationCount <= 0) return "";
-    if (notificationCount === 1) return "1 item";
-    return `${notificationCount} items`;
-  }
-
-  function notificationPrimaryAction(entry) {
-    const notification = entry ? entry.notification : null;
-    if (!notification || !notification.actions || notification.actions.length <= 0) return null;
-    return notification.actions[0];
-  }
-
-  function notificationPrimaryActionLabel(entry) {
-    const action = notificationPrimaryAction(entry);
-    if (!action) return "";
-
-    const text = cleanNotificationText(action.text);
-    if (text === "") return "Open";
-    return text.length > 14 ? "Open" : text;
-  }
-
-  function invokeNotificationAction(entry) {
-    const action = notificationPrimaryAction(entry);
-    if (!action) return;
-    action.invoke();
-  }
-
-  function forgetNotification(notification) {
-    if (!notification) return;
-
-    const nextEntries = notificationEntries.filter(entry => entry.notification !== notification);
-    if (nextEntries.length !== notificationEntries.length) notificationEntries = nextEntries;
-  }
-
-  function dismissNotification(entry) {
-    if (!entry || !entry.notification) return;
-    forgetNotification(entry.notification);
-    entry.notification.dismiss();
-  }
-
-  function clearNotifications() {
-    const entries = notificationEntries.slice();
-    notificationEntries = [];
-
-    for (let i = 0; i < entries.length; i += 1) {
-      const notification = entries[i].notification;
-      if (notification) notification.dismiss();
-    }
-  }
-
-  function trackNotification(notification) {
-    if (!notification || notification.transient) return;
-
-    notification.tracked = true;
-
-    const nextEntries = notificationEntries.filter(entry => entry.notification !== notification && (!entry.notification || entry.notification.id !== notification.id));
-    nextEntries.unshift({ notification: notification, receivedAt: Date.now() });
-    notificationEntries = nextEntries;
-
-    notification.closed.connect(function() {
-      root.forgetNotification(notification);
-    });
-  }
-
   function toggleNotificationsSection() {
     if (notificationsOpen) {
       expandedSection = notificationReturnSection;
@@ -266,6 +156,7 @@ FocusScope {
 
     notificationReturnSection = expandedSection === "notifications" ? "" : expandedSection;
     expandedSection = "notifications";
+    if (notificationCenter) notificationCenter.markAllRead();
   }
 
   function popupX(anchorItem, popupWidth, alignRight) {
@@ -1638,38 +1529,26 @@ FocusScope {
     onTriggered: brightnessService.applyScreenPercent(root.pendingScreenBrightness)
   }
 
-  NotificationServer {
-    id: notificationServer
-
-    persistenceSupported: true
-    actionsSupported: true
-    imageSupported: true
-    keepOnReload: true
-
-    onNotification: function(notification) {
-      root.trackNotification(notification);
-    }
-  }
-
   component NotificationInboxCard: UiSurface {
     id: card
 
     required property var entry
-    readonly property var notification: entry ? entry.notification : null
-    readonly property var primaryAction: root.notificationPrimaryAction(entry)
-    readonly property string primaryActionLabel: root.notificationPrimaryActionLabel(entry)
-    readonly property bool critical: !!(notification && notification.urgency === NotificationUrgency.Critical)
-    readonly property string appLabel: root.notificationAppLabel(notification)
-    readonly property string summaryLabel: root.notificationSummaryLabel(notification)
-    readonly property string bodyLabel: root.notificationBodyLabel(notification)
+    readonly property bool unread: !!(entry && entry.unread)
+    readonly property bool critical: !!(entry && entry.urgency === NotificationUrgency.Critical)
+    readonly property string primaryActionLabel: root.notificationCenter ? root.notificationCenter.primaryActionLabel(entry) : ""
+    readonly property string appLabel: root.notificationCenter ? root.notificationCenter.appLabel(entry) : "Notification"
+    readonly property string summaryLabel: root.notificationCenter ? root.notificationCenter.summaryLabel(entry) : ""
+    readonly property string bodyLabel: root.notificationCenter ? root.notificationCenter.bodyLabel(entry) : ""
 
     width: parent ? parent.width : implicitWidth
     implicitHeight: cardContent.implicitHeight + Theme.insetSm * 2
-    tone: critical ? "chip" : "fieldAlt"
+    tone: critical ? "chip" : (unread ? "field" : "fieldAlt")
     outlined: false
     radius: Theme.radiusLg
     border.width: Theme.stroke
-    border.color: critical ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.08)
+    border.color: critical
+      ? Qt.rgba(1, 1, 1, 0.16)
+      : (unread ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08))
 
     Column {
       id: cardContent
@@ -1713,7 +1592,7 @@ FocusScope {
             implicitSize: Theme.iconGlyphSm
             asynchronous: true
             mipmap: true
-            source: card.notification && card.notification.appIcon !== "" ? String(card.notification.appIcon) : ""
+            source: card.entry && card.entry.appIcon !== "" ? String(card.entry.appIcon) : ""
           }
         }
 
@@ -1742,13 +1621,31 @@ FocusScope {
           }
         }
 
-        UiText {
-          id: ageLabel
+        Item {
+          width: ageLabel.implicitWidth + (unreadIndicator.visible ? unreadIndicator.width + Theme.gapXs : 0)
+          height: Math.max(ageLabel.implicitHeight, unreadIndicator.visible ? unreadIndicator.height : 0)
 
-          anchors.top: parent.top
-          text: root.notificationAgeLabel(card.entry)
-          size: "xs"
-          tone: "subtle"
+          Rectangle {
+            id: unreadIndicator
+
+            visible: card.unread
+            width: 8
+            height: 8
+            radius: 4
+            color: card.critical ? Theme.accentStrong : Theme.toggleOn
+            anchors.left: parent.left
+            anchors.top: parent.top
+          }
+
+          UiText {
+            id: ageLabel
+
+            anchors.right: parent.right
+            anchors.top: parent.top
+            text: root.notificationCenter ? root.notificationCenter.ageLabel(card.entry) : ""
+            size: "xs"
+            tone: "subtle"
+          }
         }
       }
 
@@ -1771,18 +1668,22 @@ FocusScope {
         Controls.Button {
           id: actionButton
 
-          visible: card.primaryAction && card.primaryActionLabel !== ""
+          visible: card.primaryActionLabel !== ""
           compact: true
           text: card.primaryActionLabel
-          onClicked: root.invokeNotificationAction(card.entry)
+          onClicked: {
+            if (root.notificationCenter) root.notificationCenter.invokePrimaryAction(card.entry);
+          }
         }
 
         Controls.Button {
           id: dismissButton
 
           compact: true
-          text: "Dismiss"
-          onClicked: root.dismissNotification(card.entry)
+          text: "Remove"
+          onClicked: {
+            if (root.notificationCenter) root.notificationCenter.forgetEntry(card.entry);
+          }
         }
       }
     }
@@ -2165,7 +2066,7 @@ FocusScope {
 
           Patterns.QuickTileFrame {
             anchors.fill: parent
-            iconName: root.notificationCount > 0 ? "bell-dot" : "bell"
+            iconName: root.unreadNotificationCount > 0 ? "bell-dot" : "bell"
             title: ""
             backgroundColor: notificationsFooter.pressed ? Theme.fieldPressed : Theme.field
             borderColor: Qt.rgba(1, 1, 1, 0.08)
@@ -2190,21 +2091,46 @@ FocusScope {
             anchors.verticalCenter: parent.verticalCenter
             spacing: Theme.nudge
 
-            UiText {
+            Row {
               width: parent.width
-              text: root.latestNotificationEntry
-                ? root.notificationAppLabel(root.latestNotificationEntry.notification)
-                : "Notifications"
-              size: "xs"
-              tone: root.notificationCount > 0 ? "primary" : "muted"
-              font.weight: Font.DemiBold
-              elide: Text.ElideRight
+
+              UiText {
+                width: Math.max(0, parent.width - unreadBadge.width - (unreadBadge.visible ? Theme.gapXs : 0))
+                text: root.footerNotificationEntry && root.notificationCenter
+                  ? root.notificationCenter.appLabel(root.footerNotificationEntry)
+                  : "Notifications"
+                size: "xs"
+                tone: root.notificationCount > 0 ? "primary" : "muted"
+                font.weight: Font.DemiBold
+                elide: Text.ElideRight
+              }
+
+              Rectangle {
+                id: unreadBadge
+
+                visible: root.unreadNotificationCount > 0
+                width: visible ? Math.max(Theme.controlSm, unreadBadgeLabel.implicitWidth + Theme.gapSm) : 0
+                height: visible ? Theme.controlSm - Theme.gapXs : 0
+                radius: height / 2
+                color: root.notificationsCriticalUnread ? Theme.accent : Theme.toggleOn
+                anchors.verticalCenter: parent.verticalCenter
+
+                UiText {
+                  id: unreadBadgeLabel
+
+                  anchors.centerIn: parent
+                  text: root.unreadNotificationCount > 99 ? "99+" : String(root.unreadNotificationCount)
+                  size: "xs"
+                  tone: "onAccent"
+                  font.weight: Font.DemiBold
+                }
+              }
             }
 
             UiText {
               width: parent.width
-              text: root.latestNotificationEntry
-                ? root.notificationSummaryLabel(root.latestNotificationEntry.notification)
+              text: root.footerNotificationEntry && root.notificationCenter
+                ? root.notificationCenter.summaryLabel(root.footerNotificationEntry)
                 : "No notifications"
               size: "sm"
               tone: root.notificationCount > 0 ? "primary" : "subtle"
@@ -2214,8 +2140,7 @@ FocusScope {
           }
 
           Rectangle {
-            visible: root.notificationCount > 0 && root.latestNotificationEntry && root.latestNotificationEntry.notification
-              && root.latestNotificationEntry.notification.urgency === NotificationUrgency.Critical
+            visible: root.notificationsCriticalUnread
             width: 8
             height: 8
             radius: 4
@@ -2263,12 +2188,12 @@ FocusScope {
         x: content.x
         y: content.y + notificationSection.y
         z: 1
-        iconName: root.notificationCount > 0 && root.latestNotificationEntry && root.latestNotificationEntry.notification && root.latestNotificationEntry.notification.urgency === NotificationUrgency.Critical
+        iconName: root.notificationsCriticalUnread
           ? "bell-ring"
           : "bell"
         title: "Notifications"
-        subtitle: root.latestNotificationEntry
-          ? `${root.notificationAppLabel(root.latestNotificationEntry.notification)}${root.notificationCount > 1 ? ` • ${root.notificationCountLabel()}` : ""}`
+        subtitle: root.unreadNotificationCount > 0 && root.notificationCenter
+          ? root.notificationCenter.unreadCountLabel()
           : "You're all caught up."
 
         Column {
@@ -2326,7 +2251,7 @@ FocusScope {
               }
 
               Repeater {
-                model: root.notificationEntries
+                model: root.notificationCenter ? root.notificationCenter.entries : []
 
                 delegate: NotificationInboxCard {
                   required property var modelData
@@ -2348,7 +2273,9 @@ FocusScope {
             Controls.PopoverMenuAction {
               width: parent.width
               title: "Clear All"
-              onClicked: root.clearNotifications()
+              onClicked: {
+                if (root.notificationCenter) root.notificationCenter.clearEntries();
+              }
             }
           }
         }

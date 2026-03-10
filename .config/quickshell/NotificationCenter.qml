@@ -1,0 +1,306 @@
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import Quickshell.Services.Notifications
+
+Item {
+  id: root
+
+  property var entries: []
+  property var toastUids: []
+  property int revision: 0
+  property int nextUid: 1
+  property int maxToasts: 3
+  readonly property int unreadCount: countUnread(entries)
+  readonly property int criticalUnreadCount: countCriticalUnread(entries)
+  readonly property bool hasUnread: unreadCount > 0
+  readonly property bool hasCriticalUnread: criticalUnreadCount > 0
+  readonly property var latestEntry: entries.length > 0 ? entries[0] : null
+  readonly property var latestUnreadEntry: firstUnread(entries)
+  readonly property var footerEntry: hasUnread ? latestUnreadEntry : latestEntry
+  readonly property int trackedCount: entries.length
+  readonly property real defaultToastTimeoutMs: 6500
+
+  function cleanText(text) {
+    return String(text || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  function appLabel(entry) {
+    if (!entry) return "Notifications";
+    if (entry.appName !== "") return entry.appName;
+    if (entry.desktopEntry !== "") return entry.desktopEntry;
+    return "Notification";
+  }
+
+  function summaryLabel(entry) {
+    if (!entry) return "No notifications";
+    if (entry.summary !== "") return entry.summary;
+    if (entry.body !== "") return entry.body;
+    return appLabel(entry);
+  }
+
+  function bodyLabel(entry) {
+    if (!entry) return "";
+    if (entry.body === "" || entry.body === entry.summary) return "";
+    return entry.body;
+  }
+
+  function ageLabel(entry) {
+    if (!entry || !entry.receivedAt) return "";
+
+    const elapsedSeconds = Math.max(1, Math.floor((Date.now() - entry.receivedAt) / 1000));
+    if (elapsedSeconds < 60) return `${elapsedSeconds}s`;
+
+    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+    if (elapsedMinutes < 60) return `${elapsedMinutes}m`;
+
+    const elapsedHours = Math.floor(elapsedMinutes / 60);
+    if (elapsedHours < 24) return `${elapsedHours}h`;
+
+    return `${Math.floor(elapsedHours / 24)}d`;
+  }
+
+  function unreadCountLabel() {
+    if (unreadCount <= 0) return "";
+    if (unreadCount === 1) return "1 unread";
+    return `${unreadCount} unread`;
+  }
+
+  function trackedCountLabel() {
+    if (trackedCount <= 0) return "";
+    if (trackedCount === 1) return "1 item";
+    return `${trackedCount} items`;
+  }
+
+  function primaryAction(entry) {
+    if (!entry || !entry.notification || !entry.live) return null;
+    if (!entry.notification.actions || entry.notification.actions.length <= 0) return null;
+    return entry.notification.actions[0];
+  }
+
+  function primaryActionLabel(entry) {
+    const action = primaryAction(entry);
+    if (!action) return "";
+
+    const text = cleanText(action.text);
+    if (text === "") return "Open";
+    return text.length > 14 ? "Open" : text;
+  }
+
+  function toastTimeoutMs(entry) {
+    if (!entry || entry.urgency === NotificationUrgency.Critical) return 0;
+
+    const timeoutMs = Math.round(Number(entry.expireTimeout || 0) * 1000);
+    if (timeoutMs > 0) return Math.max(3500, Math.min(12000, timeoutMs));
+    return defaultToastTimeoutMs;
+  }
+
+  function entryForUid(uid) {
+    for (let index = 0; index < entries.length; index += 1) {
+      if (entries[index].uid === uid) return entries[index];
+    }
+
+    return null;
+  }
+
+  function setEntries(nextEntries) {
+    entries = nextEntries;
+    revision += 1;
+  }
+
+  function setToastUids(nextToastUids) {
+    toastUids = nextToastUids;
+    revision += 1;
+  }
+
+  function countUnread(list) {
+    let count = 0;
+
+    for (let index = 0; index < list.length; index += 1) {
+      if (list[index].unread) count += 1;
+    }
+
+    return count;
+  }
+
+  function countCriticalUnread(list) {
+    let count = 0;
+
+    for (let index = 0; index < list.length; index += 1) {
+      const entry = list[index];
+      if (entry.unread && entry.urgency === NotificationUrgency.Critical) count += 1;
+    }
+
+    return count;
+  }
+
+  function firstUnread(list) {
+    for (let index = 0; index < list.length; index += 1) {
+      if (list[index].unread) return list[index];
+    }
+
+    return null;
+  }
+
+  function snapshot(notification, uid) {
+    return {
+      uid: uid,
+      id: notification.id,
+      notification: notification,
+      live: true,
+      unread: !notification.lastGeneration,
+      transient: notification.transient,
+      resident: notification.resident,
+      urgency: notification.urgency,
+      appName: cleanText(notification.appName),
+      desktopEntry: cleanText(notification.desktopEntry),
+      appIcon: String(notification.appIcon || ""),
+      summary: cleanText(notification.summary),
+      body: cleanText(notification.body),
+      image: String(notification.image || ""),
+      receivedAt: Date.now(),
+      expireTimeout: Number(notification.expireTimeout || 0),
+      lastGeneration: notification.lastGeneration
+    };
+  }
+
+  function trackNotification(notification) {
+    if (!notification) return;
+
+    notification.tracked = true;
+
+    const uid = nextUid;
+    nextUid += 1;
+
+    const entry = snapshot(notification, uid);
+    const replacedUids = [];
+    const nextEntries = entries.filter(existing => {
+      if (existing.id !== notification.id) return true;
+      replacedUids.push(existing.uid);
+      return false;
+    });
+    nextEntries.unshift(entry);
+    setEntries(nextEntries);
+    if (replacedUids.length > 0) setToastUids(toastUids.filter(existingUid => replacedUids.indexOf(existingUid) < 0));
+
+    if (!notification.lastGeneration) queueToast(uid);
+
+    notification.closed.connect(function() {
+      root.markClosed(uid);
+    });
+  }
+
+  function queueToast(uid) {
+    const nextToastUids = toastUids.filter(existingUid => existingUid !== uid);
+    nextToastUids.unshift(uid);
+    if (nextToastUids.length > maxToasts) nextToastUids.length = maxToasts;
+    setToastUids(nextToastUids);
+  }
+
+  function dismissToast(uid) {
+    const nextToastUids = toastUids.filter(existingUid => existingUid !== uid);
+    if (nextToastUids.length !== toastUids.length) setToastUids(nextToastUids);
+  }
+
+  function markClosed(uid) {
+    dismissToast(uid);
+
+    const nextEntries = entries.slice();
+    let updated = false;
+
+    for (let index = 0; index < nextEntries.length; index += 1) {
+      if (nextEntries[index].uid !== uid) continue;
+      nextEntries[index] = Object.assign({}, nextEntries[index], { notification: null, live: false });
+      updated = true;
+      break;
+    }
+
+    if (updated) setEntries(nextEntries);
+  }
+
+  function markRead(entryOrUid) {
+    const uid = typeof entryOrUid === "number" ? entryOrUid : (entryOrUid ? entryOrUid.uid : -1);
+    if (uid < 0) return;
+
+    const nextEntries = entries.slice();
+    let updated = false;
+
+    for (let index = 0; index < nextEntries.length; index += 1) {
+      if (nextEntries[index].uid !== uid || !nextEntries[index].unread) continue;
+      nextEntries[index] = Object.assign({}, nextEntries[index], { unread: false });
+      updated = true;
+      break;
+    }
+
+    if (updated) setEntries(nextEntries);
+  }
+
+  function markAllRead() {
+    if (!hasUnread) return;
+
+    const nextEntries = [];
+    for (let index = 0; index < entries.length; index += 1) {
+      const entry = entries[index];
+      nextEntries.push(entry.unread ? Object.assign({}, entry, { unread: false }) : entry);
+    }
+
+    setEntries(nextEntries);
+  }
+
+  function invokePrimaryAction(entryOrUid) {
+    const entry = typeof entryOrUid === "number" ? entryForUid(entryOrUid) : entryOrUid;
+    const action = primaryAction(entry);
+    if (!action) return;
+
+    markRead(entry.uid);
+    dismissToast(entry.uid);
+    action.invoke();
+  }
+
+  function closeLive(entryOrUid) {
+    const entry = typeof entryOrUid === "number" ? entryForUid(entryOrUid) : entryOrUid;
+    if (!entry) return;
+
+    dismissToast(entry.uid);
+    if (entry.notification && entry.live) entry.notification.dismiss();
+  }
+
+  function forgetEntry(entryOrUid) {
+    const uid = typeof entryOrUid === "number" ? entryOrUid : (entryOrUid ? entryOrUid.uid : -1);
+    if (uid < 0) return;
+
+    const entry = entryForUid(uid);
+    dismissToast(uid);
+    setEntries(entries.filter(existing => existing.uid !== uid));
+    if (entry && entry.notification && entry.live) entry.notification.dismiss();
+  }
+
+  function clearEntries() {
+    const liveNotifications = [];
+
+    for (let index = 0; index < entries.length; index += 1) {
+      const entry = entries[index];
+      if (entry.notification && entry.live) liveNotifications.push(entry.notification);
+    }
+
+    setEntries([]);
+    setToastUids([]);
+
+    for (let index = 0; index < liveNotifications.length; index += 1) {
+      liveNotifications[index].dismiss();
+    }
+  }
+
+  NotificationServer {
+    id: notificationServer
+
+    persistenceSupported: true
+    actionsSupported: true
+    imageSupported: true
+    keepOnReload: true
+
+    onNotification: function(notification) {
+      root.trackNotification(notification);
+    }
+  }
+}

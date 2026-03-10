@@ -62,33 +62,36 @@ Item {
     color: root.separatorColor
   }
 
-  Row {
-    anchors.fill: parent
+  Ui.UiIcon {
+    id: leadingIcon
+
+    anchors.left: parent.left
     anchors.leftMargin: Theme.gapSm
-    anchors.rightMargin: Theme.gapSm
-    spacing: Theme.gapXs
+    anchors.verticalCenter: parent.verticalCenter
+    name: root.iconName
+    strokeColor: root.iconColor
+  }
 
-    Ui.UiIcon {
-      anchors.verticalCenter: parent.verticalCenter
-      name: root.iconName
-      strokeColor: root.iconColor
-    }
+  Item {
+    id: trailingSlot
 
-    Ui.UiText {
-      width: Math.max(0, parent.width - trailingSlot.width - Theme.iconGlyphMd - Theme.gapLg)
-      anchors.verticalCenter: parent.verticalCenter
-      text: root.title
-      size: "md"
-      tone: root.textTone
-      font.weight: Font.DemiBold
-      elide: Text.ElideRight
-    }
+    anchors.top: parent.top
+    anchors.bottom: parent.bottom
+    anchors.right: parent.right
+    anchors.rightMargin: root.split ? 0 : Theme.gapSm
+    width: root.trailingWidth
+  }
 
-    Item {
-      id: trailingSlot
-
-      width: root.trailingWidth
-      height: parent.height
-    }
+  Ui.UiText {
+    anchors.left: leadingIcon.right
+    anchors.leftMargin: Theme.gapXs
+    anchors.right: trailingSlot.left
+    anchors.rightMargin: trailingSlot.width > 0 ? Theme.gapXs : 0
+    anchors.verticalCenter: parent.verticalCenter
+    text: root.title
+    size: "md"
+    tone: root.textTone
+    font.weight: Font.DemiBold
+    elide: Text.ElideRight
   }
 }

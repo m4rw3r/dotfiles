@@ -16,91 +16,38 @@ Item {
   implicitHeight: Theme.tileHeight
   opacity: enabled ? 1 : 0.5
 
-  readonly property real tileRadius: Theme.radiusMd
   readonly property real splitWidth: Theme.tileSplitWidth
   readonly property real splitInset: Theme.stroke
   readonly property bool primaryPressed: primaryTouch.pressed
   readonly property bool secondaryPressed: secondaryTouch.pressed
-  readonly property color tileColor: active
-    ? (primaryPressed ? Theme.toggleOnStrong : Theme.toggleOn)
-    : (primaryPressed ? Theme.fieldPressed : Theme.field)
-  readonly property color splitColor: active
-    ? (secondaryPressed ? Theme.toggleOnStrong : Qt.lighter(root.tileColor, 1.05))
-    : ((secondaryPressed || menuOpen) ? Theme.fieldAlt : Qt.lighter(root.tileColor, 1.03))
 
-  Rectangle {
+  QuickTileFrame {
     anchors.fill: parent
-    radius: root.tileRadius
-    color: root.tileColor
-    border.width: Theme.stroke
-    border.color: root.active
+    iconName: root.iconName
+    title: root.title
+    backgroundColor: root.active
+      ? (root.primaryPressed ? Theme.toggleOnStrong : Theme.toggleOn)
+      : (root.primaryPressed ? Theme.fieldPressed : Theme.field)
+    borderColor: root.active
       ? Qt.rgba(1, 1, 1, 0.12)
       : (root.menuOpen ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08))
-  }
-
-  Item {
-    anchors.top: parent.top
-    anchors.topMargin: root.splitInset
-    anchors.bottom: parent.bottom
-    anchors.bottomMargin: root.splitInset
-    anchors.right: parent.right
-    anchors.rightMargin: root.splitInset
-    width: Math.max(0, root.splitWidth - root.splitInset)
-    clip: true
-
-    Rectangle {
-      x: -root.tileRadius
-      width: parent.width + root.tileRadius
-      height: parent.height
-      radius: root.tileRadius - root.splitInset
-      color: root.splitColor
-    }
-  }
-
-  Rectangle {
-    anchors.top: parent.top
-    anchors.bottom: parent.bottom
-    anchors.right: parent.right
-    anchors.rightMargin: root.splitWidth
-    width: Theme.stroke
-    color: root.active ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.08)
-  }
-
-  Row {
-    anchors.fill: parent
-    anchors.leftMargin: Theme.gapSm
-    anchors.rightMargin: Theme.gapSm
-    spacing: Theme.gapXs
+    iconColor: root.active ? Theme.textOnAccent : Theme.text
+    textTone: root.active ? "onAccent" : "primary"
+    split: true
+    trailingWidth: root.splitWidth
+    splitWidth: root.splitWidth
+    splitInset: root.splitInset
+    splitColor: root.active
+      ? (root.secondaryPressed ? Theme.toggleOnStrong : Qt.lighter(backgroundColor, 1.05))
+      : ((root.secondaryPressed || root.menuOpen) ? Theme.fieldAlt : Qt.lighter(backgroundColor, 1.03))
+    separatorColor: root.active ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.08)
 
     Ui.UiIcon {
-      id: primaryIcon
-
-      anchors.verticalCenter: parent.verticalCenter
-      name: root.iconName
+      anchors.centerIn: parent
+      width: Theme.iconGlyphSm
+      height: Theme.iconGlyphSm
+      name: root.menuOpen ? "chevron-down" : "chevron-right"
       strokeColor: root.active ? Theme.textOnAccent : Theme.text
-    }
-
-    Ui.UiText {
-      width: Math.max(0, parent.width - root.splitWidth - primaryIcon.implicitWidth - Theme.gapXs)
-      anchors.verticalCenter: parent.verticalCenter
-      text: root.title
-      size: "md"
-      tone: root.active ? "onAccent" : "primary"
-      font.weight: Font.DemiBold
-      elide: Text.ElideRight
-    }
-
-    Item {
-      width: root.splitWidth
-      height: parent.height
-
-      Ui.UiIcon {
-        anchors.centerIn: parent
-        width: Theme.iconGlyphSm
-        height: Theme.iconGlyphSm
-        name: root.menuOpen ? "chevron-down" : "chevron-right"
-        strokeColor: root.active ? Theme.textOnAccent : Theme.text
-      }
     }
   }
 

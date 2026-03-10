@@ -44,6 +44,7 @@ FocusScope {
   property real pendingScreenBrightness: 0
   property bool panelOpen: false
   property var sessionActions: null
+  property string bluetoothAdapterKey: "defaultAdapter"
   property bool initialLoadDeadlineElapsed: false
   property int initialLoadDeadlineMs: 50
   readonly property bool sessionActionBusy: !!sessionActions && sessionActions.busyAction !== ""
@@ -53,9 +54,8 @@ FocusScope {
   readonly property bool tileMenuOpen: expandedSection === "wifi" || expandedSection === "bluetooth"
   readonly property bool overlayDismissActive: selectorPopoverOpen || tileMenuOpen || powerMenuOpen || outputMenuOpen
   readonly property var audioSink: Pipewire.defaultAudioSink
-  readonly property var audioNode: audioSink && audioSink.audio ? audioSink.audio : null
   readonly property var battery: UPower.displayDevice
-  readonly property var bluetoothAdapter: Bluetooth.defaultAdapter
+  property var bluetoothAdapter: null
   readonly property bool bluetoothBlocked: !!bluetoothAdapter
     && (bluetoothAdapter.state === BluetoothAdapterState.Blocked || bluetoothSoftBlocked || bluetoothHardBlocked)
   readonly property bool batteryAvailable: battery && battery.isPresent && battery.isLaptopBattery
@@ -63,8 +63,42 @@ FocusScope {
   readonly property bool audioLoading: panelOpen && !audioService.settled
   readonly property bool brightnessLoading: panelOpen && !brightnessService.settled
   readonly property bool wifiLoading: panelOpen && !wifiService.ready
+  readonly property var powerMenuEntries: [
+    { kind: "action", title: "Suspend", action: "sleep", confirm: false },
+    { kind: "action", title: "Restart", action: "restart", confirm: true },
+    { kind: "action", title: "Power Off", action: "shutdown", confirm: true },
+    { kind: "divider" },
+    { kind: "action", title: "Log Out", action: "logout", confirm: true }
+  ]
+  readonly property var profileOptions: [
+    {
+      title: "Performance",
+      profile: PowerProfile.Performance,
+      enabled: PowerProfiles.hasPerformanceProfile,
+      dividerVisible: true
+    },
+    {
+      title: "Balanced",
+      profile: PowerProfile.Balanced,
+      enabled: true,
+      dividerVisible: true
+    },
+    {
+      title: "Power Saver",
+      profile: PowerProfile.PowerSaver,
+      enabled: true,
+      dividerVisible: false
+    }
+  ]
+  readonly property var lightingOptions: [
+    { title: "Off", index: 0, dividerVisible: true },
+    { title: "Low", index: 1, dividerVisible: true },
+    { title: "Medium", index: 2, dividerVisible: true },
+    { title: "High", index: 3, dividerVisible: false }
+  ]
 
   Component.onCompleted: {
+    bluetoothAdapter = currentBluetoothAdapter();
     refreshPanelData();
     panelRefreshTimer.restart();
   }
@@ -73,6 +107,10 @@ FocusScope {
 
   function clamp(value, minValue, maxValue) {
     return Math.max(minValue, Math.min(maxValue, value));
+  }
+
+  function currentBluetoothAdapter() {
+    return Bluetooth[bluetoothAdapterKey];
   }
 
   function toggleSection(section) {
@@ -112,31 +150,6 @@ FocusScope {
   function dismissOverlaySection() {
     if (!overlayDismissActive) return;
     toggleSection(expandedSection);
-  }
-
-  function profileLabel(profile) {
-    if (profile === PowerProfile.PowerSaver) return "Power Saver";
-    if (profile === PowerProfile.Performance) return "Performance";
-    return "Balanced";
-  }
-
-  function batteryStateLabel(state) {
-    if (state === UPowerDeviceState.Charging || state === UPowerDeviceState.PendingCharge) return "Charging";
-    if (state === UPowerDeviceState.Discharging || state === UPowerDeviceState.PendingDischarge) return "Discharging";
-    if (state === UPowerDeviceState.FullyCharged) return "Full";
-    if (state === UPowerDeviceState.Empty) return "Empty";
-    return "Unknown";
-  }
-
-  function formatDuration(seconds) {
-    const totalMinutes = Math.round(Number(seconds || 0) / 60);
-    if (totalMinutes <= 0) return "";
-
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    if (hours <= 0) return `${minutes}m`;
-    if (minutes <= 0) return `${hours}h`;
-    return `${hours}h ${minutes}m`;
   }
 
   function batterySummary() {
@@ -232,25 +245,6 @@ FocusScope {
     if (sessionActionBusy) return `${powerActionTitle(sessionActions.busyAction)} in progress...`;
     if (pendingPowerAction !== "") return "Press the highlighted action again to confirm";
     return "";
-  }
-
-  function wifiSummary() {
-    if (!wifiService.hardwareEnabled) return "Blocked";
-    if (!wifiService.enabled) return "Off";
-    if (wifiService.connectedSsid !== "") {
-      return `${wifiService.connectedSsid} ${wifiService.connectedSignal}%`;
-    }
-    if (wifiService.networks.length > 0) return `${wifiService.networks.length} networks`;
-    return "On";
-  }
-
-  function bluetoothSummary() {
-    if (!bluetoothAdapter) return "Unavailable";
-    if (bluetoothBusy && bluetoothEnableAfterUnblock) return "Unblocking";
-    if (bluetoothHardBlocked) return "Hardware Blocked";
-    if (bluetoothBlocked) return "Blocked";
-    if (!bluetoothAdapter.enabled) return "Off";
-    return bluetoothAdapter.discovering ? "Scanning" : "On";
   }
 
   function bluetoothConnectedCount() {
@@ -457,10 +451,6 @@ FocusScope {
     powerConfirmTimer.restart();
   }
 
-  function powerActionLabel(action, label) {
-    return pendingPowerAction === action ? `Confirm ${label}` : label;
-  }
-
   function toggleWifiEnabled() {
     wifiService.setEnabledState(!wifiService.enabled);
   }
@@ -531,6 +521,16 @@ FocusScope {
       keyboardRecoveryMessage = "";
       keyboardRecoveryFailed = false;
       if (bluetoothAdapter) bluetoothAdapter.discovering = false;
+    }
+  }
+
+  Connections {
+    target: Bluetooth
+    ignoreUnknownSignals: true
+
+    function onDefaultAdapterChanged() {
+      root.bluetoothAdapter = root.currentBluetoothAdapter();
+      root.refreshBluetoothRfkillState();
     }
   }
 
@@ -648,12 +648,13 @@ FocusScope {
       stdout: audioReadStdout
       stderr: audioReadStderr
 
-      onExited: function(exitCode) {
+      Component.onCompleted: exited.connect(function(exitCode) {
+
         audioService.settled = true;
         audioService.lastError = exitCode === 0 ? "" : String(audioReadStderr.text || "").trim();
         if (exitCode === 0) audioService.parseState(audioReadStdout.text);
         else audioService.ready = false;
-      }
+      })
     }
 
     StdioCollector {
@@ -671,10 +672,11 @@ FocusScope {
 
       stderr: audioWriteStderr
 
-      onExited: function(exitCode) {
+      Component.onCompleted: exited.connect(function(exitCode) {
+
         audioService.lastError = exitCode === 0 ? "" : String(audioWriteStderr.text || "").trim();
         audioRefreshTimer.restart();
-      }
+      })
     }
 
     Process {
@@ -682,10 +684,11 @@ FocusScope {
 
       stderr: audioMuteStderr
 
-      onExited: function(exitCode) {
+      Component.onCompleted: exited.connect(function(exitCode) {
+
         audioService.lastError = exitCode === 0 ? "" : String(audioMuteStderr.text || "").trim();
         audioRefreshTimer.restart();
-      }
+      })
     }
 
     Timer {
@@ -715,9 +718,10 @@ FocusScope {
 
     stderr: powerProfileWriteStderr
 
-    onExited: function(exitCode) {
+    Component.onCompleted: exited.connect(function(exitCode) {
+
       root.powerProfileBusy = false;
-    }
+    })
   }
 
   StdioCollector {
@@ -736,7 +740,8 @@ FocusScope {
     stdout: bluetoothRfkillStateStdout
     stderr: bluetoothRfkillStateStderr
 
-    onExited: function(exitCode) {
+    Component.onCompleted: exited.connect(function(exitCode) {
+
       root.bluetoothRfkillRefreshing = false;
 
       const stderrText = String(bluetoothRfkillStateStderr.text || "").trim();
@@ -762,7 +767,7 @@ FocusScope {
         root.bluetoothRfkillRefreshQueued = false;
         root.refreshBluetoothRfkillState();
       }
-    }
+    })
   }
 
   StdioCollector {
@@ -781,7 +786,8 @@ FocusScope {
     stdout: bluetoothUnblockStdout
     stderr: bluetoothUnblockStderr
 
-    onExited: function(exitCode) {
+    Component.onCompleted: exited.connect(function(exitCode) {
+
       root.bluetoothBusy = false;
       root.bluetoothEnableAfterUnblock = false;
 
@@ -813,174 +819,7 @@ FocusScope {
       root.bluetoothLastErrorFromRefresh = false;
       root.bluetoothLastError = stderrText !== "" ? stderrText : "Unable to unblock Bluetooth.";
       root.refreshBluetoothRfkillState();
-    }
-  }
-
-  component StatusChip: UiSurface {
-    id: chip
-
-    property string text: ""
-    property string iconName: ""
-
-    implicitWidth: chipRow.implicitWidth + Theme.gapLg
-    implicitHeight: Theme.controlSm
-    tone: "field"
-    outlined: false
-    radius: Theme.radiusMd
-
-    border.width: Theme.stroke
-    border.color: Qt.rgba(1, 1, 1, 0.08)
-
-    Row {
-      id: chipRow
-
-      anchors.centerIn: parent
-      spacing: chip.iconName === "" ? 0 : Theme.gapXs
-
-      UiIcon {
-        visible: chip.iconName !== ""
-        anchors.verticalCenter: parent.verticalCenter
-        name: chip.iconName
-        strokeColor: Theme.text
-      }
-
-      UiText {
-        id: chipLabel
-
-        anchors.verticalCenter: parent.verticalCenter
-        text: chip.text
-        size: "sm"
-        tone: "primary"
-        font.weight: Font.DemiBold
-      }
-    }
-  }
-
-  component PopoverSurface: UiSurface {
-    id: popover
-
-    default property alias content: popoverColumn.data
-    property int horizontalPadding: Theme.insetSm
-    property int verticalPadding: Theme.insetSm
-
-    width: implicitWidth
-    height: implicitHeight
-    implicitWidth: Theme.popoverWidthSm
-    implicitHeight: popoverColumn.implicitHeight + verticalPadding * 2
-    tone: "submenu"
-    outlined: false
-    radius: Theme.radiusMd
-    z: 8
-    clip: true
-
-    border.width: Theme.stroke
-    border.color: Qt.rgba(1, 1, 1, 0.08)
-
-    Column {
-      id: popoverColumn
-
-      width: parent.width - popover.horizontalPadding * 2
-      anchors.left: parent.left
-      anchors.leftMargin: popover.horizontalPadding
-      anchors.top: parent.top
-      anchors.topMargin: popover.verticalPadding
-      spacing: Theme.nudge
-    }
-  }
-
-  component PopoverMenuAction: Item {
-    id: actionRow
-
-    property string title: ""
-    property string subtitle: ""
-    property string actionText: ""
-    property string trailingIconName: ""
-    property color trailingIconColor: Theme.textMuted
-    property bool active: false
-    signal clicked()
-
-    width: parent ? parent.width : implicitWidth
-    implicitWidth: 1
-    implicitHeight: subtitle !== "" ? Theme.controlMd : Theme.controlSm
-    opacity: enabled ? 1 : 0.5
-
-    Rectangle {
-      anchors.fill: parent
-      radius: Theme.radiusMd
-      color: actionRow.active
-        ? Qt.rgba(1, 1, 1, 0.06)
-        : (actionTouch.pressed ? Qt.rgba(1, 1, 1, 0.035) : "transparent")
-      border.width: actionRow.active ? Theme.stroke : 0
-      border.color: Qt.rgba(1, 1, 1, 0.1)
-    }
-
-    Column {
-      width: Math.max(0, parent.width - trailingSlot.width - Theme.controlMd)
-      anchors.left: parent.left
-      anchors.leftMargin: Theme.gapSm
-      anchors.verticalCenter: parent.verticalCenter
-      spacing: actionRow.subtitle !== "" ? Theme.nudge : 0
-
-      UiText {
-        width: parent.width
-        text: actionRow.title
-        size: "md"
-        font.weight: Font.Medium
-        elide: Text.ElideRight
-      }
-
-      UiText {
-        width: parent.width
-        visible: text !== ""
-        text: actionRow.subtitle
-        size: "xs"
-        tone: "muted"
-        elide: Text.ElideRight
-      }
-    }
-
-    Item {
-      id: trailingSlot
-
-      anchors.right: parent.right
-      anchors.rightMargin: Theme.gapSm
-      anchors.verticalCenter: parent.verticalCenter
-      width: Math.max(actionLabel.visible ? actionLabel.implicitWidth : 0, trailingGlyph.visible ? trailingGlyph.implicitWidth : 0)
-      height: parent.height
-
-      UiText {
-        id: actionLabel
-
-        anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
-        visible: text !== ""
-        text: actionRow.actionText
-        size: "xs"
-        tone: "muted"
-        font.weight: Font.DemiBold
-      }
-
-      UiIcon {
-        id: trailingGlyph
-
-        anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
-        visible: name !== ""
-        width: 16
-        height: 16
-        name: actionRow.trailingIconName
-        strokeColor: actionRow.trailingIconColor
-      }
-    }
-
-    MouseArea {
-      id: actionTouch
-
-      anchors.fill: parent
-      enabled: actionRow.enabled
-      hoverEnabled: true
-      onClicked: actionRow.clicked()
-    }
+    })
   }
 
   component BrightnessController: Item {
@@ -1093,11 +932,12 @@ FocusScope {
       stdout: detectStdout
       stderr: detectStderr
 
-      onExited: function(exitCode) {
+      Component.onCompleted: exited.connect(function(exitCode) {
+
         brightnessController.lastError = exitCode === 0 ? "" : String(detectStderr.text || "").trim();
         if (exitCode === 0) brightnessController.parseDeviceList(detectStdout.text);
         else brightnessController.settled = true;
-      }
+      })
     }
 
     StdioCollector {
@@ -1108,10 +948,11 @@ FocusScope {
     Process {
       id: screenReadProcess
       stdout: screenStdout
-      onExited: function(exitCode) {
+      Component.onCompleted: exited.connect(function(exitCode) {
+
         brightnessController.settled = true;
         if (exitCode === 0) brightnessController.parseBrightness(screenStdout.text, false);
-      }
+      })
     }
 
     StdioCollector {
@@ -1122,9 +963,10 @@ FocusScope {
     Process {
       id: keyboardReadProcess
       stdout: keyboardStdout
-      onExited: function(exitCode) {
+      Component.onCompleted: exited.connect(function(exitCode) {
+
         if (exitCode === 0) brightnessController.parseBrightness(keyboardStdout.text, true);
-      }
+      })
     }
 
     StdioCollector {
@@ -1135,10 +977,11 @@ FocusScope {
     Process {
       id: screenWriteProcess
       stderr: screenWriteStderr
-      onExited: function(exitCode) {
+      Component.onCompleted: exited.connect(function(exitCode) {
+
         brightnessController.lastError = exitCode === 0 ? "" : String(screenWriteStderr.text || "").trim();
         brightnessController.refreshScreen();
-      }
+      })
     }
 
     StdioCollector {
@@ -1149,10 +992,11 @@ FocusScope {
     Process {
       id: keyboardWriteProcess
       stderr: keyboardWriteStderr
-      onExited: function(exitCode) {
+      Component.onCompleted: exited.connect(function(exitCode) {
+
         brightnessController.lastError = exitCode === 0 ? "" : String(keyboardWriteStderr.text || "").trim();
         brightnessController.refreshKeyboard();
-      }
+      })
     }
   }
 
@@ -1250,7 +1094,8 @@ FocusScope {
       stdout: lightingStateStdout
       stderr: lightingStateStderr
 
-      onExited: function(exitCode) {
+      Component.onCompleted: exited.connect(function(exitCode) {
+
         lightingController.settled = true;
         if (exitCode === 0) {
           lightingController.parseState(lightingStateStdout.text);
@@ -1263,7 +1108,7 @@ FocusScope {
         lightingController.lastError = exitCode === 127
           ? ""
           : (exitCode === 66 ? "Lighting state unavailable." : String(lightingStateStderr.text || "").trim());
-      }
+      })
     }
 
     StdioCollector {
@@ -1276,10 +1121,11 @@ FocusScope {
 
       stderr: lightingWriteStderr
 
-      onExited: function(exitCode) {
+      Component.onCompleted: exited.connect(function(exitCode) {
+
         lightingController.lastError = exitCode === 0 ? "" : String(lightingWriteStderr.text || "").trim();
         lightingRefreshTimer.restart();
-      }
+      })
     }
 
     Timer {
@@ -1512,7 +1358,8 @@ FocusScope {
       stdout: wifiRefreshStdout
       stderr: wifiRefreshStderr
 
-      onExited: function(exitCode) {
+      Component.onCompleted: exited.connect(function(exitCode) {
+
         wifiController.busy = false;
         wifiController.ready = true;
         const stderrText = String(wifiRefreshStderr.text || "").trim();
@@ -1525,7 +1372,7 @@ FocusScope {
         }
 
         wifiController.lastError = stderrText !== "" ? stderrText : "Unable to refresh Wi-Fi state.";
-      }
+      })
     }
 
     StdioCollector {
@@ -1546,30 +1393,33 @@ FocusScope {
     Process {
       id: toggleProcess
       stderr: wifiToggleStderr
-      onExited: function(exitCode) {
+      Component.onCompleted: exited.connect(function(exitCode) {
+
         wifiController.lastError = exitCode === 0 ? "" : String(wifiToggleStderr.text || "").trim();
         wifiController.refresh();
-      }
+      })
     }
 
     Process {
       id: scanProcess
       stderr: wifiScanStderr
-      onExited: function(exitCode) {
+      Component.onCompleted: exited.connect(function(exitCode) {
+
         wifiController.lastError = exitCode === 0 ? "" : String(wifiScanStderr.text || "").trim();
         wifiRescanDelay.restart();
-      }
+      })
     }
 
     Process {
       id: connectProcess
       stderr: wifiConnectStderr
-      onExited: function(exitCode) {
+      Component.onCompleted: exited.connect(function(exitCode) {
+
         wifiController.lastError = exitCode === 0 ? "" : String(wifiConnectStderr.text || "").trim();
         if (exitCode !== 0) wifiController.busy = false;
         wifiController.pendingSsid = "";
         wifiRescanDelay.restart();
-      }
+      })
     }
 
     Timer {
@@ -1596,14 +1446,15 @@ FocusScope {
     stdout: onScreenKeyboardStdout
     stderr: onScreenKeyboardStderr
 
-    onExited: function(exitCode) {
+    Component.onCompleted: exited.connect(function(exitCode) {
+
       const action = String(onScreenKeyboardStdout.text || "").trim();
       root.onScreenKeyboardBusy = false;
       root.onScreenKeyboardFailed = exitCode !== 0;
       root.onScreenKeyboardMessage = exitCode === 0
         ? (action === "started" ? "On-screen keyboard started." : "On-screen keyboard toggled.")
         : (String(onScreenKeyboardStderr.text || "").trim() || "Unable to control the on-screen keyboard.");
-    }
+    })
   }
 
   StdioCollector {
@@ -1616,7 +1467,8 @@ FocusScope {
 
     stderr: keyboardRecoveryStderr
 
-    onExited: function(exitCode) {
+    Component.onCompleted: exited.connect(function(exitCode) {
+
       root.keyboardRecoveryBusy = false;
       root.keyboardRecoveryFailed = exitCode !== 0;
       root.keyboardRecoveryMessage = exitCode === 0
@@ -1625,7 +1477,7 @@ FocusScope {
 
       brightnessService.refresh();
       lightingService.refresh();
-    }
+    })
   }
 
   Timer {
@@ -1674,7 +1526,7 @@ FocusScope {
         height: Theme.controlSm
         spacing: Theme.gapXs
 
-        StatusChip {
+        Controls.StatusChip {
           id: batteryChip
           visible: root.batteryAvailable
           anchors.verticalCenter: parent.verticalCenter
@@ -2035,7 +1887,7 @@ FocusScope {
             Repeater {
               model: Pipewire.nodes
 
-              delegate: PopoverMenuAction {
+              delegate: Controls.PopoverMenuAction {
                 id: outputRow
 
                 required property var modelData
@@ -2076,47 +1928,36 @@ FocusScope {
             width: parent.width
             spacing: 2
 
-            PopoverMenuAction {
-              width: parent.width
-              title: "Suspend"
-              enabled: !root.sessionActionBusy
-              onClicked: root.runSessionAction("sleep")
-            }
+            Repeater {
+              model: root.powerMenuEntries
 
-            PopoverMenuAction {
-              width: parent.width
-              title: "Restart"
-              actionText: root.pendingPowerAction === "restart" ? "Confirm" : ""
-              active: root.pendingPowerAction === "restart"
-              enabled: !root.sessionActionBusy
-              onClicked: root.triggerPowerAction("restart")
-            }
+              delegate: Item {
+                required property var modelData
+                readonly property var entry: modelData
 
-            PopoverMenuAction {
-              width: parent.width
-              title: "Power Off"
-              actionText: root.pendingPowerAction === "shutdown" ? "Confirm" : ""
-              active: root.pendingPowerAction === "shutdown"
-              enabled: !root.sessionActionBusy
-              onClicked: root.triggerPowerAction("shutdown")
-            }
+                width: parent.width
+                height: entry.kind === "divider" ? divider.height : action.implicitHeight
 
-            Rectangle {
-              width: parent.width - 36
-              height: 1
-              radius: 0.5
-              anchors.horizontalCenter: parent.horizontalCenter
-              color: Theme.divider
-              opacity: 0.72
-            }
+                Controls.Divider {
+                  id: divider
+                  visible: parent.entry.kind === "divider"
+                }
 
-            PopoverMenuAction {
-              width: parent.width
-              title: "Log Out"
-              actionText: root.pendingPowerAction === "logout" ? "Confirm" : ""
-              active: root.pendingPowerAction === "logout"
-              enabled: !root.sessionActionBusy
-              onClicked: root.triggerPowerAction("logout")
+                Controls.PopoverMenuAction {
+                  id: action
+
+                  visible: parent.entry.kind === "action"
+                  width: parent.width
+                  title: parent.entry.title || ""
+                  actionText: parent.entry.confirm && root.pendingPowerAction === parent.entry.action ? "Confirm" : ""
+                  active: parent.entry.confirm && root.pendingPowerAction === parent.entry.action
+                  enabled: !root.sessionActionBusy
+                  onClicked: {
+                    if (parent.entry.confirm) root.triggerPowerAction(parent.entry.action);
+                    else root.runSessionAction(parent.entry.action);
+                  }
+                }
+              }
             }
           }
         }
@@ -2179,7 +2020,7 @@ FocusScope {
             Repeater {
               model: wifiService.enabled ? Math.min(6, wifiService.networks.length) : 0
 
-              delegate: PopoverMenuAction {
+              delegate: Controls.PopoverMenuAction {
                 id: wifiRow
 
                 required property int index
@@ -2290,23 +2131,18 @@ FocusScope {
             width: parent.width
             spacing: 4
 
-            Rectangle {
-              width: parent.width - Theme.controlSm
-              height: Theme.stroke
-              radius: height / 2
-              anchors.horizontalCenter: parent.horizontalCenter
-              color: Theme.divider
-              opacity: 0.72
+            Controls.Divider {
+              horizontalInset: Theme.controlSm / 2
             }
 
-            PopoverMenuAction {
+            Controls.PopoverMenuAction {
               width: parent.width
               title: wifiService.enabled ? "Turn Off" : "Turn On"
               enabled: wifiService.ready && !wifiService.busy
               onClicked: wifiService.setEnabledState(!wifiService.enabled)
             }
 
-            PopoverMenuAction {
+            Controls.PopoverMenuAction {
               width: parent.width
               title: wifiService.busy ? "Refreshing" : "Rescan"
               enabled: wifiService.ready && wifiService.enabled && !wifiService.busy
@@ -2384,7 +2220,7 @@ FocusScope {
               Repeater {
                 model: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? root.bluetoothAdapter.devices : null
 
-                delegate: PopoverMenuAction {
+                delegate: Controls.PopoverMenuAction {
                   id: connectedDeviceRow
 
                   required property var modelData
@@ -2428,7 +2264,7 @@ FocusScope {
               Repeater {
                 model: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? root.bluetoothAdapter.devices : null
 
-                delegate: PopoverMenuAction {
+                delegate: Controls.PopoverMenuAction {
                   id: otherDeviceRow
 
                   required property var modelData
@@ -2455,23 +2291,16 @@ FocusScope {
             width: parent.width
             spacing: 4
 
-            Rectangle {
-              width: parent.width - 36
-              height: 1
-              radius: 0.5
-              anchors.horizontalCenter: parent.horizontalCenter
-              color: Theme.divider
-              opacity: 0.72
-            }
+            Controls.Divider {}
 
-            PopoverMenuAction {
+            Controls.PopoverMenuAction {
               width: parent.width
               title: root.bluetoothPrimaryActionText()
               enabled: !!root.bluetoothAdapter && !root.bluetoothBusy && !root.bluetoothHardBlocked
               onClicked: root.toggleBluetoothEnabled()
             }
 
-            PopoverMenuAction {
+            Controls.PopoverMenuAction {
               width: parent.width
               title: root.bluetoothAdapter && root.bluetoothAdapter.discovering ? "Stop Scan" : "Scan"
               enabled: !!root.bluetoothAdapter && root.bluetoothAdapter.enabled && !root.bluetoothBusy
@@ -2491,108 +2320,62 @@ FocusScope {
       z: 6
 
       MouseArea {
-        anchors.fill: panel
+        anchors.fill: parent
         enabled: root.selectorPopoverOpen
         onClicked: root.dismissOverlaySection()
       }
 
-      PopoverSurface {
+      Controls.PopoverSurface {
         id: profilePopover
         visible: root.expandedSection === "profile"
         width: implicitWidth
         x: root.popupX(profileTile, width, false)
         y: root.popupOverlayY(profileTile, height)
 
-        Controls.MenuItem {
-          width: parent.width
-          iconName: "gauge"
-          title: "Performance"
-          trailingIconName: PowerProfiles.profile === PowerProfile.Performance ? "check" : ""
-          active: PowerProfiles.profile === PowerProfile.Performance
-          activeStyle: "indicator"
-          compact: true
-          dividerVisible: true
-          enabled: PowerProfiles.hasPerformanceProfile && !root.powerProfileBusy
-          onClicked: root.selectPowerProfile(PowerProfile.Performance)
-        }
+        Repeater {
+          model: root.profileOptions
 
-        Controls.MenuItem {
-          width: parent.width
-          iconName: "gauge"
-          title: "Balanced"
-          trailingIconName: PowerProfiles.profile === PowerProfile.Balanced ? "check" : ""
-          active: PowerProfiles.profile === PowerProfile.Balanced
-          activeStyle: "indicator"
-          compact: true
-          dividerVisible: true
-          enabled: !root.powerProfileBusy
-          onClicked: root.selectPowerProfile(PowerProfile.Balanced)
-        }
+          delegate: Controls.MenuItem {
+            required property var modelData
+            readonly property var option: modelData
 
-        Controls.MenuItem {
-          width: parent.width
-          iconName: "gauge"
-          title: "Power Saver"
-          trailingIconName: PowerProfiles.profile === PowerProfile.PowerSaver ? "check" : ""
-          active: PowerProfiles.profile === PowerProfile.PowerSaver
-          activeStyle: "indicator"
-          compact: true
-          enabled: !root.powerProfileBusy
-          onClicked: root.selectPowerProfile(PowerProfile.PowerSaver)
+            width: parent.width
+            iconName: "gauge"
+            title: option.title
+            trailingIconName: PowerProfiles.profile === option.profile ? "check" : ""
+            active: PowerProfiles.profile === option.profile
+            activeStyle: "indicator"
+            compact: true
+            dividerVisible: option.dividerVisible
+            enabled: option.enabled && !root.powerProfileBusy
+            onClicked: root.selectPowerProfile(option.profile)
+          }
         }
       }
 
-      PopoverSurface {
+      Controls.PopoverSurface {
         visible: root.expandedSection === "lighting" && lightingService.commandAvailable
         width: lightingTile.width
         x: root.popupX(lightingTile, width, false)
         y: root.popupOverlayY(lightingTile, height)
 
-        Controls.MenuItem {
-          width: parent.width
-          iconName: "sun"
-          title: "Off"
-          trailingIconName: root.lightingLevelIndex() === 0 ? "check" : ""
-          active: root.lightingLevelIndex() === 0
-          activeStyle: "indicator"
-          compact: true
-          dividerVisible: true
-          onClicked: root.setLightingLevel(0)
-        }
+        Repeater {
+          model: root.lightingOptions
 
-        Controls.MenuItem {
-          width: parent.width
-          iconName: "sun"
-          title: "Low"
-          trailingIconName: root.lightingLevelIndex() === 1 ? "check" : ""
-          active: root.lightingLevelIndex() === 1
-          activeStyle: "indicator"
-          compact: true
-          dividerVisible: true
-          onClicked: root.setLightingLevel(1)
-        }
+          delegate: Controls.MenuItem {
+            required property var modelData
+            readonly property var option: modelData
 
-        Controls.MenuItem {
-          width: parent.width
-          iconName: "sun"
-          title: "Medium"
-          trailingIconName: root.lightingLevelIndex() === 2 ? "check" : ""
-          active: root.lightingLevelIndex() === 2
-          activeStyle: "indicator"
-          compact: true
-          dividerVisible: true
-          onClicked: root.setLightingLevel(2)
-        }
-
-        Controls.MenuItem {
-          width: parent.width
-          iconName: "sun"
-          title: "High"
-          trailingIconName: root.lightingLevelIndex() === 3 ? "check" : ""
-          active: root.lightingLevelIndex() === 3
-          activeStyle: "indicator"
-          compact: true
-          onClicked: root.setLightingLevel(3)
+            width: parent.width
+            iconName: "sun"
+            title: option.title
+            trailingIconName: root.lightingLevelIndex() === option.index ? "check" : ""
+            active: root.lightingLevelIndex() === option.index
+            activeStyle: "indicator"
+            compact: true
+            dividerVisible: option.dividerVisible
+            onClicked: root.setLightingLevel(option.index)
+          }
         }
 
       }

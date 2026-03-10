@@ -1,5 +1,4 @@
 import QtQuick
-import "../primitives" as Ui
 import "../../theme"
 
 Item {
@@ -18,42 +17,19 @@ Item {
 
   readonly property bool pressed: touchArea.pressed
   readonly property bool highlighted: useActiveStyling && active
-  readonly property real tileRadius: Theme.radiusMd
-  readonly property color tileColor: highlighted
-    ? (pressed ? Theme.toggleOnStrong : Theme.toggleOn)
-    : ((pressed || open) ? Theme.fieldAlt : Theme.field)
 
-  Rectangle {
+  QuickTileFrame {
     anchors.fill: parent
-    radius: root.tileRadius
-    color: root.tileColor
-    border.width: Theme.stroke
-    border.color: root.highlighted
+    iconName: root.iconName
+    title: root.title
+    backgroundColor: root.highlighted
+      ? (root.pressed ? Theme.toggleOnStrong : Theme.toggleOn)
+      : ((root.pressed || root.open) ? Theme.fieldAlt : Theme.field)
+    borderColor: root.highlighted
       ? Qt.rgba(1, 1, 1, 0.12)
       : (root.open ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08))
-  }
-
-  Row {
-    anchors.fill: parent
-    anchors.leftMargin: Theme.gapSm
-    anchors.rightMargin: Theme.gapSm
-    spacing: Theme.gapXs
-
-    Ui.UiIcon {
-      anchors.verticalCenter: parent.verticalCenter
-      name: root.iconName
-      strokeColor: root.highlighted ? Theme.textOnAccent : Theme.text
-    }
-
-    Ui.UiText {
-      width: Math.max(0, parent.width - Theme.iconGlyphMd - Theme.gapLg)
-      anchors.verticalCenter: parent.verticalCenter
-      text: root.title
-      size: "md"
-      tone: root.highlighted ? "onAccent" : "primary"
-      font.weight: Font.DemiBold
-      elide: Text.ElideRight
-    }
+    iconColor: root.highlighted ? Theme.textOnAccent : Theme.text
+    textTone: root.highlighted ? "onAccent" : "primary"
   }
 
   MouseArea {

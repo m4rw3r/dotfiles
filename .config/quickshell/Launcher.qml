@@ -322,10 +322,10 @@ Item {
     stdout: focusedOutputStdout
     stderr: focusedOutputStderr
 
-    onExited: function(exitCode) {
+    Component.onCompleted: exited.connect(function(exitCode) {
       const preferredScreen = exitCode === 0 ? root.parseFocusedOutput(focusedOutputStdout.text) : null;
       root.finishPendingLauncherOpen(focusedOutputProcess.requestId, preferredScreen);
-    }
+    })
   }
 
   Timer {
@@ -338,6 +338,7 @@ Item {
   Variants {
     model: Quickshell.screens
 
+    // qmllint disable uncreatable-type
     PanelWindow {
       id: launcherWindow
 
@@ -1061,5 +1062,6 @@ Item {
         launcherWindow.syncWindowState();
       }
     }
+    // qmllint enable uncreatable-type
   }
 }

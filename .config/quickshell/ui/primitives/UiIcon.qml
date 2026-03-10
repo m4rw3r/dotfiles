@@ -21,7 +21,7 @@ Item {
     "battery": "battery-medium"
   })
   readonly property string resolvedName: aliases[name] !== undefined ? aliases[name] : name
-  readonly property url sourceUrl: Qt.resolvedUrl(`../../icons/${resolvedName}.svg`)
+  readonly property url sourceUrl: resolvedName === "" ? "" : Qt.resolvedUrl(`../../icons/${resolvedName}.svg`)
 
   QtQuickControlsImpl.IconImage {
     anchors.fill: parent

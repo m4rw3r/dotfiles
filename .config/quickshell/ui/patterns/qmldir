@@ -1,1 +1,7 @@
+HeroSheetPopover 1.0 HeroSheetPopover.qml
+QuickSelectorTile 1.0 QuickSelectorTile.qml
 QuickTile 1.0 QuickTile.qml
+QuickTileFrame 1.0 QuickTileFrame.qml
+QuickTileMenuPanel 1.0 QuickTileMenuPanel.qml
+QuickToggleMenuTile 1.0 QuickToggleMenuTile.qml
+QuickToggleTile 1.0 QuickToggleTile.qml

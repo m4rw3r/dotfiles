@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Wayland
 import "ui/primitives"
 
+// qmllint disable uncreatable-type
 PanelWindow {
   id: root
 
@@ -39,3 +40,4 @@ PanelWindow {
     onCloseRequested: root.closeRequested()
   }
 }
+// qmllint enable uncreatable-type

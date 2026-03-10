@@ -139,7 +139,7 @@ ShellRoot {
 
       stderr: actionStderr
 
-      onExited: function(exitCode) {
+      Component.onCompleted: exited.connect(function(exitCode) {
         const actionName = controller.busyAction;
         const errorText = String(actionStderr.text || "").trim();
         controller.busyAction = "";
@@ -149,7 +149,7 @@ ShellRoot {
         }
 
         controller.fail(actionName, errorText);
-      }
+      })
     }
 
     StdioCollector {
@@ -162,7 +162,7 @@ ShellRoot {
 
       stderr: lockStderr
 
-      onExited: function(exitCode) {
+      Component.onCompleted: exited.connect(function(exitCode) {
         const errorText = String(lockStderr.text || "").trim();
         controller.busyAction = "";
         if (exitCode === 0) {
@@ -171,7 +171,7 @@ ShellRoot {
         }
 
         controller.fail("lock", errorText);
-      }
+      })
     }
   }
 
@@ -338,6 +338,7 @@ ShellRoot {
     }
   }
 
+  // qmllint disable uncreatable-type
   PanelWindow {
     visible: sessionActions.bannerVisible
     anchors { top: true; right: true }
@@ -359,7 +360,9 @@ ShellRoot {
       anchors.rightMargin: Theme.overlayMargin
     }
   }
+  // qmllint enable uncreatable-type
 
+  // qmllint disable uncreatable-type
   PanelWindow {
     visible: root.shadeOpen
     anchors { left: true; right: true; top: true; bottom: true }
@@ -378,7 +381,9 @@ ShellRoot {
       }
     }
   }
+  // qmllint enable uncreatable-type
 
+  // qmllint disable uncreatable-type
   PanelWindow {
     visible: root.shadeOpen
     anchors { left: true; right: true; top: true; bottom: true }
@@ -413,6 +418,7 @@ ShellRoot {
       onCloseRequested: root.shadeOpen = false
     }
   }
+  // qmllint enable uncreatable-type
 
   WidgetGalleryWindow {
     galleryOpen: root.galleryOpen

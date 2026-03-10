@@ -1,8 +1,9 @@
 import QtQuick
+import "../controls" as Controls
 import "../primitives" as Ui
 import "../../theme"
 
-Ui.UiSurface {
+Controls.PopoverSurface {
   id: root
 
   property string iconName: "wifi"
@@ -13,22 +14,13 @@ Ui.UiSurface {
 
   width: implicitWidth
   implicitWidth: Theme.popoverWidthMd
-  implicitHeight: headerRow.implicitHeight + bodyColumn.implicitHeight + verticalPadding * 2 + Theme.gapSm
-  tone: "submenu"
-  outlined: false
+  implicitHeight: contentColumn.implicitHeight + verticalPadding * 2
   radius: Theme.radiusLg
-  z: 8
-  clip: true
-
-  border.width: Theme.stroke
-  border.color: Qt.rgba(1, 1, 1, 0.08)
 
   Column {
-    width: parent.width - root.horizontalPadding * 2
-    anchors.left: parent.left
-    anchors.leftMargin: root.horizontalPadding
-    anchors.top: parent.top
-    anchors.topMargin: root.verticalPadding
+    id: contentColumn
+
+    width: parent.width
     spacing: Theme.gapSm
 
     Row {

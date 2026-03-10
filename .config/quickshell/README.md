@@ -7,6 +7,7 @@ Small Quickshell setup with two overlays: an app launcher and a top control pane
 - Full-screen app launcher with search and ranked matching
 - Multi-screen launcher windows (one per detected screen)
 - Theme-aware control panel with runtime theme switching
+- Hidden-on-demand system tray rail with attention peek + control-center companion mode
 - Widget gallery overlay for previewing reusable controls and patterns
 - Shared styling primitives for consistent surfaces and text
 - IPC handlers so keybinds/scripts can open, close, or toggle UI pieces
@@ -16,6 +17,7 @@ Small Quickshell setup with two overlays: an app launcher and a top control pane
 - `shell.qml` - Main shell definition (UI windows + IPC wiring)
 - `Launcher.qml` - Launcher logic and UI
 - `ControlCenter.qml` - Shade/control panel content
+- `TrayRail.qml` - Vertical tray rail used as a top-right peek or beside the control center
 - `WidgetGallery.qml` - Scrollable gallery for the shared widget library
 - `WidgetGalleryWindow.qml` - Overlay window wrapper for the gallery
 - `theme/Theme.qml` - Singleton design tokens + theme persistence
@@ -36,6 +38,12 @@ Small Quickshell setup with two overlays: an app launcher and a top control pane
 - `toggleControlCenter()`
 - `showControlCenter()`
 - `hideControlCenter()`
+
+`tray`
+- `toggle()`
+- `open()`
+- `peek()`
+- `close()`
 
 `launcher`
 - `toggle()`
@@ -65,6 +73,23 @@ qs ipc call gallery close
 ```
 
 The gallery opens as its own overlay and automatically closes the launcher or shade if either is visible.
+
+## Tray behavior
+
+- The tray is hidden by default and only peeks into the top-right corner when attention is needed or when forced through IPC.
+- Tapping the peek opens the tray rail by itself; it does not open the control center.
+- If the control center opens while the tray is visible, the tray shifts left and becomes a companion rail beside it.
+- If the tray was opened from the peek, closing the control center leaves the tray expanded in the top-right corner.
+- If the tray was opened only from the control-center button, closing the control center collapses it back to a peek or hides it.
+
+From a shell, you can exercise the tray directly:
+
+```bash
+qs ipc call tray peek
+qs ipc call tray open
+qs ipc call tray close
+qs ipc call tray toggle
+```
 
 ## Niri bind example
 

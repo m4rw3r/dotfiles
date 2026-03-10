@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.SystemTray
 import Quickshell.Wayland
 import "theme"
 import "ui/controls" as Controls
@@ -13,6 +14,114 @@ ShellRoot {
 
   property bool shadeOpen: false
   property bool galleryOpen: false
+  property string trayMode: "hidden"
+  property bool trayUserPinned: false
+  property bool trayPeekForced: false
+  property int trayAttentionCount: 0
+  readonly property bool trayHasAttention: trayAttentionCount > 0
+  // qmllint disable missing-property
+  readonly property bool trayHasItems: trayTracker.count > 0
+  // qmllint enable missing-property
+
+  function refreshTrayState() {
+    let attention = 0;
+    // qmllint disable missing-property
+    for (let i = 0; i < SystemTray.items.count; i += 1) {
+      const item = SystemTray.items.get(i);
+      if (item && item.status === Status.NeedsAttention) attention += 1;
+    }
+    // qmllint enable missing-property
+    trayAttentionCount = attention;
+  }
+
+  function collapseTrayToPeekOrHidden() {
+    trayUserPinned = false;
+    trayMode = (trayPeekForced || trayHasAttention) ? "peek" : "hidden";
+  }
+
+  function openTrayFromPeek() {
+    trayPeekForced = false;
+    trayUserPinned = true;
+    trayMode = "expanded";
+  }
+
+  function openTrayFromControlCenter() {
+    trayPeekForced = false;
+    trayUserPinned = false;
+    trayMode = "expanded";
+  }
+
+  function toggleTrayFromControlCenter() {
+    if (trayMode === "hidden" || trayMode === "peek") {
+      openTrayFromControlCenter();
+      return;
+    }
+
+    closeTray();
+  }
+
+  function forceTrayPeek() {
+    trayPeekForced = true;
+    trayUserPinned = false;
+    trayMode = "peek";
+  }
+
+  function closeTray() {
+    trayPeekForced = false;
+    trayUserPinned = false;
+    trayMode = trayHasAttention ? "peek" : "hidden";
+  }
+
+  function openControlCenter() {
+    shadeOpen = true;
+    galleryOpen = false;
+    launcher.closeLauncher();
+  }
+
+  function closeControlCenter() {
+    shadeOpen = false;
+    if (!trayUserPinned) collapseTrayToPeekOrHidden();
+  }
+
+  onTrayHasAttentionChanged: {
+    if (trayHasAttention) {
+      if (trayMode === "hidden") trayMode = "peek";
+      return;
+    }
+
+    if (trayMode === "peek" && !trayPeekForced) trayMode = "hidden";
+  }
+
+  Instantiator {
+    id: trayTracker
+
+    model: SystemTray.items
+
+    delegate: Item {
+      id: trayTrackerItem
+
+      required property var modelData
+      visible: false
+      width: 0
+      height: 0
+
+      Connections {
+        target: trayTrackerItem.modelData
+        ignoreUnknownSignals: true
+
+        function onStatusChanged() {
+          Qt.callLater(root.refreshTrayState);
+        }
+
+        function onReady() {
+          Qt.callLater(root.refreshTrayState);
+        }
+      }
+    }
+
+    onObjectAdded: Qt.callLater(root.refreshTrayState)
+    onObjectRemoved: Qt.callLater(root.refreshTrayState)
+  }
 
   component SessionActionController: Item {
     id: controller
@@ -274,17 +383,41 @@ ShellRoot {
   IpcHandler {
     target: "ui"
     function toggleControlCenter() {
-      root.shadeOpen = !root.shadeOpen;
-      if (root.shadeOpen) root.galleryOpen = false;
-      if (root.shadeOpen) launcher.closeLauncher();
+      if (root.shadeOpen) root.closeControlCenter();
+      else root.openControlCenter();
     }
     function showControlCenter() {
-      root.shadeOpen = true;
-      root.galleryOpen = false;
-      launcher.closeLauncher();
+      root.openControlCenter();
     }
     function hideControlCenter() {
-      root.shadeOpen = false;
+      root.closeControlCenter();
+    }
+  }
+
+  IpcHandler {
+    target: "tray"
+
+    function toggle() {
+      if (root.trayMode === "expanded") root.closeTray();
+      else {
+        root.trayPeekForced = false;
+        root.trayUserPinned = true;
+        root.trayMode = "expanded";
+      }
+    }
+
+    function open() {
+      root.trayPeekForced = false;
+      root.trayUserPinned = true;
+      root.trayMode = "expanded";
+    }
+
+    function peek() {
+      root.forceTrayPeek();
+    }
+
+    function close() {
+      root.closeTray();
     }
   }
 
@@ -294,14 +427,14 @@ ShellRoot {
     function toggle() {
       root.galleryOpen = !root.galleryOpen;
       if (root.galleryOpen) {
-        root.shadeOpen = false;
+        root.closeControlCenter();
         launcher.closeLauncher();
       }
     }
 
     function open() {
       root.galleryOpen = true;
-      root.shadeOpen = false;
+      root.closeControlCenter();
       launcher.closeLauncher();
     }
 
@@ -333,7 +466,7 @@ ShellRoot {
   Launcher {
     id: launcher
     onLauncherOpening: {
-      root.shadeOpen = false;
+      root.closeControlCenter();
       root.galleryOpen = false;
     }
   }
@@ -364,6 +497,42 @@ ShellRoot {
 
   // qmllint disable uncreatable-type
   PanelWindow {
+    id: trayWindow
+
+    visible: root.trayMode !== "hidden" && !root.shadeOpen && !root.galleryOpen && !launcher.launcherOpen
+    anchors { top: true; right: true }
+    implicitWidth: standaloneTray.implicitWidth + Theme.overlayMargin * 2
+    implicitHeight: standaloneTray.implicitHeight + Theme.overlayMargin * 2
+    exclusionMode: ExclusionMode.Ignore
+    aboveWindows: true
+    color: "transparent"
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: root.trayMode === "expanded" ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+    onVisibleChanged: {
+      if (visible && root.trayMode === "expanded") standaloneTray.forceActiveFocus();
+    }
+
+    TrayRail {
+      id: standaloneTray
+
+      mode: root.trayMode
+      forcedVisible: root.trayPeekForced
+      controlCenterOpen: false
+      panelWindow: trayWindow
+      anchors.top: parent.top
+      anchors.right: parent.right
+      anchors.topMargin: Theme.overlayMargin
+      anchors.rightMargin: Theme.overlayMargin
+
+      onDismissRequested: root.closeTray()
+      onExpandRequested: root.openTrayFromPeek()
+    }
+  }
+  // qmllint enable uncreatable-type
+
+  // qmllint disable uncreatable-type
+  PanelWindow {
     visible: root.shadeOpen
     anchors { left: true; right: true; top: true; bottom: true }
     exclusionMode: ExclusionMode.Ignore
@@ -377,7 +546,7 @@ ShellRoot {
 
       MouseArea {
         anchors.fill: parent
-        onClicked: root.shadeOpen = false
+        onClicked: root.closeControlCenter()
       }
     }
   }
@@ -385,6 +554,8 @@ ShellRoot {
 
   // qmllint disable uncreatable-type
   PanelWindow {
+    id: controlCenterWindow
+
     visible: root.shadeOpen
     anchors { left: true; right: true; top: true; bottom: true }
     exclusionMode: ExclusionMode.Ignore
@@ -401,8 +572,24 @@ ShellRoot {
       anchors.fill: parent
       onClicked: {
         if (controlCenter.overlayDismissActive) controlCenter.dismissOverlaySection();
-        else root.shadeOpen = false;
+        else root.closeControlCenter();
       }
+    }
+
+    TrayRail {
+      id: companionTray
+
+      visible: root.trayMode !== "hidden"
+      mode: root.trayMode
+      forcedVisible: root.trayPeekForced
+      controlCenterOpen: true
+      panelWindow: controlCenterWindow
+      anchors.top: controlCenter.top
+      anchors.right: controlCenter.left
+      anchors.rightMargin: Theme.gapSm
+
+      onDismissRequested: root.closeTray()
+      onExpandRequested: root.openTrayFromPeek()
     }
 
     ControlCenter {
@@ -410,12 +597,16 @@ ShellRoot {
 
       panelOpen: root.shadeOpen
       sessionActions: sessionActions
+      trayVisible: root.trayMode !== "hidden"
+      trayExpanded: root.trayMode === "expanded"
+      trayNeedsAttention: root.trayHasAttention
       anchors.top: parent.top
       anchors.right: parent.right
       anchors.topMargin: Theme.overlayMargin
       anchors.rightMargin: Theme.overlayMargin
 
-      onCloseRequested: root.shadeOpen = false
+      onTrayToggleRequested: root.toggleTrayFromControlCenter()
+      onCloseRequested: root.closeControlCenter()
     }
   }
   // qmllint enable uncreatable-type

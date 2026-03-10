@@ -16,6 +16,7 @@ FocusScope {
   id: root
 
   signal closeRequested()
+  signal trayToggleRequested()
 
   implicitWidth: 344
   implicitHeight: panel.implicitHeight
@@ -43,6 +44,9 @@ FocusScope {
   property real pendingAudioVolume: 0
   property real pendingScreenBrightness: 0
   property bool panelOpen: false
+  property bool trayVisible: false
+  property bool trayExpanded: false
+  property bool trayNeedsAttention: false
   property var sessionActions: null
   property string bluetoothAdapterKey: "defaultAdapter"
   property bool initialLoadDeadlineElapsed: false
@@ -1538,8 +1542,8 @@ FocusScope {
           width: Math.max(
             0,
             parent.width - (batteryChip.visible ? batteryChip.implicitWidth : 0)
-            - onScreenKeyboardButton.implicitWidth - keyboardRecoveryButton.implicitWidth - lockButton.implicitWidth - powerToggleButton.implicitWidth
-            - Theme.gapXs * (4 + (batteryChip.visible ? 1 : 0))
+            - onScreenKeyboardButton.implicitWidth - keyboardRecoveryButton.implicitWidth - trayToggleButton.implicitWidth - lockButton.implicitWidth - powerToggleButton.implicitWidth
+            - Theme.gapXs * (5 + (batteryChip.visible ? 1 : 0))
           )
           height: parent.height
         }
@@ -1562,6 +1566,30 @@ FocusScope {
           iconName: "rotate-cw"
           active: root.keyboardRecoveryBusy
           onClicked: root.recoverKeyboard()
+        }
+
+        Controls.IconButton {
+          id: trayToggleButton
+          anchors.verticalCenter: parent.verticalCenter
+          iconSize: Theme.iconGlyphSm
+          circular: true
+          iconName: root.trayExpanded ? "panel-right-open" : "panel-right"
+          active: root.trayExpanded
+          onClicked: root.trayToggleRequested()
+
+          Rectangle {
+            visible: root.trayNeedsAttention
+            width: 10
+            height: 10
+            radius: 5
+            color: Theme.accentStrong
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.topMargin: 3
+            anchors.rightMargin: 3
+            border.width: 1
+            border.color: Theme.panelOverlay
+          }
         }
 
         Controls.IconButton {

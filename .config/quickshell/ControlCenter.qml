@@ -2154,45 +2154,39 @@ FocusScope {
         width: parent.width
         height: root.notificationsOpen ? notificationMenuPanel.implicitHeight : notificationsFooter.implicitHeight
 
-        UiSurface {
+        Item {
           id: notificationsFooter
 
           visible: !root.notificationsOpen
           width: parent.width
-          implicitHeight: Theme.controlMd + Theme.gapSm
-          tone: "field"
-          outlined: false
-          radius: Theme.radiusMd
-          pressed: notificationFooterTouchArea.pressed
-          border.width: Theme.stroke
-          border.color: Qt.rgba(1, 1, 1, 0.08)
+          implicitHeight: Theme.tileHeight
 
-          UiIcon {
-            anchors.left: parent.left
-            anchors.leftMargin: Theme.gapSm
-            anchors.verticalCenter: parent.verticalCenter
-            width: Theme.iconGlyphSm
-            height: Theme.iconGlyphSm
-            name: root.notificationCount > 0 ? "bell-dot" : "bell"
-            strokeColor: Theme.text
+          readonly property bool pressed: notificationFooterTouchArea.pressed
 
-            Rectangle {
-              visible: root.notificationCount > 0 && root.latestNotificationEntry && root.latestNotificationEntry.notification
-                && root.latestNotificationEntry.notification.urgency === NotificationUrgency.Critical
-              width: 8
-              height: 8
-              radius: 4
-              color: Theme.accentStrong
-              anchors.right: parent.right
-              anchors.top: parent.top
+          Patterns.QuickTileFrame {
+            anchors.fill: parent
+            iconName: root.notificationCount > 0 ? "bell-dot" : "bell"
+            title: ""
+            backgroundColor: notificationsFooter.pressed ? Theme.fieldPressed : Theme.field
+            borderColor: Qt.rgba(1, 1, 1, 0.08)
+            iconColor: Theme.text
+            textTone: "primary"
+            trailingWidth: Theme.iconGlyphSm
+
+            UiIcon {
+              anchors.centerIn: parent
+              width: Theme.iconGlyphSm
+              height: Theme.iconGlyphSm
+              name: "chevron-right"
+              strokeColor: Theme.textSubtle
             }
           }
 
           Column {
             anchors.left: parent.left
             anchors.leftMargin: Theme.gapSm + Theme.iconGlyphSm + Theme.gapXs
-            anchors.right: footerChevron.left
-            anchors.rightMargin: Theme.gapXs
+            anchors.right: parent.right
+            anchors.rightMargin: Theme.gapSm + Theme.iconGlyphSm + Theme.gapXs
             anchors.verticalCenter: parent.verticalCenter
             spacing: Theme.nudge
 
@@ -2219,16 +2213,15 @@ FocusScope {
             }
           }
 
-          UiIcon {
-            id: footerChevron
-
-            anchors.right: parent.right
-            anchors.rightMargin: Theme.gapSm
-            anchors.verticalCenter: parent.verticalCenter
-            width: Theme.iconGlyphSm
-            height: Theme.iconGlyphSm
-            name: "chevron-right"
-            strokeColor: Theme.textSubtle
+          Rectangle {
+            visible: root.notificationCount > 0 && root.latestNotificationEntry && root.latestNotificationEntry.notification
+              && root.latestNotificationEntry.notification.urgency === NotificationUrgency.Critical
+            width: 8
+            height: 8
+            radius: 4
+            color: Theme.accentStrong
+            x: Theme.gapSm + Theme.iconGlyphSm - width * 0.35
+            y: Math.round((parent.height - Theme.iconGlyphSm) / 2) - height * 0.25
           }
 
           MouseArea {

@@ -4,9 +4,11 @@ import QtQuick
 import QtQml
 import QtQuick.Controls
 import Quickshell.Io
+import Quickshell.Services.Notifications
 import Quickshell.Services.Pipewire
 import Quickshell.Services.UPower
 import Quickshell.Bluetooth
+import Quickshell.Widgets
 import "theme"
 import "ui/primitives"
 import "ui/controls" as Controls
@@ -47,16 +49,25 @@ FocusScope {
   property bool trayVisible: false
   property bool trayExpanded: false
   property bool trayNeedsAttention: false
+  property var notificationEntries: []
+  property string notificationReturnSection: ""
   property var sessionActions: null
   property string bluetoothAdapterKey: "defaultAdapter"
   property bool initialLoadDeadlineElapsed: false
   property int initialLoadDeadlineMs: 50
   readonly property bool sessionActionBusy: !!sessionActions && sessionActions.busyAction !== ""
+  readonly property bool notificationsOpen: expandedSection === "notifications"
+  readonly property int notificationCount: notificationEntries.length
+  readonly property var latestNotificationEntry: notificationCount > 0 ? notificationEntries[0] : null
+  readonly property real notificationViewportMaxHeight: Math.max(
+    Theme.controlMd * 4,
+    Math.min(Theme.controlMd * 8, parent ? parent.height * 0.36 : Theme.controlMd * 6)
+  )
   readonly property bool powerMenuOpen: expandedSection === "power"
   readonly property bool outputMenuOpen: expandedSection === "outputs"
   readonly property bool selectorPopoverOpen: expandedSection === "profile" || (expandedSection === "lighting" && lightingService.commandAvailable)
   readonly property bool tileMenuOpen: expandedSection === "wifi" || expandedSection === "bluetooth"
-  readonly property bool overlayDismissActive: selectorPopoverOpen || tileMenuOpen || powerMenuOpen || outputMenuOpen
+  readonly property bool overlayDismissActive: selectorPopoverOpen || tileMenuOpen || powerMenuOpen || outputMenuOpen || notificationsOpen
   readonly property var audioSink: Pipewire.defaultAudioSink
   readonly property var battery: UPower.displayDevice
   property var bluetoothAdapter: null
@@ -118,6 +129,7 @@ FocusScope {
   }
 
   function toggleSection(section) {
+    if (expandedSection === "notifications" && section !== "notifications") notificationReturnSection = "";
     expandedSection = expandedSection === section ? "" : section;
     if (expandedSection !== "wifi") {
       wifiPasswordTarget = "";
@@ -127,6 +139,133 @@ FocusScope {
     if (expandedSection === "wifi") wifiService.refresh();
     if (expandedSection === "bluetooth") refreshBluetoothRfkillState();
     if (expandedSection !== "bluetooth" && bluetoothAdapter) bluetoothAdapter.discovering = false;
+  }
+
+  function cleanNotificationText(text) {
+    return String(text || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  function notificationAppLabel(notification) {
+    if (!notification) return "Notifications";
+
+    const appName = cleanNotificationText(notification.appName);
+    if (appName !== "") return appName;
+
+    const desktopEntry = cleanNotificationText(notification.desktopEntry);
+    if (desktopEntry !== "") return desktopEntry;
+
+    return "Notification";
+  }
+
+  function notificationSummaryLabel(notification) {
+    if (!notification) return "No notifications";
+
+    const summary = cleanNotificationText(notification.summary);
+    if (summary !== "") return summary;
+
+    const body = cleanNotificationText(notification.body);
+    if (body !== "") return body;
+
+    return notificationAppLabel(notification);
+  }
+
+  function notificationBodyLabel(notification) {
+    if (!notification) return "";
+
+    const body = cleanNotificationText(notification.body);
+    const summary = cleanNotificationText(notification.summary);
+    if (body === "" || body === summary) return "";
+    return body;
+  }
+
+  function notificationAgeLabel(entry) {
+    if (!entry || !entry.receivedAt) return "";
+
+    const elapsedSeconds = Math.max(1, Math.floor((Date.now() - entry.receivedAt) / 1000));
+    if (elapsedSeconds < 60) return `${elapsedSeconds}s`;
+
+    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+    if (elapsedMinutes < 60) return `${elapsedMinutes}m`;
+
+    const elapsedHours = Math.floor(elapsedMinutes / 60);
+    if (elapsedHours < 24) return `${elapsedHours}h`;
+
+    return `${Math.floor(elapsedHours / 24)}d`;
+  }
+
+  function notificationCountLabel() {
+    if (notificationCount <= 0) return "";
+    if (notificationCount === 1) return "1 item";
+    return `${notificationCount} items`;
+  }
+
+  function notificationPrimaryAction(entry) {
+    const notification = entry ? entry.notification : null;
+    if (!notification || !notification.actions || notification.actions.length <= 0) return null;
+    return notification.actions[0];
+  }
+
+  function notificationPrimaryActionLabel(entry) {
+    const action = notificationPrimaryAction(entry);
+    if (!action) return "";
+
+    const text = cleanNotificationText(action.text);
+    if (text === "") return "Open";
+    return text.length > 14 ? "Open" : text;
+  }
+
+  function invokeNotificationAction(entry) {
+    const action = notificationPrimaryAction(entry);
+    if (!action) return;
+    action.invoke();
+  }
+
+  function forgetNotification(notification) {
+    if (!notification) return;
+
+    const nextEntries = notificationEntries.filter(entry => entry.notification !== notification);
+    if (nextEntries.length !== notificationEntries.length) notificationEntries = nextEntries;
+  }
+
+  function dismissNotification(entry) {
+    if (!entry || !entry.notification) return;
+    forgetNotification(entry.notification);
+    entry.notification.dismiss();
+  }
+
+  function clearNotifications() {
+    const entries = notificationEntries.slice();
+    notificationEntries = [];
+
+    for (let i = 0; i < entries.length; i += 1) {
+      const notification = entries[i].notification;
+      if (notification) notification.dismiss();
+    }
+  }
+
+  function trackNotification(notification) {
+    if (!notification || notification.transient) return;
+
+    notification.tracked = true;
+
+    const nextEntries = notificationEntries.filter(entry => entry.notification !== notification && (!entry.notification || entry.notification.id !== notification.id));
+    nextEntries.unshift({ notification: notification, receivedAt: Date.now() });
+    notificationEntries = nextEntries;
+
+    notification.closed.connect(function() {
+      root.forgetNotification(notification);
+    });
+  }
+
+  function toggleNotificationsSection() {
+    if (notificationsOpen) {
+      expandedSection = notificationReturnSection;
+      notificationReturnSection = "";
+      return;
+    }
+
+    notificationReturnSection = expandedSection === "notifications" ? "" : expandedSection;
+    expandedSection = "notifications";
   }
 
   function popupX(anchorItem, popupWidth, alignRight) {
@@ -517,6 +656,7 @@ FocusScope {
       initialLoadDeadline.stop();
       initialLoadDeadlineElapsed = false;
       expandedSection = "";
+      notificationReturnSection = "";
       pendingPowerAction = "";
       wifiPasswordTarget = "";
       wifiPassword = "";
@@ -1498,6 +1638,156 @@ FocusScope {
     onTriggered: brightnessService.applyScreenPercent(root.pendingScreenBrightness)
   }
 
+  NotificationServer {
+    id: notificationServer
+
+    persistenceSupported: true
+    actionsSupported: true
+    imageSupported: true
+    keepOnReload: true
+
+    onNotification: function(notification) {
+      root.trackNotification(notification);
+    }
+  }
+
+  component NotificationInboxCard: UiSurface {
+    id: card
+
+    required property var entry
+    readonly property var notification: entry ? entry.notification : null
+    readonly property var primaryAction: root.notificationPrimaryAction(entry)
+    readonly property string primaryActionLabel: root.notificationPrimaryActionLabel(entry)
+    readonly property bool critical: !!(notification && notification.urgency === NotificationUrgency.Critical)
+    readonly property string appLabel: root.notificationAppLabel(notification)
+    readonly property string summaryLabel: root.notificationSummaryLabel(notification)
+    readonly property string bodyLabel: root.notificationBodyLabel(notification)
+
+    width: parent ? parent.width : implicitWidth
+    implicitHeight: cardContent.implicitHeight + Theme.insetSm * 2
+    tone: critical ? "chip" : "fieldAlt"
+    outlined: false
+    radius: Theme.radiusLg
+    border.width: Theme.stroke
+    border.color: critical ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.08)
+
+    Column {
+      id: cardContent
+
+      width: parent.width - Theme.insetLg
+      anchors.left: parent.left
+      anchors.leftMargin: Theme.insetSm
+      anchors.top: parent.top
+      anchors.topMargin: Theme.insetSm
+      spacing: Theme.gapXs
+
+      Row {
+        width: parent.width
+        spacing: Theme.gapSm
+
+        Item {
+          width: Theme.controlSm
+          height: Theme.controlSm
+
+          UiSurface {
+            anchors.fill: parent
+            tone: card.critical ? "accent" : "field"
+            radius: width / 2
+            outlined: false
+          }
+
+          UiIcon {
+            visible: !appIcon.visible
+            anchors.centerIn: parent
+            width: Theme.iconGlyphSm
+            height: Theme.iconGlyphSm
+            name: card.critical ? "bell-ring" : "bell"
+            strokeColor: card.critical ? Theme.textOnAccent : Theme.text
+          }
+
+          IconImage {
+            id: appIcon
+
+            visible: source !== ""
+            anchors.centerIn: parent
+            implicitSize: Theme.iconGlyphSm
+            asynchronous: true
+            mipmap: true
+            source: card.notification && card.notification.appIcon !== "" ? String(card.notification.appIcon) : ""
+          }
+        }
+
+        Column {
+          width: Math.max(0, parent.width - Theme.controlSm - ageLabel.implicitWidth - Theme.gapSm * 2)
+          spacing: Theme.nudge
+
+          UiText {
+            width: parent.width
+            text: card.appLabel
+            size: "xs"
+            tone: "muted"
+            font.weight: Font.DemiBold
+            elide: Text.ElideRight
+          }
+
+          UiText {
+            width: parent.width
+            text: card.summaryLabel
+            size: "sm"
+            font.weight: Font.DemiBold
+            wrapMode: Text.WordWrap
+            maximumLineCount: 2
+            elide: Text.ElideRight
+            textFormat: Text.PlainText
+          }
+        }
+
+        UiText {
+          id: ageLabel
+
+          anchors.top: parent.top
+          text: root.notificationAgeLabel(card.entry)
+          size: "xs"
+          tone: "subtle"
+        }
+      }
+
+      UiText {
+        visible: text !== ""
+        width: parent.width
+        text: card.bodyLabel
+        size: "xs"
+        tone: "subtle"
+        wrapMode: Text.WordWrap
+        maximumLineCount: 3
+        elide: Text.ElideRight
+        textFormat: Text.PlainText
+      }
+
+      Row {
+        visible: actionButton.visible || dismissButton.visible
+        spacing: Theme.gapXs
+
+        Controls.Button {
+          id: actionButton
+
+          visible: card.primaryAction && card.primaryActionLabel !== ""
+          compact: true
+          text: card.primaryActionLabel
+          onClicked: root.invokeNotificationAction(card.entry)
+        }
+
+        Controls.Button {
+          id: dismissButton
+
+          compact: true
+          text: "Dismiss"
+          onClicked: root.dismissNotification(card.entry)
+        }
+      }
+    }
+  }
+
   UiSurface {
     id: panel
 
@@ -1858,6 +2148,98 @@ FocusScope {
         }
       }
 
+      Item {
+        id: notificationSection
+
+        width: parent.width
+        height: root.notificationsOpen ? notificationMenuPanel.implicitHeight : notificationsFooter.implicitHeight
+
+        UiSurface {
+          id: notificationsFooter
+
+          visible: !root.notificationsOpen
+          width: parent.width
+          implicitHeight: Theme.controlMd + Theme.gapSm
+          tone: "field"
+          outlined: false
+          radius: Theme.radiusMd
+          pressed: notificationFooterTouchArea.pressed
+          border.width: Theme.stroke
+          border.color: Qt.rgba(1, 1, 1, 0.08)
+
+          UiIcon {
+            anchors.left: parent.left
+            anchors.leftMargin: Theme.gapSm
+            anchors.verticalCenter: parent.verticalCenter
+            width: Theme.iconGlyphSm
+            height: Theme.iconGlyphSm
+            name: root.notificationCount > 0 ? "bell-dot" : "bell"
+            strokeColor: Theme.text
+
+            Rectangle {
+              visible: root.notificationCount > 0 && root.latestNotificationEntry && root.latestNotificationEntry.notification
+                && root.latestNotificationEntry.notification.urgency === NotificationUrgency.Critical
+              width: 8
+              height: 8
+              radius: 4
+              color: Theme.accentStrong
+              anchors.right: parent.right
+              anchors.top: parent.top
+            }
+          }
+
+          Column {
+            anchors.left: parent.left
+            anchors.leftMargin: Theme.gapSm + Theme.iconGlyphSm + Theme.gapXs
+            anchors.right: footerChevron.left
+            anchors.rightMargin: Theme.gapXs
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Theme.nudge
+
+            UiText {
+              width: parent.width
+              text: root.latestNotificationEntry
+                ? root.notificationAppLabel(root.latestNotificationEntry.notification)
+                : "Notifications"
+              size: "xs"
+              tone: root.notificationCount > 0 ? "primary" : "muted"
+              font.weight: Font.DemiBold
+              elide: Text.ElideRight
+            }
+
+            UiText {
+              width: parent.width
+              text: root.latestNotificationEntry
+                ? root.notificationSummaryLabel(root.latestNotificationEntry.notification)
+                : "No notifications"
+              size: "sm"
+              tone: root.notificationCount > 0 ? "primary" : "subtle"
+              elide: Text.ElideRight
+              textFormat: Text.PlainText
+            }
+          }
+
+          UiIcon {
+            id: footerChevron
+
+            anchors.right: parent.right
+            anchors.rightMargin: Theme.gapSm
+            anchors.verticalCenter: parent.verticalCenter
+            width: Theme.iconGlyphSm
+            height: Theme.iconGlyphSm
+            name: "chevron-right"
+            strokeColor: Theme.textSubtle
+          }
+
+          MouseArea {
+            id: notificationFooterTouchArea
+
+            anchors.fill: parent
+            onClicked: root.toggleNotificationsSection()
+          }
+        }
+      }
+
     }
 
     UiScrim {
@@ -1878,6 +2260,105 @@ FocusScope {
         anchors.fill: parent
         enabled: root.overlayDismissActive
         onClicked: root.dismissOverlaySection()
+      }
+
+      Patterns.HeroSheetPopover {
+        id: notificationMenuPanel
+
+        visible: root.notificationsOpen
+        width: content.width
+        x: content.x
+        y: content.y + notificationSection.y
+        z: 1
+        iconName: root.notificationCount > 0 && root.latestNotificationEntry && root.latestNotificationEntry.notification && root.latestNotificationEntry.notification.urgency === NotificationUrgency.Critical
+          ? "bell-ring"
+          : "bell"
+        title: "Notifications"
+        subtitle: root.latestNotificationEntry
+          ? `${root.notificationAppLabel(root.latestNotificationEntry.notification)}${root.notificationCount > 1 ? ` • ${root.notificationCountLabel()}` : ""}`
+          : "You're all caught up."
+
+        Column {
+          width: parent.width
+          spacing: Theme.gapSm
+
+          Flickable {
+            id: notificationViewport
+
+            width: parent.width
+            height: Math.min(notificationContentColumn.implicitHeight, root.notificationViewportMaxHeight)
+            clip: true
+            contentWidth: width
+            contentHeight: notificationContentColumn.implicitHeight
+            boundsBehavior: Flickable.StopAtBounds
+
+            ScrollBar.vertical: ScrollBar {
+              policy: ScrollBar.AsNeeded
+            }
+
+            Column {
+              id: notificationContentColumn
+
+              width: notificationViewport.width
+              spacing: Theme.gapSm
+
+              Item {
+                width: parent.width
+                height: emptyNotificationsState.visible ? emptyNotificationsState.implicitHeight : 0
+                visible: root.notificationCount === 0
+
+                Column {
+                  id: emptyNotificationsState
+
+                  width: parent.width
+                  spacing: Theme.gapXs
+
+                  UiText {
+                    width: parent.width
+                    text: "No notifications"
+                    size: "sm"
+                    font.weight: Font.DemiBold
+                    horizontalAlignment: Text.AlignHCenter
+                  }
+
+                  UiText {
+                    width: parent.width
+                    text: "New messages will show up here."
+                    size: "xs"
+                    tone: "subtle"
+                    wrapMode: Text.WordWrap
+                    horizontalAlignment: Text.AlignHCenter
+                  }
+                }
+              }
+
+              Repeater {
+                model: root.notificationEntries
+
+                delegate: NotificationInboxCard {
+                  required property var modelData
+                  entry: modelData
+                }
+              }
+            }
+          }
+
+          Column {
+            width: parent.width
+            spacing: 4
+            visible: root.notificationCount > 0
+
+            Controls.Divider {
+              horizontalInset: Theme.controlSm / 2
+            }
+
+            Controls.PopoverMenuAction {
+              width: parent.width
+              title: "Clear All"
+              onClicked: root.clearNotifications()
+            }
+          }
+        }
       }
 
       Patterns.HeroSheetPopover {

@@ -182,6 +182,8 @@ Item {
 
     for (let i = 0; i < entries.length; i += 1) {
       const entry = entries[i];
+      if (!entry) continue;
+
       const entryKey = launcherEntryKey(entry);
       if (seenEntryKeys[entryKey]) continue;
       seenEntryKeys[entryKey] = true;
@@ -925,7 +927,11 @@ Item {
                           id: tile
                           required property int index
                           property int absoluteIndex: pageItem.pageBase + index
-                          property var entry: root.launcherResults[absoluteIndex]
+                          readonly property var entry: root.launcherResults[absoluteIndex]
+                          readonly property bool hasEntry: !!entry
+                          readonly property string entryIcon: hasEntry && entry.icon ? entry.icon : "application-x-executable"
+                          readonly property string entryName: hasEntry && entry.name ? entry.name : ""
+                          readonly property string entryGenericName: hasEntry && entry.genericName ? entry.genericName : ""
                           property bool selected: root.launcherSelectedIndex === absoluteIndex
                           width: pagerArea.tileWidth
                           height: pagerArea.tileHeight
@@ -933,6 +939,7 @@ Item {
                           MouseArea {
                             id: tileTouch
                             anchors.fill: parent
+                            enabled: tile.hasEntry
                             onPressed: {
                               root.setActiveScreen(launcherWindow.modelData);
                               root.setLauncherSelection(tile.absoluteIndex);
@@ -959,7 +966,7 @@ Item {
                               implicitSize: tile.selected ? Theme.launcherTileIconMd : Theme.launcherTileIconSm
                               asynchronous: true
                               mipmap: true
-                              source: tile.entry.icon !== "" ? `image://icon/${tile.entry.icon}` : "image://icon/application-x-executable"
+                              source: `image://icon/${tile.entryIcon}`
                             }
 
                             UiText {
@@ -968,7 +975,7 @@ Item {
                               wrapMode: Text.WordWrap
                               maximumLineCount: 2
                               elide: Text.ElideRight
-                              text: tile.entry.name
+                              text: tile.entryName
                               color: tile.selected ? Theme.textOnAccent : Theme.text
                               size: "md"
                               font.weight: Font.DemiBold
@@ -978,8 +985,8 @@ Item {
                               width: parent.width
                               horizontalAlignment: Text.AlignHCenter
                               elide: Text.ElideRight
-                              visible: tile.entry.genericName !== ""
-                              text: tile.entry.genericName
+                              visible: tile.entryGenericName !== ""
+                              text: tile.entryGenericName
                               color: tile.selected ? Theme.textMuted : Theme.textSubtle
                               size: "sm"
                             }

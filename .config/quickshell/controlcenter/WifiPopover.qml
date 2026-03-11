@@ -56,29 +56,89 @@ Patterns.HeroSheetPopover {
     }
 
     Column {
+      id: wifiNetworksSection
+
       width: parent.width
       spacing: Theme.nudge
       visible: popover.wifiService && popover.wifiService.ready && popover.wifiService.enabled && popover.wifiService.networks.length > 0
 
-      Repeater {
-        model: popover.wifiService && popover.wifiService.enabled ? Math.min(6, popover.wifiService.networks.length) : 0
+      readonly property int visibleRowCount: 6
+      readonly property real scrollIndicatorHeight: Theme.iconGlyphSm
+      readonly property real viewportMaxHeight: Theme.controlMd * visibleRowCount + Theme.nudge * (visibleRowCount - 1)
+      readonly property bool networkListOverflowing: wifiNetworkViewport.contentHeight > wifiNetworkViewport.height + 1
+      readonly property bool networkListHasMoreAbove: networkListOverflowing && wifiNetworkViewport.contentY > 1
+      readonly property bool networkListHasMoreBelow: networkListOverflowing
+        && wifiNetworkViewport.contentY + wifiNetworkViewport.height < wifiNetworkViewport.contentHeight - 1
 
-        delegate: Controls.PopoverMenuAction {
-          id: wifiRow
+      Item {
+        width: parent.width
+        height: wifiNetworksSection.scrollIndicatorHeight
 
-          required property int index
-          readonly property var network: popover.wifiService.networks[index]
+        UiIcon {
+          anchors.horizontalCenter: parent.horizontalCenter
+          width: parent.height
+          height: parent.height
+          name: "chevron-up"
+          strokeColor: Theme.textSubtle
+          opacity: wifiNetworksSection.networkListHasMoreAbove ? 0.8 : 0
+        }
+      }
 
-          width: parent.width
-          visible: !!network
-          title: network ? network.ssid : ""
-          subtitle: network && popover.controller ? popover.controller.wifiNetworkSubtitle(network) : ""
-          actionText: network && !network.active ? "Connect" : ""
-          trailingIconName: network && network.active ? "check" : ""
-          trailingIconColor: Theme.text
-          active: network && network.active
-          enabled: !!network && !popover.wifiService.busy
-          onClicked: popover.controller.beginWifiConnect(network)
+      Flickable {
+        id: wifiNetworkViewport
+
+        width: parent.width
+        height: Math.min(wifiNetworkContent.implicitHeight, wifiNetworksSection.viewportMaxHeight)
+        clip: true
+        contentWidth: width
+        contentHeight: wifiNetworkContent.implicitHeight
+        boundsBehavior: Flickable.StopAtBounds
+
+        ScrollBar.vertical: ScrollBar {
+          policy: ScrollBar.AsNeeded
+        }
+
+        Column {
+          id: wifiNetworkContent
+
+          width: wifiNetworkViewport.width
+          spacing: Theme.nudge
+
+          Repeater {
+            model: popover.wifiService && popover.wifiService.enabled ? popover.wifiService.networks.length : 0
+
+            delegate: Controls.PopoverMenuAction {
+              id: wifiRow
+
+              required property int index
+              readonly property var network: popover.wifiService.networks[index]
+
+              width: parent.width
+              visible: !!network
+              title: network ? network.ssid : ""
+              subtitle: network && popover.controller ? popover.controller.wifiNetworkSubtitle(network) : ""
+              actionText: network && !network.active ? "Connect" : ""
+              trailingIconName: network && network.active ? "check" : ""
+              trailingIconColor: Theme.text
+              active: network && network.active
+              enabled: !!network && !popover.wifiService.busy
+              onClicked: popover.controller.beginWifiConnect(network)
+            }
+          }
+        }
+      }
+
+      Item {
+        width: parent.width
+        height: wifiNetworksSection.scrollIndicatorHeight
+
+        UiIcon {
+          anchors.horizontalCenter: parent.horizontalCenter
+          width: parent.height
+          height: parent.height
+          name: "chevron-down"
+          strokeColor: Theme.textSubtle
+          opacity: wifiNetworksSection.networkListHasMoreBelow ? 0.8 : 0
         }
       }
     }

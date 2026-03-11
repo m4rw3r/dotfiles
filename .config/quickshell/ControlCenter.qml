@@ -1417,11 +1417,31 @@ FocusScope {
             spacing: 4
             visible: bluetoothService.enabled && bluetoothService.availableCount > 0
 
+            readonly property real scrollIndicatorHeight: Theme.iconGlyphSm
+            readonly property bool scanListOverflowing: bluetoothScanViewport.contentHeight > bluetoothScanViewport.height + 1
+            readonly property bool scanListHasMoreAbove: scanListOverflowing && bluetoothScanViewport.contentY > 1
+            readonly property bool scanListHasMoreBelow: scanListOverflowing
+              && bluetoothScanViewport.contentY + bluetoothScanViewport.height < bluetoothScanViewport.contentHeight - 1
+
             UiText {
               text: "Available Devices"
               size: "xs"
               tone: "muted"
               font.weight: Font.DemiBold
+            }
+
+            Item {
+              width: parent.width
+              height: parent.scrollIndicatorHeight
+
+              UiIcon {
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: parent.height
+                height: parent.height
+                name: "chevron-up"
+                strokeColor: Theme.textSubtle
+                opacity: parent.parent.scanListHasMoreAbove ? 0.8 : 0
+              }
             }
 
             Flickable {
@@ -1472,19 +1492,17 @@ FocusScope {
 
             Item {
               width: parent.width
-              height: chevronIndicator.visible ? Theme.iconGlyphSm : 0
+              height: parent.scrollIndicatorHeight
 
               UiIcon {
                 id: chevronIndicator
 
-                visible: bluetoothScanViewport.contentHeight > bluetoothScanViewport.height
-                  && bluetoothScanViewport.contentY + bluetoothScanViewport.height < bluetoothScanViewport.contentHeight - 1
                 anchors.horizontalCenter: parent.horizontalCenter
-                width: Theme.iconGlyphSm
-                height: Theme.iconGlyphSm
+                width: parent.height
+                height: parent.height
                 name: "chevron-down"
                 strokeColor: Theme.textSubtle
-                opacity: 0.8
+                opacity: parent.parent.scanListHasMoreBelow ? 0.8 : 0
               }
             }
           }

@@ -127,7 +127,8 @@ FocusScope {
 
   onBluetoothAdapterChanged: refreshBluetoothRfkillState()
   onNotificationsOpenChanged: {
-    if (notificationsOpen && notificationCenter) notificationCenter.markAllRead();
+    if (notificationsOpen && unreadNotificationCount > 0) notificationReadTimer.restart();
+    else notificationReadTimer.stop();
   }
 
   function clamp(value, minValue, maxValue) {
@@ -160,7 +161,6 @@ FocusScope {
 
     notificationReturnSection = expandedSection === "notifications" ? "" : expandedSection;
     expandedSection = "notifications";
-    if (notificationCenter) notificationCenter.markAllRead();
   }
 
   function isNotificationGroupExpanded(groupKey) {
@@ -670,6 +670,15 @@ FocusScope {
     interval: 2200
     repeat: false
     onTriggered: root.pendingPowerAction = ""
+  }
+
+  Timer {
+    id: notificationReadTimer
+    interval: 350
+    repeat: false
+    onTriggered: {
+      if (root.notificationsOpen && root.notificationCenter) root.notificationCenter.markAllRead();
+    }
   }
 
   Timer {

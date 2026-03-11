@@ -120,6 +120,10 @@ FocusScope {
     return Math.max(minValue, Math.min(maxValue, value));
   }
 
+  function withAlpha(color, alpha) {
+    return Qt.rgba(color.r, color.g, color.b, alpha);
+  }
+
   function toggleSection(section) {
     if (expandedSection === "notifications" && section !== "notifications") notificationReturnSection = "";
     expandedSection = expandedSection === section ? "" : section;
@@ -1051,16 +1055,17 @@ FocusScope {
           implicitHeight: Theme.tileHeight
 
           readonly property bool pressed: notificationFooterTouchArea.pressed
+          readonly property color backgroundColor: pressed ? Theme.fieldPressed : Theme.field
 
-          Patterns.QuickTileFrame {
-            anchors.fill: parent
-            iconName: root.unreadNotificationCount > 0 ? "bell-dot" : "bell"
-            title: ""
-            backgroundColor: notificationsFooter.pressed ? Theme.fieldPressed : Theme.field
-            borderColor: Qt.rgba(1, 1, 1, 0.08)
-            iconColor: Theme.text
-            textTone: "primary"
-            trailingWidth: Theme.iconGlyphSm
+            Patterns.QuickTileFrame {
+              anchors.fill: parent
+              iconName: root.unreadNotificationCount > 0 ? "bell-dot" : "bell"
+              title: ""
+              backgroundColor: notificationsFooter.backgroundColor
+              borderColor: Qt.rgba(1, 1, 1, 0.08)
+              iconColor: Theme.text
+              textTone: "primary"
+              trailingWidth: Theme.iconGlyphSm
 
             UiIcon {
               anchors.centerIn: parent
@@ -1080,8 +1085,11 @@ FocusScope {
             spacing: Theme.nudge
 
             Item {
+              id: notificationSourceRow
+
               width: parent.width
               height: sourceLabel.implicitHeight
+              z: 2
 
               UiText {
                 id: sourceLabel
@@ -1122,15 +1130,64 @@ FocusScope {
               }
             }
 
-            UiText {
+            Item {
+              id: notificationSummaryRow
+
               width: parent.width
-              text: root.footerNotificationEntry && root.notificationCenter
-                ? root.notificationCenter.summaryLabel(root.footerNotificationEntry)
-                : "No notifications"
-              size: "sm"
-              tone: root.notificationCount > 0 ? "primary" : "subtle"
-              elide: Text.ElideRight
-              textFormat: Text.PlainText
+              height: summaryLabel.implicitHeight
+              z: 1
+
+              UiText {
+                id: summaryLabel
+
+                width: parent.width
+                text: root.footerNotificationEntry && root.notificationCenter
+                  ? root.notificationCenter.summaryLabel(root.footerNotificationEntry)
+                  : "No notifications"
+                size: "sm"
+                tone: root.notificationCount > 0 ? "primary" : "subtle"
+                elide: Text.ElideRight
+                textFormat: Text.PlainText
+              }
+
+              Item {
+                visible: unreadBadge.visible
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.right: parent.right
+                width: unreadBadge.width + Theme.controlMd
+                clip: true
+                z: 1
+
+                Rectangle {
+                  anchors.centerIn: parent
+                  width: parent.height
+                  height: parent.width
+                  rotation: -90
+                  transformOrigin: Item.Center
+                  color: "transparent"
+                  gradient: Gradient {
+                    GradientStop {
+                      position: 0.0
+                      color: Qt.rgba(
+                        notificationsFooter.backgroundColor.r,
+                        notificationsFooter.backgroundColor.g,
+                        notificationsFooter.backgroundColor.b,
+                        0
+                      )
+                    }
+                    GradientStop {
+                      position: 1.0
+                      color: Qt.rgba(
+                        notificationsFooter.backgroundColor.r,
+                        notificationsFooter.backgroundColor.g,
+                        notificationsFooter.backgroundColor.b,
+                        1
+                      )
+                    }
+                  }
+                }
+              }
             }
           }
 
@@ -1405,7 +1462,7 @@ FocusScope {
             spacing: 4
             visible: bluetoothService.enabled && bluetoothService.availableCount > 0
 
-            readonly property real scrollIndicatorHeight: Theme.iconGlyphSm
+            readonly property real scrollIndicatorHeight: Theme.controlSm
             readonly property bool scanListOverflowing: bluetoothScanViewport.contentHeight > bluetoothScanViewport.height + 1
             readonly property bool scanListHasMoreAbove: scanListOverflowing && bluetoothScanViewport.contentY > 1
             readonly property bool scanListHasMoreBelow: scanListOverflowing
@@ -1420,77 +1477,103 @@ FocusScope {
 
             Item {
               width: parent.width
-              height: parent.scrollIndicatorHeight
-
-              UiIcon {
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: parent.height
-                height: parent.height
-                name: "chevron-up"
-                strokeColor: Theme.textSubtle
-                opacity: parent.parent.scanListHasMoreAbove ? 0.8 : 0
-              }
-            }
-
-            Flickable {
-              id: bluetoothScanViewport
-
-              width: parent.width
               height: Math.min(bluetoothScanContent.implicitHeight, root.bluetoothScanViewportMaxHeight)
-              clip: true
-              contentWidth: width
-              contentHeight: bluetoothScanContent.implicitHeight
-              boundsBehavior: Flickable.StopAtBounds
 
-              ScrollBar.vertical: ScrollBar {
-                policy: ScrollBar.AsNeeded
-              }
+              Flickable {
+                id: bluetoothScanViewport
 
-              Column {
-                id: bluetoothScanContent
+                anchors.fill: parent
+                clip: true
+                contentWidth: width
+                contentHeight: bluetoothScanContent.implicitHeight
+                boundsBehavior: Flickable.StopAtBounds
 
-                width: bluetoothScanViewport.width
-                spacing: 4
+                ScrollBar.vertical: ScrollBar {
+                  policy: ScrollBar.AsNeeded
+                }
 
-                Repeater {
-                  model: bluetoothService.enabled ? bluetoothService.devices : []
+                Column {
+                  id: bluetoothScanContent
 
-                  delegate: Controls.PopoverMenuAction {
-                    id: otherDeviceRow
+                  width: bluetoothScanViewport.width
+                  spacing: 4
 
-                    required property var modelData
-                    readonly property var device: modelData
-                    readonly property bool busyState: !!(device && (device.pairing || device.state === BluetoothDeviceState.Connecting))
+                  Repeater {
+                    model: bluetoothService.enabled ? bluetoothService.devices : []
 
-                    visible: !!(device && !device.connected)
-                    width: parent.width
-                    title: root.bluetoothDeviceTitle(device)
-                    subtitle: root.bluetoothAvailableSubtitle(device)
-                    actionText: busyState ? "Working" : (device && (device.paired || device.bonded) ? "Connect" : "Pair")
-                    enabled: visible && !busyState
-                    onClicked: {
-                      if (busyState) return;
-                      if (device.paired || device.bonded) device.connect();
-                      else device.pair();
+                    delegate: Controls.PopoverMenuAction {
+                      id: otherDeviceRow
+
+                      required property var modelData
+                      readonly property var device: modelData
+                      readonly property bool busyState: !!(device && (device.pairing || device.state === BluetoothDeviceState.Connecting))
+
+                      visible: !!(device && !device.connected)
+                      width: parent.width
+                      title: root.bluetoothDeviceTitle(device)
+                      subtitle: root.bluetoothAvailableSubtitle(device)
+                      actionText: busyState ? "Working" : (device && (device.paired || device.bonded) ? "Connect" : "Pair")
+                      enabled: visible && !busyState
+                      onClicked: {
+                        if (busyState) return;
+                        if (device.paired || device.bonded) device.connect();
+                        else device.pair();
+                      }
                     }
                   }
                 }
               }
-            }
 
-            Item {
-              width: parent.width
-              height: parent.scrollIndicatorHeight
+              Item {
+                anchors.top: parent.top
+                width: parent.width
+                height: parent.parent.scrollIndicatorHeight
 
-              UiIcon {
-                id: chevronIndicator
+                Rectangle {
+                  anchors.fill: parent
+                  color: "transparent"
+                  opacity: parent.parent.parent.scanListHasMoreAbove ? 1 : 0
+                  gradient: Gradient {
+                    GradientStop { position: 0.0; color: root.withAlpha(Theme.submenu, 1) }
+                    GradientStop { position: 1.0; color: root.withAlpha(Theme.submenu, 0) }
+                  }
+                }
 
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: parent.height
-                height: parent.height
-                name: "chevron-down"
-                strokeColor: Theme.textSubtle
-                opacity: parent.parent.scanListHasMoreBelow ? 0.8 : 0
+                UiIcon {
+                  anchors.horizontalCenter: parent.horizontalCenter
+                  anchors.top: parent.top
+                  width: Theme.iconGlyphSm
+                  height: Theme.iconGlyphSm
+                  name: "chevron-up"
+                  strokeColor: Theme.textSubtle
+                  opacity: parent.parent.parent.scanListHasMoreAbove ? 0.8 : 0
+                }
+              }
+
+              Item {
+                anchors.bottom: parent.bottom
+                width: parent.width
+                height: parent.parent.scrollIndicatorHeight
+
+                Rectangle {
+                  anchors.fill: parent
+                  color: "transparent"
+                  opacity: parent.parent.parent.scanListHasMoreBelow ? 1 : 0
+                  gradient: Gradient {
+                    GradientStop { position: 0.0; color: root.withAlpha(Theme.submenu, 0) }
+                    GradientStop { position: 1.0; color: root.withAlpha(Theme.submenu, 1) }
+                  }
+                }
+
+                UiIcon {
+                  anchors.horizontalCenter: parent.horizontalCenter
+                  anchors.bottom: parent.bottom
+                  width: Theme.iconGlyphSm
+                  height: Theme.iconGlyphSm
+                  name: "chevron-down"
+                  strokeColor: Theme.textSubtle
+                  opacity: parent.parent.parent.scanListHasMoreBelow ? 0.8 : 0
+                }
               }
             }
           }

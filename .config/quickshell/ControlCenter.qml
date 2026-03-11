@@ -2781,6 +2781,7 @@ FocusScope {
 
         visible: root.expandedSection === "bluetooth"
         width: content.width
+        sectionSpacing: Theme.gapSm
         x: content.x
         y: content.y + quickTileStack.y + quickTileSection.y
         z: 1
@@ -2800,6 +2801,7 @@ FocusScope {
           Column {
             width: parent.width
             spacing: Theme.gapXs
+            visible: !root.bluetoothAdapter || root.bluetoothBlockedMessage() !== "" || root.bluetoothLastError !== ""
 
             UiText {
               visible: !root.bluetoothAdapter

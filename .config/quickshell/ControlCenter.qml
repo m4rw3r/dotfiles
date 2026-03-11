@@ -734,8 +734,8 @@ FocusScope {
           width: Math.max(
             0,
             parent.width - (batteryChip.visible ? batteryChip.implicitWidth : 0)
-            - onScreenKeyboardButton.implicitWidth - keyboardRecoveryButton.implicitWidth - trayToggleButton.implicitWidth - powerToggleButton.implicitWidth
-            - Theme.gapXs * (4 + (batteryChip.visible ? 1 : 0))
+            - onScreenKeyboardButton.implicitWidth - trayToggleButton.implicitWidth - powerToggleButton.implicitWidth
+            - Theme.gapXs * (3 + (batteryChip.visible ? 1 : 0))
           )
           height: parent.height
         }
@@ -746,18 +746,11 @@ FocusScope {
           iconSize: Theme.iconGlyphSm
           circular: true
           iconName: "keyboard"
-          active: root.onScreenKeyboardBusy
+          active: root.onScreenKeyboardBusy || root.keyboardRecoveryBusy
+          enabled: !root.onScreenKeyboardBusy && !root.keyboardRecoveryBusy
+          pressAndHoldInterval: 700
           onClicked: root.toggleOnScreenKeyboard()
-        }
-
-        Controls.IconButton {
-          id: keyboardRecoveryButton
-          anchors.verticalCenter: parent.verticalCenter
-          iconSize: Theme.iconGlyphSm
-          circular: true
-          iconName: "rotate-cw"
-          active: root.keyboardRecoveryBusy
-          onClicked: root.recoverKeyboard()
+          onPressAndHold: root.recoverKeyboard()
         }
 
         Controls.IconButton {

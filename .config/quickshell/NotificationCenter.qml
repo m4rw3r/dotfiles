@@ -11,6 +11,7 @@ Item {
   property int revision: 0
   property int nextUid: 1
   property int maxToasts: 3
+  readonly property var groupedEntries: buildGroups(entries)
   readonly property int unreadCount: countUnread(entries)
   readonly property int criticalUnreadCount: countCriticalUnread(entries)
   readonly property bool hasUnread: unreadCount > 0
@@ -70,6 +71,54 @@ Item {
     if (trackedCount <= 0) return "";
     if (trackedCount === 1) return "1 item";
     return `${trackedCount} items`;
+  }
+
+  function sourceKey(entry) {
+    if (!entry) return "notifications";
+
+    const desktopEntry = cleanText(entry.desktopEntry);
+    if (desktopEntry !== "") return `desktop:${desktopEntry}`;
+
+    const appName = cleanText(entry.appName);
+    if (appName !== "") return `app:${appName}`;
+
+    return `fallback:${cleanText(entry.appIcon)}:${cleanText(entry.summary)}`;
+  }
+
+  function buildGroups(list) {
+    const groups = [];
+    const indexByKey = {};
+
+    for (let index = 0; index < list.length; index += 1) {
+      const entry = list[index];
+      const key = sourceKey(entry);
+      let groupIndex = indexByKey[key];
+
+      if (groupIndex === undefined) {
+        groupIndex = groups.length;
+        indexByKey[key] = groupIndex;
+        groups.push({
+          key: key,
+          latestEntry: entry,
+          entries: [],
+          entryCount: 0,
+          unreadCount: 0,
+          criticalUnreadCount: 0,
+          liveCount: 0,
+          appName: appLabel(entry),
+          appIcon: entry ? String(entry.appIcon || "") : ""
+        });
+      }
+
+      const group = groups[groupIndex];
+      group.entries.push(entry);
+      group.entryCount += 1;
+      if (entry.unread) group.unreadCount += 1;
+      if (entry.unread && entry.urgency === NotificationUrgency.Critical) group.criticalUnreadCount += 1;
+      if (entry.live) group.liveCount += 1;
+    }
+
+    return groups;
   }
 
   function primaryAction(entry) {

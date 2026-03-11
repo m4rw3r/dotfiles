@@ -118,7 +118,6 @@ FocusScope {
             UiText {
               id: toastAge
 
-              anchors.verticalCenter: parent.verticalCenter
               text: card.notificationCenter ? card.notificationCenter.ageLabel(card.entry) : ""
               size: "xs"
               tone: "subtle"
@@ -152,7 +151,6 @@ FocusScope {
         Controls.IconButton {
           id: dismissButton
 
-          anchors.top: parent.top
           variant: "minimal"
           iconName: "x"
           onClicked: {
@@ -162,7 +160,7 @@ FocusScope {
       }
 
       Row {
-        visible: actionButton.visible || hideButton.visible
+        visible: actionButton.visible
         spacing: Theme.gapXs
 
         Controls.Button {
@@ -173,16 +171,6 @@ FocusScope {
           text: card.primaryActionLabel
           onClicked: {
             if (card.notificationCenter) card.notificationCenter.invokePrimaryAction(card.toastUid);
-          }
-        }
-
-        Controls.Button {
-          id: hideButton
-
-          compact: true
-          text: "Hide"
-          onClicked: {
-            if (card.notificationCenter) card.notificationCenter.dismissToast(card.toastUid);
           }
         }
       }

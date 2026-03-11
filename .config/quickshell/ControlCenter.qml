@@ -1597,7 +1597,7 @@ FocusScope {
         }
 
         Column {
-          width: Math.max(0, parent.width - Theme.controlSm - ageLabel.implicitWidth - Theme.gapSm * 2)
+          width: Math.max(0, parent.width - Theme.controlSm - metadataSlot.width - closeButton.implicitWidth - Theme.gapSm * 3)
           spacing: Theme.nudge
 
           UiText {
@@ -1622,6 +1622,8 @@ FocusScope {
         }
 
         Item {
+          id: metadataSlot
+
           width: ageLabel.implicitWidth + (unreadIndicator.visible ? unreadIndicator.width + Theme.gapXs : 0)
           height: Math.max(ageLabel.implicitHeight, unreadIndicator.visible ? unreadIndicator.height : 0)
 
@@ -1647,6 +1649,16 @@ FocusScope {
             tone: "subtle"
           }
         }
+
+        Controls.IconButton {
+          id: closeButton
+
+          variant: "minimal"
+          iconName: "x"
+          onClicked: {
+            if (root.notificationCenter) root.notificationCenter.forgetEntry(card.entry);
+          }
+        }
       }
 
       UiText {
@@ -1662,7 +1674,7 @@ FocusScope {
       }
 
       Row {
-        visible: actionButton.visible || dismissButton.visible
+        visible: actionButton.visible
         spacing: Theme.gapXs
 
         Controls.Button {
@@ -1676,14 +1688,55 @@ FocusScope {
           }
         }
 
-        Controls.Button {
-          id: dismissButton
+      }
+    }
+  }
 
-          compact: true
-          text: "Remove"
-          onClicked: {
-            if (root.notificationCenter) root.notificationCenter.forgetEntry(card.entry);
-          }
+  component NotificationGroupSection: Column {
+    id: groupSection
+
+    required property var group
+
+    width: parent ? parent.width : implicitWidth
+    spacing: Theme.gapXs
+
+    Row {
+      width: parent.width
+      spacing: Theme.gapXs
+
+      UiText {
+        width: Math.max(0, parent.width - groupMeta.implicitWidth - Theme.gapXs)
+        text: groupSection.group ? groupSection.group.appName : "Notifications"
+        size: "xs"
+        tone: "muted"
+        font.weight: Font.DemiBold
+        elide: Text.ElideRight
+      }
+
+      UiText {
+        id: groupMeta
+
+        text: {
+          if (!groupSection.group) return "";
+          if (groupSection.group.unreadCount > 0) return `${groupSection.group.unreadCount} unread`;
+          if (groupSection.group.entryCount > 1) return `${groupSection.group.entryCount} items`;
+          return "";
+        }
+        size: "xs"
+        tone: groupSection.group && groupSection.group.criticalUnreadCount > 0 ? "accent" : "subtle"
+      }
+    }
+
+    Column {
+      width: parent.width
+      spacing: Theme.gapXs
+
+      Repeater {
+        model: groupSection.group ? groupSection.group.entries : []
+
+        delegate: NotificationInboxCard {
+          required property var modelData
+          entry: modelData
         }
       }
     }
@@ -2251,11 +2304,11 @@ FocusScope {
               }
 
               Repeater {
-                model: root.notificationCenter ? root.notificationCenter.entries : []
+                model: root.notificationCenter ? root.notificationCenter.groupedEntries : []
 
-                delegate: NotificationInboxCard {
+                delegate: NotificationGroupSection {
                   required property var modelData
-                  entry: modelData
+                  group: modelData
                 }
               }
             }

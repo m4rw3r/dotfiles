@@ -73,6 +73,7 @@ FocusScope {
   readonly property bool brightnessLoading: panelOpen && !brightnessService.settled
   readonly property bool wifiLoading: panelOpen && !wifiService.ready
   readonly property var powerMenuEntries: [
+    { kind: "action", title: "Lock", action: "lock", confirm: false },
     { kind: "action", title: "Suspend", action: "sleep", confirm: false },
     { kind: "action", title: "Restart", action: "restart", confirm: true },
     { kind: "action", title: "Power Off", action: "shutdown", confirm: true },
@@ -733,8 +734,8 @@ FocusScope {
           width: Math.max(
             0,
             parent.width - (batteryChip.visible ? batteryChip.implicitWidth : 0)
-            - onScreenKeyboardButton.implicitWidth - keyboardRecoveryButton.implicitWidth - trayToggleButton.implicitWidth - lockButton.implicitWidth - powerToggleButton.implicitWidth
-            - Theme.gapXs * (5 + (batteryChip.visible ? 1 : 0))
+            - onScreenKeyboardButton.implicitWidth - keyboardRecoveryButton.implicitWidth - trayToggleButton.implicitWidth - powerToggleButton.implicitWidth
+            - Theme.gapXs * (4 + (batteryChip.visible ? 1 : 0))
           )
           height: parent.height
         }
@@ -781,16 +782,6 @@ FocusScope {
             border.width: 1
             border.color: Theme.panelOverlay
           }
-        }
-
-        Controls.IconButton {
-          id: lockButton
-          anchors.verticalCenter: parent.verticalCenter
-          iconSize: Theme.iconGlyphSm
-          circular: true
-          iconName: "lock"
-          enabled: !root.sessionActionBusy
-          onClicked: root.runSessionAction("lock")
         }
 
         Controls.IconButton {

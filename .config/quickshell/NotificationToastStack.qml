@@ -30,7 +30,12 @@ FocusScope {
     readonly property bool critical: !!(entry && entry.urgency === NotificationUrgency.Critical)
     readonly property string primaryActionLabel: notificationCenter ? notificationCenter.primaryActionLabel(entry) : ""
     readonly property int timeoutMs: notificationCenter ? notificationCenter.toastTimeoutMs(entry) : 0
+    readonly property int remainingMs: notificationCenter ? notificationCenter.toastRemainingMs(entry) : 0
     readonly property bool autoDismiss: timeoutMs > 0
+
+    function dismissIfExpired() {
+      if (notificationCenter && autoDismiss && !!entry && remainingMs <= 0) notificationCenter.dismissToast(toastUid);
+    }
 
     visible: !!entry
     width: parent ? parent.width : implicitWidth
@@ -177,13 +182,17 @@ FocusScope {
     }
 
     Timer {
-      interval: card.timeoutMs
-      running: card.autoDismiss && !card.suspended && !!card.entry
+      interval: Math.max(1, card.remainingMs)
+      running: card.autoDismiss && !!card.entry && card.remainingMs > 0
       repeat: false
       onTriggered: {
         if (card.notificationCenter) card.notificationCenter.dismissToast(card.toastUid);
       }
     }
+
+    Component.onCompleted: dismissIfExpired()
+    onEntryChanged: dismissIfExpired()
+    onSuspendedChanged: dismissIfExpired()
   }
 
   Column {

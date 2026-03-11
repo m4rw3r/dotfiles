@@ -144,6 +144,11 @@ Item {
     return defaultToastTimeoutMs;
   }
 
+  function toastRemainingMs(entry) {
+    if (!entry || !entry.toastExpiresAt) return 0;
+    return Math.max(0, entry.toastExpiresAt - Date.now());
+  }
+
   function entryForUid(uid) {
     for (let index = 0; index < entries.length; index += 1) {
       if (entries[index].uid === uid) return entries[index];
@@ -192,6 +197,12 @@ Item {
   }
 
   function snapshot(notification, uid) {
+    const receivedAt = Date.now();
+    const expireTimeout = Number(notification.expireTimeout || 0);
+    const timeoutMs = notification.urgency === NotificationUrgency.Critical
+      ? 0
+      : (expireTimeout > 0 ? Math.max(3500, Math.min(12000, Math.round(expireTimeout * 1000))) : defaultToastTimeoutMs);
+
     return {
       uid: uid,
       id: notification.id,
@@ -207,8 +218,9 @@ Item {
       summary: cleanText(notification.summary),
       body: cleanText(notification.body),
       image: String(notification.image || ""),
-      receivedAt: Date.now(),
-      expireTimeout: Number(notification.expireTimeout || 0),
+      receivedAt: receivedAt,
+      expireTimeout: expireTimeout,
+      toastExpiresAt: timeoutMs > 0 ? receivedAt + timeoutMs : 0,
       lastGeneration: notification.lastGeneration
     };
   }

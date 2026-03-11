@@ -336,6 +336,37 @@ Item {
     if (entry && entry.notification && entry.live) entry.notification.dismiss();
   }
 
+  function forgetGroup(groupOrKey) {
+    const groupKey = typeof groupOrKey === "string"
+      ? groupOrKey
+      : (groupOrKey && groupOrKey.key ? String(groupOrKey.key) : "");
+    if (groupKey === "") return;
+
+    const liveNotifications = [];
+    const removedUids = [];
+    const nextEntries = [];
+
+    for (let index = 0; index < entries.length; index += 1) {
+      const entry = entries[index];
+      if (sourceKey(entry) !== groupKey) {
+        nextEntries.push(entry);
+        continue;
+      }
+
+      removedUids.push(entry.uid);
+      if (entry.notification && entry.live) liveNotifications.push(entry.notification);
+    }
+
+    if (removedUids.length === 0) return;
+
+    setEntries(nextEntries);
+    setToastUids(toastUids.filter(existingUid => removedUids.indexOf(existingUid) < 0));
+
+    for (let index = 0; index < liveNotifications.length; index += 1) {
+      liveNotifications[index].dismiss();
+    }
+  }
+
   function clearEntries() {
     const liveNotifications = [];
 

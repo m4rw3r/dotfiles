@@ -170,6 +170,14 @@ FocusScope {
     expandedNotificationGroups = nextState;
   }
 
+  function clearNotificationGroup(groupKey) {
+    if (notificationCenter) notificationCenter.forgetGroup(groupKey);
+
+    const nextState = Object.assign({}, expandedNotificationGroups);
+    delete nextState[groupKey];
+    expandedNotificationGroups = nextState;
+  }
+
   function popupX(anchorItem, popupWidth, alignRight) {
     if (!anchorItem || !panel) return 0;
     const position = anchorItem.mapToItem(panel, 0, 0);
@@ -1742,7 +1750,7 @@ FocusScope {
           spacing: Theme.gapXs
 
           UiText {
-            width: Math.max(0, parent.width - groupMeta.implicitWidth - groupChevron.width - Theme.gapSm * 2)
+            width: Math.max(0, parent.width - groupClearButton.implicitWidth - Theme.gapXs)
             text: groupSection.group ? groupSection.group.appName : "Notifications"
             size: "xs"
             tone: "muted"
@@ -1750,9 +1758,42 @@ FocusScope {
             elide: Text.ElideRight
           }
 
+          Controls.IconButton {
+            id: groupClearButton
+
+            visible: groupSection.expandable
+            variant: "minimal"
+            iconName: "x"
+            onClicked: root.clearNotificationGroup(groupSection.group.key)
+          }
+        }
+
+        Item {
+          id: groupExpandRow
+
+          width: parent.width
+          height: Math.max(groupSummary.implicitHeight, Math.max(groupMeta.implicitHeight, groupChevron.height))
+
+          UiText {
+            id: groupSummary
+
+            anchors.left: parent.left
+            anchors.right: groupMeta.left
+            anchors.rightMargin: Theme.gapXs
+            anchors.verticalCenter: parent.verticalCenter
+            text: root.notificationCenter ? root.notificationCenter.summaryLabel(groupSection.latestEntry) : ""
+            size: "sm"
+            font.weight: Font.DemiBold
+            elide: Text.ElideRight
+            textFormat: Text.PlainText
+          }
+
           UiText {
             id: groupMeta
 
+            anchors.right: groupChevron.left
+            anchors.rightMargin: Theme.gapXs
+            anchors.verticalCenter: parent.verticalCenter
             text: {
               if (!groupSection.group) return "";
               if (groupSection.group.entryCount === 1) return "1 message";
@@ -1766,29 +1807,20 @@ FocusScope {
             id: groupChevron
 
             visible: groupSection.expandable
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
             width: Theme.iconGlyphSm
             height: Theme.iconGlyphSm
             name: groupSection.expanded ? "chevron-down" : "chevron-right"
             strokeColor: Theme.textSubtle
           }
-        }
 
-        UiText {
-          width: parent.width
-          text: root.notificationCenter ? root.notificationCenter.summaryLabel(groupSection.latestEntry) : ""
-          size: "sm"
-          font.weight: Font.DemiBold
-          wrapMode: Text.WordWrap
-          maximumLineCount: groupSection.expanded ? 2 : 1
-          elide: Text.ElideRight
-          textFormat: Text.PlainText
+          MouseArea {
+            anchors.fill: parent
+            enabled: groupSection.expandable
+            onClicked: root.toggleNotificationGroup(groupSection.group.key)
+          }
         }
-      }
-
-      MouseArea {
-        anchors.fill: parent
-        enabled: groupSection.expandable
-        onClicked: root.toggleNotificationGroup(groupSection.group.key)
       }
     }
 

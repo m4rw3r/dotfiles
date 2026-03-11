@@ -11,12 +11,15 @@ Ui.UiSurface {
   property bool interactive: true
   property string variant: "filled"
   property int iconSize: Theme.iconGlyphSm
+  property int pressAndHoldInterval: 700
   property color iconColor: {
     if (!enabled) return Theme.textSubtle;
     if (variant === "minimal") return active ? Theme.text : Theme.textMuted;
     return active ? Theme.textOnAccent : Theme.iconSecondary;
   }
+  property bool holdTriggered: false
   signal clicked()
+  signal pressAndHold()
 
   width: implicitWidth
   implicitWidth: variant === "minimal" ? Theme.iconGlyphMd : (circular ? Theme.controlSm : Theme.controlMd)
@@ -48,6 +51,19 @@ Ui.UiSurface {
 
     anchors.fill: parent
     enabled: root.enabled && root.interactive
-    onClicked: root.clicked()
+    pressAndHoldInterval: root.pressAndHoldInterval
+    onPressed: root.holdTriggered = false
+    onPressAndHold: {
+      root.holdTriggered = true;
+      root.pressAndHold();
+    }
+    onClicked: {
+      if (root.holdTriggered) {
+        root.holdTriggered = false;
+        return;
+      }
+
+      root.clicked();
+    }
   }
 }

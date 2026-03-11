@@ -823,6 +823,10 @@ FocusScope {
         wrapMode: Text.WordWrap
       }
 
+      Controls.HeroClock {
+        width: parent.width
+      }
+
       Item {
         id: powerPopoverSpacer
 

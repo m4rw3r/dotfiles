@@ -114,15 +114,29 @@ Item {
     return ensureActiveScreen(screen);
   }
 
-  function parseFocusedOutput(text) {
-    const payload = String(text || "").trim();
-    if (payload === "") return null;
+  function parseFocusedOutputResponse(text) {
+    const payload = String(text || "");
+    const newlineIndex = payload.indexOf("\n");
+    const requestLine = newlineIndex >= 0 ? payload.slice(0, newlineIndex) : payload;
+    const responsePayload = newlineIndex >= 0 ? payload.slice(newlineIndex + 1).trim() : "";
+    const requestId = Number(requestLine.trim());
+
+    if (!Number.isInteger(requestId) || requestId <= 0) {
+      return { requestId: 0, screen: null };
+    }
+
+    if (responsePayload === "") {
+      return { requestId, screen: null };
+    }
 
     try {
-      const parsed = JSON.parse(payload);
-      return screenByName(parsed && parsed.name ? String(parsed.name) : "");
+      const parsed = JSON.parse(responsePayload);
+      return {
+        requestId,
+        screen: screenByName(parsed && parsed.name ? String(parsed.name) : "")
+      };
     } catch (error) {
-      return null;
+      return { requestId, screen: null };
     }
   }
 
@@ -241,9 +255,12 @@ Item {
       return;
     }
 
-    focusedOutputProcess.requestId = pendingOpenRequestId;
     focusedOutputLookupTimer.restart();
-    focusedOutputProcess.exec(["niri", "msg", "-j", "focused-output"]);
+    focusedOutputProcess.exec([
+      "sh",
+      "-lc",
+      `printf '%s\\n' ${pendingOpenRequestId}; exec niri msg -j focused-output`
+    ]);
   }
 
   function closeLauncher() {
@@ -346,13 +363,13 @@ Item {
   Process {
     id: focusedOutputProcess
 
-    property int requestId: 0
     stdout: focusedOutputStdout
     stderr: focusedOutputStderr
 
     Component.onCompleted: exited.connect(function(exitCode) {
-      const preferredScreen = exitCode === 0 ? root.parseFocusedOutput(focusedOutputStdout.text) : null;
-      root.finishPendingLauncherOpen(focusedOutputProcess.requestId, preferredScreen);
+      const response = root.parseFocusedOutputResponse(focusedOutputStdout.text);
+      const preferredScreen = exitCode === 0 ? response.screen : null;
+      root.finishPendingLauncherOpen(response.requestId, preferredScreen);
     })
   }
 

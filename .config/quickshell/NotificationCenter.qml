@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtMultimedia
 import Quickshell.Services.Notifications
 
 Item {
@@ -21,6 +22,7 @@ Item {
   readonly property var footerEntry: hasUnread ? latestUnreadEntry : latestEntry
   readonly property int trackedCount: entries.length
   readonly property real defaultToastTimeoutMs: 6500
+  readonly property url notificationSoundSource: "file:///usr/share/sounds/freedesktop/stereo/message.oga"
 
   function cleanText(text) {
     return String(text || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
@@ -256,6 +258,14 @@ Item {
     nextToastUids.unshift(uid);
     if (nextToastUids.length > maxToasts) nextToastUids.length = maxToasts;
     setToastUids(nextToastUids);
+    playToastSound();
+  }
+
+  function playToastSound() {
+    if (notificationSoundPlayer.mediaStatus === MediaPlayer.InvalidMedia) return;
+    if (notificationSoundPlayer.playbackState === MediaPlayer.PlayingState) notificationSoundPlayer.stop();
+    notificationSoundPlayer.position = 0;
+    notificationSoundPlayer.play();
   }
 
   function dismissToast(uid) {
@@ -394,5 +404,18 @@ Item {
     onNotification: function(notification) {
       root.trackNotification(notification);
     }
+  }
+
+  AudioOutput {
+    id: notificationSoundOutput
+
+    volume: 0.7
+  }
+
+  MediaPlayer {
+    id: notificationSoundPlayer
+
+    source: root.notificationSoundSource
+    audioOutput: notificationSoundOutput
   }
 }

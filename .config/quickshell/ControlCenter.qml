@@ -50,6 +50,7 @@ FocusScope {
   property bool trayExpanded: false
   property bool trayNeedsAttention: false
   property var notificationCenter: null
+  property var expandedNotificationGroups: ({})
   property string notificationReturnSection: ""
   property var sessionActions: null
   property string bluetoothAdapterKey: "defaultAdapter"
@@ -157,6 +158,16 @@ FocusScope {
     notificationReturnSection = expandedSection === "notifications" ? "" : expandedSection;
     expandedSection = "notifications";
     if (notificationCenter) notificationCenter.markAllRead();
+  }
+
+  function isNotificationGroupExpanded(groupKey) {
+    return !!expandedNotificationGroups[groupKey];
+  }
+
+  function toggleNotificationGroup(groupKey) {
+    const nextState = Object.assign({}, expandedNotificationGroups);
+    nextState[groupKey] = !nextState[groupKey];
+    expandedNotificationGroups = nextState;
   }
 
   function popupX(anchorItem, popupWidth, alignRight) {
@@ -1696,47 +1707,116 @@ FocusScope {
     id: groupSection
 
     required property var group
+    readonly property bool expandable: !!group && group.entryCount > 1
+    readonly property bool expanded: expandable && root.isNotificationGroupExpanded(group.key)
+    readonly property var latestEntry: group ? group.latestEntry : null
 
     width: parent ? parent.width : implicitWidth
     spacing: Theme.gapXs
 
-    Row {
+    UiSurface {
       width: parent.width
-      spacing: Theme.gapXs
+      implicitHeight: groupHeaderContent.implicitHeight + Theme.insetSm * 2
+      tone: groupSection.group && groupSection.group.criticalUnreadCount > 0
+        ? "chip"
+        : (groupSection.group && groupSection.group.unreadCount > 0 ? "field" : "fieldAlt")
+      outlined: false
+      radius: Theme.radiusLg
+      border.width: Theme.stroke
+      border.color: groupSection.group && groupSection.group.unreadCount > 0
+        ? Qt.rgba(1, 1, 1, 0.12)
+        : Qt.rgba(1, 1, 1, 0.08)
 
-      UiText {
-        width: Math.max(0, parent.width - groupMeta.implicitWidth - Theme.gapXs)
-        text: groupSection.group ? groupSection.group.appName : "Notifications"
-        size: "xs"
-        tone: "muted"
-        font.weight: Font.DemiBold
-        elide: Text.ElideRight
+      Column {
+        id: groupHeaderContent
+
+        width: parent.width - Theme.insetLg
+        anchors.left: parent.left
+        anchors.leftMargin: Theme.insetSm
+        anchors.top: parent.top
+        anchors.topMargin: Theme.insetSm
+        spacing: Theme.nudge
+
+        Row {
+          width: parent.width
+          spacing: Theme.gapXs
+
+          UiText {
+            width: Math.max(0, parent.width - groupMeta.implicitWidth - groupChevron.width - Theme.gapSm * 2)
+            text: groupSection.group ? groupSection.group.appName : "Notifications"
+            size: "xs"
+            tone: "muted"
+            font.weight: Font.DemiBold
+            elide: Text.ElideRight
+          }
+
+          UiText {
+            id: groupMeta
+
+            text: {
+              if (!groupSection.group) return "";
+              if (groupSection.group.entryCount === 1) return "1 message";
+              return `${groupSection.group.entryCount} messages`;
+            }
+            size: "xs"
+            tone: groupSection.group && groupSection.group.criticalUnreadCount > 0 ? "accent" : "subtle"
+          }
+
+          UiIcon {
+            id: groupChevron
+
+            visible: groupSection.expandable
+            width: Theme.iconGlyphSm
+            height: Theme.iconGlyphSm
+            name: groupSection.expanded ? "chevron-down" : "chevron-right"
+            strokeColor: Theme.textSubtle
+          }
+        }
+
+        UiText {
+          width: parent.width
+          text: root.notificationCenter ? root.notificationCenter.summaryLabel(groupSection.latestEntry) : ""
+          size: "sm"
+          font.weight: Font.DemiBold
+          wrapMode: Text.WordWrap
+          maximumLineCount: groupSection.expanded ? 2 : 1
+          elide: Text.ElideRight
+          textFormat: Text.PlainText
+        }
       }
 
-      UiText {
-        id: groupMeta
-
-        text: {
-          if (!groupSection.group) return "";
-          if (groupSection.group.unreadCount > 0) return `${groupSection.group.unreadCount} unread`;
-          if (groupSection.group.entryCount > 1) return `${groupSection.group.entryCount} items`;
-          return "";
-        }
-        size: "xs"
-        tone: groupSection.group && groupSection.group.criticalUnreadCount > 0 ? "accent" : "subtle"
+      MouseArea {
+        anchors.fill: parent
+        enabled: groupSection.expandable
+        onClicked: root.toggleNotificationGroup(groupSection.group.key)
       }
     }
 
-    Column {
+    Item {
       width: parent.width
-      spacing: Theme.gapXs
+      height: groupSection.expanded ? groupCards.implicitHeight : 0
+      clip: true
 
-      Repeater {
-        model: groupSection.group ? groupSection.group.entries : []
+      Behavior on height {
+        NumberAnimation {
+          duration: Theme.motionBase
+          easing.type: Easing.OutCubic
+        }
+      }
 
-        delegate: NotificationInboxCard {
-          required property var modelData
-          entry: modelData
+      Column {
+        id: groupCards
+
+        width: parent.width
+        spacing: Theme.gapXs
+
+        Repeater {
+          model: groupSection.expandable && groupSection.group ? groupSection.group.entries : []
+
+          delegate: NotificationInboxCard {
+            required property var modelData
+            entry: modelData
+          }
         }
       }
     }
@@ -2306,9 +2386,29 @@ FocusScope {
               Repeater {
                 model: root.notificationCenter ? root.notificationCenter.groupedEntries : []
 
-                delegate: NotificationGroupSection {
+                delegate: Item {
                   required property var modelData
-                  group: modelData
+
+                  width: notificationContentColumn.width
+                  height: modelData && modelData.entryCount === 1
+                    ? singleNotificationCard.implicitHeight
+                    : groupedNotificationSection.implicitHeight
+
+                  NotificationInboxCard {
+                    id: singleNotificationCard
+
+                    visible: !!parent.modelData && parent.modelData.entryCount === 1
+                    width: parent.width
+                    entry: parent.modelData ? parent.modelData.latestEntry : null
+                  }
+
+                  NotificationGroupSection {
+                    id: groupedNotificationSection
+
+                    visible: !!parent.modelData && parent.modelData.entryCount > 1
+                    width: parent.width
+                    group: parent.modelData
+                  }
                 }
               }
             }
@@ -2431,8 +2531,8 @@ FocusScope {
                   visible: parent.entry.kind === "action"
                   width: parent.width
                   title: parent.entry.title || ""
-                  actionText: parent.entry.confirm && root.pendingPowerAction === parent.entry.action ? "Confirm" : ""
-                  active: parent.entry.confirm && root.pendingPowerAction === parent.entry.action
+                  actionText: !!parent.entry.confirm && root.pendingPowerAction === parent.entry.action ? "Confirm" : ""
+                  active: !!parent.entry.confirm && root.pendingPowerAction === parent.entry.action
                   enabled: !root.sessionActionBusy
                   onClicked: {
                     if (parent.entry.confirm) root.triggerPowerAction(parent.entry.action);

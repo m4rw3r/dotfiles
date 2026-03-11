@@ -4,11 +4,11 @@ import QtQuick
 import QtQml
 import QtQuick.Controls
 import Quickshell.Io
-import Quickshell.Services.Notifications
 import Quickshell.Services.Pipewire
 import Quickshell.Services.UPower
 import Quickshell.Bluetooth
-import Quickshell.Widgets
+import "services" as Services
+import "controlcenter" as ControlCenterParts
 import "theme"
 import "ui/primitives"
 import "ui/controls" as Controls
@@ -27,15 +27,6 @@ FocusScope {
   property string pendingPowerAction: ""
   property string wifiPasswordTarget: ""
   property string wifiPassword: ""
-  property bool bluetoothBusy: false
-  property bool bluetoothEnableAfterUnblock: false
-  property bool bluetoothRfkillKnown: false
-  property bool bluetoothRfkillRefreshing: false
-  property bool bluetoothRfkillRefreshQueued: false
-  property bool bluetoothSoftBlocked: false
-  property bool bluetoothHardBlocked: false
-  property bool bluetoothLastErrorFromRefresh: false
-  property string bluetoothLastError: ""
   property bool powerProfileBusy: false
   property bool onScreenKeyboardBusy: false
   property bool onScreenKeyboardFailed: false
@@ -76,10 +67,6 @@ FocusScope {
   readonly property bool overlayDismissActive: selectorPopoverOpen || tileMenuOpen || powerMenuOpen || outputMenuOpen || notificationsOpen
   readonly property var audioSink: Pipewire.defaultAudioSink
   readonly property var battery: UPower.displayDevice
-  property var bluetoothAdapter: null
-  readonly property var bluetoothDevices: bluetoothAdapter && bluetoothAdapter.devices ? bluetoothAdapter.devices.values : []
-  readonly property bool bluetoothBlocked: !!bluetoothAdapter
-    && (bluetoothAdapter.state === BluetoothAdapterState.Blocked || bluetoothSoftBlocked || bluetoothHardBlocked)
   readonly property bool batteryAvailable: battery && battery.isPresent && battery.isLaptopBattery
   readonly property bool audioReady: audioService.ready
   readonly property bool audioLoading: panelOpen && !audioService.settled
@@ -120,12 +107,9 @@ FocusScope {
   ]
 
   Component.onCompleted: {
-    bluetoothAdapter = currentBluetoothAdapter();
     refreshPanelData();
     panelRefreshTimer.restart();
   }
-
-  onBluetoothAdapterChanged: refreshBluetoothRfkillState()
   onNotificationsOpenChanged: {
     if (notificationsOpen && unreadNotificationCount > 0) notificationReadTimer.restart();
     else notificationReadTimer.stop();
@@ -133,10 +117,6 @@ FocusScope {
 
   function clamp(value, minValue, maxValue) {
     return Math.max(minValue, Math.min(maxValue, value));
-  }
-
-  function currentBluetoothAdapter() {
-    return Bluetooth[bluetoothAdapterKey];
   }
 
   function toggleSection(section) {
@@ -148,8 +128,8 @@ FocusScope {
     }
     if (expandedSection !== "power") pendingPowerAction = "";
     if (expandedSection === "wifi") wifiService.refresh();
-    if (expandedSection === "bluetooth") refreshBluetoothRfkillState();
-    if (expandedSection !== "bluetooth" && bluetoothAdapter) bluetoothAdapter.discovering = false;
+    if (expandedSection === "bluetooth") bluetoothService.refreshRfkillState();
+    if (expandedSection !== "bluetooth") bluetoothService.stopDiscovery();
   }
 
   function toggleNotificationsSection() {
@@ -239,43 +219,6 @@ FocusScope {
     return "battery";
   }
 
-  function bluetoothRfkillCommand(prefix) {
-    const scriptPrefix = prefix || "";
-    const script = `${scriptPrefix}for d in /sys/class/rfkill/rfkill*; do [ -r "$d/type" ] || continue; type=$(cat "$d/type"); [ "$type" = "bluetooth" ] || continue; name=$(cat "$d/name" 2>/dev/null || printf ''); soft=$(cat "$d/soft" 2>/dev/null || printf '0'); hard=$(cat "$d/hard" 2>/dev/null || printf '0'); printf '%s\t%s\t%s\n' "$name" "$soft" "$hard"; done`;
-    return ["sh", "-lc", script];
-  }
-
-  function parseBluetoothRfkillState(text) {
-    let softBlocked = false;
-    let hardBlocked = false;
-
-    const lines = String(text || "").split("\n");
-    for (let i = 0; i < lines.length; i += 1) {
-      const line = lines[i].trim();
-      if (line === "") continue;
-
-      const fields = line.split("\t");
-      if (fields.length < 3) continue;
-
-      if (fields[1] === "1") softBlocked = true;
-      if (fields[2] === "1") hardBlocked = true;
-    }
-
-    bluetoothSoftBlocked = softBlocked;
-    bluetoothHardBlocked = hardBlocked;
-    bluetoothRfkillKnown = true;
-  }
-
-  function refreshBluetoothRfkillState() {
-    if (bluetoothRfkillRefreshing) {
-      bluetoothRfkillRefreshQueued = true;
-      return;
-    }
-
-    bluetoothRfkillRefreshing = true;
-    bluetoothRfkillStateProcess.exec(bluetoothRfkillCommand(""));
-  }
-
   function normalizePowerAction(action) {
     if (action === "sleep") return "suspend";
     return action;
@@ -308,26 +251,6 @@ FocusScope {
     return "";
   }
 
-  function bluetoothConnectedCount() {
-    if (!bluetoothAdapter || !bluetoothAdapter.enabled) return 0;
-    let count = 0;
-    for (let i = 0; i < bluetoothDevices.length; i += 1) {
-      const device = bluetoothDevices[i];
-      if (device && device.connected) count += 1;
-    }
-    return count;
-  }
-
-  function bluetoothAvailableCount() {
-    if (!bluetoothAdapter || !bluetoothAdapter.enabled) return 0;
-    let count = 0;
-    for (let i = 0; i < bluetoothDevices.length; i += 1) {
-      const device = bluetoothDevices[i];
-      if (device && !device.connected) count += 1;
-    }
-    return count;
-  }
-
   function wifiTileTitle() {
     if (!wifiService.ready) return "Wi-Fi";
     if (!wifiService.enabled || wifiService.connectedSsid === "") return "Wi-Fi";
@@ -353,18 +276,18 @@ FocusScope {
   }
 
   function bluetoothTileTitle() {
-    const count = bluetoothConnectedCount();
+    const count = bluetoothService.connectedCount;
     if (count > 0) return count === 1 ? "1 Device" : `${count} Devices`;
     return "Bluetooth";
   }
 
   function bluetoothTileSubtitle() {
-    if (!bluetoothAdapter) return "Unavailable";
-    if (bluetoothBusy && bluetoothEnableAfterUnblock) return "Unblocking...";
-    if (bluetoothHardBlocked) return "Hardware Blocked";
-    if (bluetoothBlocked) return "Blocked";
-    if (!bluetoothAdapter.enabled) return "Off";
-    return bluetoothAdapter.discovering ? "Scanning" : "Ready";
+    if (!bluetoothService.adapter) return "Unavailable";
+    if (bluetoothService.busy && bluetoothService.enableAfterUnblock) return "Unblocking...";
+    if (bluetoothService.hardBlocked) return "Hardware Blocked";
+    if (bluetoothService.blocked) return "Blocked";
+    if (!bluetoothService.enabled) return "Off";
+    return bluetoothService.discovering ? "Scanning" : "Ready";
   }
 
   function bluetoothDeviceText(value) {
@@ -419,18 +342,18 @@ FocusScope {
   }
 
   function bluetoothBlockedMessage() {
-    if (!bluetoothBlocked) return "";
-    if (bluetoothBusy && bluetoothEnableAfterUnblock) return "Unblocking Bluetooth...";
-    if (bluetoothHardBlocked) return "Bluetooth is blocked by hardware or firmware airplane mode.";
-    if (bluetoothSoftBlocked) return "Bluetooth is blocked by rfkill. Turn On will unblock it.";
-    if (!bluetoothRfkillKnown) return "Bluetooth is blocked. Turn On will try to unblock it.";
+    if (!bluetoothService.blocked) return "";
+    if (bluetoothService.busy && bluetoothService.enableAfterUnblock) return "Unblocking Bluetooth...";
+    if (bluetoothService.hardBlocked) return "Bluetooth is blocked by hardware or firmware airplane mode.";
+    if (bluetoothService.softBlocked) return "Bluetooth is blocked by rfkill. Turn On will unblock it.";
+    if (!bluetoothService.rfkillKnown) return "Bluetooth is blocked. Turn On will try to unblock it.";
     return "Bluetooth is blocked.";
   }
 
   function bluetoothPrimaryActionText() {
-    if (bluetoothBusy && bluetoothEnableAfterUnblock) return "Unblocking...";
-    if (bluetoothHardBlocked) return "Blocked";
-    return bluetoothAdapter && bluetoothAdapter.enabled ? "Turn Off" : "Turn On";
+    if (bluetoothService.busy && bluetoothService.enableAfterUnblock) return "Unblocking...";
+    if (bluetoothService.hardBlocked) return "Blocked";
+    return bluetoothService.enabled ? "Turn Off" : "Turn On";
   }
 
   function profileShortLabel() {
@@ -515,7 +438,7 @@ FocusScope {
     brightnessService.refresh();
     lightingService.refresh();
     wifiService.refresh();
-    refreshBluetoothRfkillState();
+    bluetoothService.refreshRfkillState();
     pendingAudioVolume = audioService.volume;
     pendingScreenBrightness = brightnessService.screenPercent;
   }
@@ -568,28 +491,7 @@ FocusScope {
   }
 
   function toggleBluetoothEnabled() {
-    if (!bluetoothAdapter || bluetoothBusy) return;
-
-    bluetoothLastErrorFromRefresh = false;
-    bluetoothLastError = "";
-
-    if (bluetoothHardBlocked) {
-      bluetoothLastErrorFromRefresh = false;
-      bluetoothLastError = "Bluetooth is hard blocked by hardware or firmware airplane mode.";
-      refreshBluetoothRfkillState();
-      return;
-    }
-
-    if (bluetoothBlocked) {
-      bluetoothBusy = true;
-      bluetoothEnableAfterUnblock = true;
-      bluetoothUnblockProcess.exec(bluetoothRfkillCommand("rfkill unblock bluetooth && "));
-      return;
-    }
-
-    bluetoothAdapter.enabled = !bluetoothAdapter.enabled;
-    if (!bluetoothAdapter.enabled) bluetoothAdapter.discovering = false;
-    refreshBluetoothRfkillState();
+    bluetoothService.toggleEnabled();
   }
 
   function recoverKeyboard() {
@@ -633,30 +535,7 @@ FocusScope {
       onScreenKeyboardFailed = false;
       keyboardRecoveryMessage = "";
       keyboardRecoveryFailed = false;
-      if (bluetoothAdapter) bluetoothAdapter.discovering = false;
-    }
-  }
-
-  Connections {
-    target: Bluetooth
-    ignoreUnknownSignals: true
-
-    function onDefaultAdapterChanged() {
-      root.bluetoothAdapter = root.currentBluetoothAdapter();
-      root.refreshBluetoothRfkillState();
-    }
-  }
-
-  Connections {
-    target: root.bluetoothAdapter
-    ignoreUnknownSignals: true
-
-    function onStateChanged() {
-      root.refreshBluetoothRfkillState();
-    }
-
-    function onEnabledChanged() {
-      root.refreshBluetoothRfkillState();
+      bluetoothService.stopDiscovery();
     }
   }
 
@@ -695,7 +574,7 @@ FocusScope {
     onTriggered: root.refreshPanelData()
   }
 
-  BrightnessController {
+  Services.BrightnessService {
     id: brightnessService
 
     onScreenPercentChanged: {
@@ -703,134 +582,31 @@ FocusScope {
     }
   }
 
-  LightingController {
+  Services.LightingService {
     id: lightingService
   }
 
-  Item {
+  Services.AudioService {
     id: audioService
-
-    property real volume: 0
-    property bool muted: false
-    property bool ready: false
-    property bool settled: false
-    property string lastError: ""
-
-    function refresh() {
-      readProcess.exec(["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"]);
-    }
-
-    function setVolume(nextVolume) {
-      const clamped = Math.max(0, Math.min(1, Number(nextVolume)));
-      volume = clamped;
-      if (clamped > 0 && muted) muted = false;
-      lastError = "";
-      writeProcess.exec(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", clamped.toFixed(3)]);
-    }
-
-    function setMuted(nextMuted) {
-      muted = nextMuted;
-      lastError = "";
-      muteProcess.exec(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", nextMuted ? "1" : "0"]);
-    }
-
-    function toggleMuted() {
-      setMuted(!muted);
-    }
-
-    function parseState(text) {
-      const match = String(text || "").match(/Volume:\s+([0-9.]+)(?:\s+\[(MUTED)\])?/i);
-      settled = true;
-
-      if (!match) {
-        ready = false;
-        lastError = "Unable to parse current volume.";
-        return;
-      }
-
-      volume = Math.max(0, Math.min(1, Number(match[1]) || 0));
-      muted = match[2] === "MUTED";
-      ready = true;
-    }
 
     onVolumeChanged: {
       if (!audioCommitTimer.running) root.pendingAudioVolume = volume;
     }
-
-    StdioCollector {
-      id: audioReadStdout
-      waitForEnd: true
-    }
-
-    StdioCollector {
-      id: audioReadStderr
-      waitForEnd: true
-    }
-
-    Process {
-      id: readProcess
-
-      stdout: audioReadStdout
-      stderr: audioReadStderr
-
-      Component.onCompleted: exited.connect(function(exitCode) {
-
-        audioService.settled = true;
-        audioService.lastError = exitCode === 0 ? "" : String(audioReadStderr.text || "").trim();
-        if (exitCode === 0) audioService.parseState(audioReadStdout.text);
-        else audioService.ready = false;
-      })
-    }
-
-    StdioCollector {
-      id: audioWriteStderr
-      waitForEnd: true
-    }
-
-    StdioCollector {
-      id: audioMuteStderr
-      waitForEnd: true
-    }
-
-    Process {
-      id: writeProcess
-
-      stderr: audioWriteStderr
-
-      Component.onCompleted: exited.connect(function(exitCode) {
-
-        audioService.lastError = exitCode === 0 ? "" : String(audioWriteStderr.text || "").trim();
-        audioRefreshTimer.restart();
-      })
-    }
-
-    Process {
-      id: muteProcess
-
-      stderr: audioMuteStderr
-
-      Component.onCompleted: exited.connect(function(exitCode) {
-
-        audioService.lastError = exitCode === 0 ? "" : String(audioMuteStderr.text || "").trim();
-        audioRefreshTimer.restart();
-      })
-    }
-
-    Timer {
-      id: audioRefreshTimer
-      interval: 150
-      repeat: false
-      onTriggered: audioService.refresh()
-    }
   }
 
-  WifiController {
+  Services.WifiService {
     id: wifiService
 
     onConnectedSsidChanged: {
       root.wifiPasswordTarget = "";
       root.wifiPassword = "";
     }
+  }
+
+  Services.BluetoothService {
+    id: bluetoothService
+
+    adapterKey: root.bluetoothAdapterKey
   }
 
   StdioCollector {
@@ -847,755 +623,6 @@ FocusScope {
 
       root.powerProfileBusy = false;
     })
-  }
-
-  StdioCollector {
-    id: bluetoothRfkillStateStdout
-    waitForEnd: true
-  }
-
-  StdioCollector {
-    id: bluetoothRfkillStateStderr
-    waitForEnd: true
-  }
-
-  Process {
-    id: bluetoothRfkillStateProcess
-
-    stdout: bluetoothRfkillStateStdout
-    stderr: bluetoothRfkillStateStderr
-
-    Component.onCompleted: exited.connect(function(exitCode) {
-
-      root.bluetoothRfkillRefreshing = false;
-
-      const stderrText = String(bluetoothRfkillStateStderr.text || "").trim();
-      const stdoutText = bluetoothRfkillStateStdout.text;
-
-      if (exitCode === 0) {
-        root.parseBluetoothRfkillState(stdoutText);
-        if (root.bluetoothLastErrorFromRefresh) {
-          root.bluetoothLastError = "";
-          root.bluetoothLastErrorFromRefresh = false;
-        }
-      } else {
-        root.bluetoothRfkillKnown = false;
-        root.bluetoothSoftBlocked = false;
-        root.bluetoothHardBlocked = false;
-        if (root.bluetoothLastError === "") {
-          root.bluetoothLastErrorFromRefresh = true;
-          root.bluetoothLastError = stderrText !== "" ? stderrText : "Unable to inspect Bluetooth block state.";
-        }
-      }
-
-      if (root.bluetoothRfkillRefreshQueued) {
-        root.bluetoothRfkillRefreshQueued = false;
-        root.refreshBluetoothRfkillState();
-      }
-    })
-  }
-
-  StdioCollector {
-    id: bluetoothUnblockStdout
-    waitForEnd: true
-  }
-
-  StdioCollector {
-    id: bluetoothUnblockStderr
-    waitForEnd: true
-  }
-
-  Process {
-    id: bluetoothUnblockProcess
-
-    stdout: bluetoothUnblockStdout
-    stderr: bluetoothUnblockStderr
-
-    Component.onCompleted: exited.connect(function(exitCode) {
-
-      root.bluetoothBusy = false;
-      root.bluetoothEnableAfterUnblock = false;
-
-      const stderrText = String(bluetoothUnblockStderr.text || "").trim();
-      const stdoutText = bluetoothUnblockStdout.text;
-
-      if (exitCode === 0) {
-        root.parseBluetoothRfkillState(stdoutText);
-
-        if (root.bluetoothHardBlocked) {
-          root.bluetoothLastErrorFromRefresh = false;
-          root.bluetoothLastError = "Bluetooth is hard blocked by hardware or firmware airplane mode.";
-          return;
-        }
-
-        if (root.bluetoothSoftBlocked) {
-          root.bluetoothLastErrorFromRefresh = false;
-          root.bluetoothLastError = "Bluetooth is still soft blocked after the unblock attempt.";
-          return;
-        }
-
-        root.bluetoothLastErrorFromRefresh = false;
-        root.bluetoothLastError = "";
-        if (root.bluetoothAdapter) root.bluetoothAdapter.enabled = true;
-        root.refreshBluetoothRfkillState();
-        return;
-      }
-
-      root.bluetoothLastErrorFromRefresh = false;
-      root.bluetoothLastError = stderrText !== "" ? stderrText : "Unable to unblock Bluetooth.";
-      root.refreshBluetoothRfkillState();
-    })
-  }
-
-  component BrightnessController: Item {
-    id: brightnessController
-
-    property bool ready: false
-    property bool settled: false
-    property bool screenLoaded: false
-    property string screenDevice: ""
-    property string keyboardDevice: ""
-    property int screenPercent: 0
-    property int keyboardPercent: 0
-    property int keyboardValue: 0
-    property int keyboardMax: 0
-    property string lastError: ""
-    readonly property bool screenAvailable: screenDevice !== ""
-    readonly property bool keyboardAvailable: keyboardDevice !== "" && keyboardMax > 0
-
-    function refresh() {
-      if (!ready) {
-        detectProcess.exec(["brightnessctl", "--list"]);
-        return;
-      }
-
-      refreshScreen();
-      refreshKeyboard();
-    }
-
-    function refreshScreen() {
-      if (!screenAvailable) return;
-      screenReadProcess.exec(["brightnessctl", "-m", "-d", screenDevice]);
-    }
-
-    function refreshKeyboard() {
-      if (!keyboardAvailable) return;
-      keyboardReadProcess.exec(["brightnessctl", "-m", "-d", keyboardDevice]);
-    }
-
-    function applyScreenPercent(percent) {
-      if (!screenAvailable) return;
-      screenWriteProcess.exec(["brightnessctl", "-d", screenDevice, "set", `${Math.round(percent)}%`]);
-    }
-
-    function applyKeyboardValue(value) {
-      if (!keyboardAvailable) return;
-      keyboardWriteProcess.exec(["brightnessctl", "-d", keyboardDevice, "set", `${Math.round(value)}`]);
-    }
-
-    function parseDeviceList(text) {
-      const lines = String(text || "").split("\n");
-      let nextScreen = "";
-      let nextKeyboard = "";
-
-      for (let i = 0; i < lines.length; i += 1) {
-        const line = lines[i];
-        const match = line.match(/^Device '([^']+)' of class '([^']+)'/);
-        if (!match) continue;
-
-        const deviceName = match[1];
-        const deviceClass = match[2];
-
-        if (deviceClass === "backlight" && nextScreen === "") nextScreen = deviceName;
-        if (deviceClass === "leds" && deviceName.indexOf("kbd_backlight") >= 0) {
-          if (nextKeyboard === "" || deviceName.indexOf("::kbd_backlight") >= 0) nextKeyboard = deviceName;
-        }
-      }
-
-      screenDevice = nextScreen;
-      keyboardDevice = nextKeyboard;
-      screenLoaded = false;
-      settled = nextScreen === "";
-      ready = true;
-      refreshScreen();
-      refreshKeyboard();
-    }
-
-    function parseBrightness(text, isKeyboard) {
-      const line = String(text || "").trim();
-      if (line === "") return;
-
-      const parts = line.split(",");
-      if (parts.length < 5) return;
-
-      const percent = parseInt(String(parts[3]).replace("%", ""));
-      if (!Number.isFinite(percent)) return;
-
-      if (isKeyboard) {
-        keyboardPercent = percent;
-        keyboardValue = parseInt(parts[2]) || 0;
-        keyboardMax = parseInt(parts[4]) || 0;
-      } else {
-        screenLoaded = true;
-        screenPercent = percent;
-      }
-    }
-
-    StdioCollector {
-      id: detectStdout
-      waitForEnd: true
-    }
-
-    StdioCollector {
-      id: detectStderr
-      waitForEnd: true
-    }
-
-    Process {
-      id: detectProcess
-
-      stdout: detectStdout
-      stderr: detectStderr
-
-      Component.onCompleted: exited.connect(function(exitCode) {
-
-        brightnessController.lastError = exitCode === 0 ? "" : String(detectStderr.text || "").trim();
-        if (exitCode === 0) brightnessController.parseDeviceList(detectStdout.text);
-        else brightnessController.settled = true;
-      })
-    }
-
-    StdioCollector {
-      id: screenStdout
-      waitForEnd: true
-    }
-
-    Process {
-      id: screenReadProcess
-      stdout: screenStdout
-      Component.onCompleted: exited.connect(function(exitCode) {
-
-        brightnessController.settled = true;
-        if (exitCode === 0) brightnessController.parseBrightness(screenStdout.text, false);
-      })
-    }
-
-    StdioCollector {
-      id: keyboardStdout
-      waitForEnd: true
-    }
-
-    Process {
-      id: keyboardReadProcess
-      stdout: keyboardStdout
-      Component.onCompleted: exited.connect(function(exitCode) {
-
-        if (exitCode === 0) brightnessController.parseBrightness(keyboardStdout.text, true);
-      })
-    }
-
-    StdioCollector {
-      id: screenWriteStderr
-      waitForEnd: true
-    }
-
-    Process {
-      id: screenWriteProcess
-      stderr: screenWriteStderr
-      Component.onCompleted: exited.connect(function(exitCode) {
-
-        brightnessController.lastError = exitCode === 0 ? "" : String(screenWriteStderr.text || "").trim();
-        brightnessController.refreshScreen();
-      })
-    }
-
-    StdioCollector {
-      id: keyboardWriteStderr
-      waitForEnd: true
-    }
-
-    Process {
-      id: keyboardWriteProcess
-      stderr: keyboardWriteStderr
-      Component.onCompleted: exited.connect(function(exitCode) {
-
-        brightnessController.lastError = exitCode === 0 ? "" : String(keyboardWriteStderr.text || "").trim();
-        brightnessController.refreshKeyboard();
-      })
-    }
-  }
-
-  component LightingController: Item {
-    id: lightingController
-
-    property bool commandAvailable: false
-    property bool available: false
-    property bool settled: false
-    property string level: "off"
-    property string lastError: ""
-
-    function refresh() {
-      stateReadProcess.exec([
-        "zsh",
-        "-lc",
-        "command -v z13ctl >/dev/null 2>&1 || exit 127; state_file=${XDG_STATE_HOME:-$HOME/.local/state}/z13ctl/state.json; [ -r \"$state_file\" ] || exit 66; command cat \"$state_file\""
-      ]);
-    }
-
-    function applyLevel(nextLevel) {
-      if (!available) return;
-      lastError = "";
-      lightingWriteProcess.exec(["zsh", "-lc", `z13ctl brightness ${nextLevel}`]);
-    }
-
-    function parseState(text) {
-      let parsed;
-
-      try {
-        parsed = JSON.parse(String(text || "{}"));
-      } catch (error) {
-        commandAvailable = true;
-        available = false;
-        settled = true;
-        level = "off";
-        lastError = "Unable to parse lighting state.";
-        return;
-      }
-
-      const lighting = parsed && parsed.lighting ? parsed.lighting : null;
-      const keyboard = parsed && parsed.devices && parsed.devices.keyboard ? parsed.devices.keyboard : null;
-      if (!lighting && !keyboard) {
-        commandAvailable = true;
-        available = false;
-        settled = true;
-        level = "off";
-        lastError = "Lighting state unavailable.";
-        return;
-      }
-
-      const enabled = lighting && lighting.enabled !== undefined
-        ? Boolean(lighting.enabled)
-        : (keyboard && keyboard.enabled !== undefined ? Boolean(keyboard.enabled) : false);
-      const brightness = lighting && lighting.brightness !== undefined
-        ? Number(lighting.brightness)
-        : (keyboard && keyboard.brightness !== undefined ? Number(keyboard.brightness) : 0);
-
-      commandAvailable = true;
-      available = true;
-      settled = true;
-      lastError = "";
-
-      if (!enabled || !Number.isFinite(brightness) || brightness <= 0) {
-        level = "off";
-        return;
-      }
-
-      if (brightness >= 3) {
-        level = "high";
-        return;
-      }
-
-      if (brightness >= 2) {
-        level = "medium";
-        return;
-      }
-
-      level = "low";
-    }
-
-    StdioCollector {
-      id: lightingStateStdout
-      waitForEnd: true
-    }
-
-    StdioCollector {
-      id: lightingStateStderr
-      waitForEnd: true
-    }
-
-    Process {
-      id: stateReadProcess
-
-      stdout: lightingStateStdout
-      stderr: lightingStateStderr
-
-      Component.onCompleted: exited.connect(function(exitCode) {
-
-        lightingController.settled = true;
-        if (exitCode === 0) {
-          lightingController.parseState(lightingStateStdout.text);
-          return;
-        }
-
-        lightingController.commandAvailable = exitCode !== 127;
-        lightingController.available = false;
-        lightingController.level = "off";
-        lightingController.lastError = exitCode === 127
-          ? ""
-          : (exitCode === 66 ? "Lighting state unavailable." : String(lightingStateStderr.text || "").trim());
-      })
-    }
-
-    StdioCollector {
-      id: lightingWriteStderr
-      waitForEnd: true
-    }
-
-    Process {
-      id: lightingWriteProcess
-
-      stderr: lightingWriteStderr
-
-      Component.onCompleted: exited.connect(function(exitCode) {
-
-        lightingController.lastError = exitCode === 0 ? "" : String(lightingWriteStderr.text || "").trim();
-        lightingRefreshTimer.restart();
-      })
-    }
-
-    Timer {
-      id: lightingRefreshTimer
-      interval: 150
-      repeat: false
-      onTriggered: lightingController.refresh()
-    }
-  }
-
-  component WifiController: Item {
-    id: wifiController
-
-    property bool ready: false
-    property bool enabled: false
-    property bool hardwareEnabled: true
-    property bool busy: false
-    property string connectedSsid: ""
-    property int connectedSignal: 0
-    property var savedNetworks: ({})
-    property var networks: []
-    property string lastError: ""
-    property string pendingSsid: ""
-
-    function splitEscaped(line) {
-      const fields = [];
-      let current = "";
-      let escaping = false;
-
-      for (let i = 0; i < line.length; i += 1) {
-        const character = line[i];
-
-        if (escaping) {
-          current += character;
-          escaping = false;
-          continue;
-        }
-
-        if (character === "\\") {
-          escaping = true;
-          continue;
-        }
-
-        if (character === ":") {
-          fields.push(current);
-          current = "";
-          continue;
-        }
-
-        current += character;
-      }
-
-      fields.push(current);
-      return fields;
-    }
-
-    function refresh() {
-      busy = true;
-      lastError = "";
-      refreshProcess.exec([
-        "sh",
-        "-lc",
-        "saved_file=$(mktemp) || exit 1; connections_file=$(mktemp) || exit 1; wifi_file=$(mktemp) || exit 1; trap 'rm -f \"$saved_file\" \"$connections_file\" \"$wifi_file\"' EXIT; status_failed=0; saved_failed=0; wifi_failed=0; status_output=$(nmcli -t -f WIFI,WIFI-HW general status) || status_failed=1; if ! nmcli -t --escape yes -f UUID,TYPE connection show >\"$connections_file\"; then saved_failed=1; else while IFS=: read -r uuid type; do [ \"$type\" = \"802-11-wireless\" ] || continue; if ! nmcli -t --escape yes -g 802-11-wireless.ssid connection show uuid \"$uuid\" >>\"$saved_file\"; then saved_failed=1; break; fi; done <\"$connections_file\"; fi; if ! nmcli -t --escape yes -f IN-USE,BSSID,SSID,SIGNAL,SECURITY device wifi list --rescan no >\"$wifi_file\"; then wifi_failed=1; fi; printf '%s\n@@SAVED@@\n' \"$status_output\"; if [ \"$saved_failed\" -eq 0 ]; then cat \"$saved_file\"; fi; printf '\n@@WIFI@@\n'; if [ \"$wifi_failed\" -eq 0 ]; then cat \"$wifi_file\"; fi; printf '\n@@ERRORS@@\n'; if [ \"$status_failed\" -ne 0 ]; then printf 'status\n'; fi; if [ \"$saved_failed\" -ne 0 ]; then printf 'saved\n'; fi; if [ \"$wifi_failed\" -ne 0 ]; then printf 'wifi\n'; fi"
-      ]);
-    }
-
-    function scan() {
-      busy = true;
-      lastError = "";
-      scanProcess.exec(["nmcli", "device", "wifi", "rescan"]);
-    }
-
-    function setEnabledState(nextState) {
-      busy = true;
-      lastError = "";
-      toggleProcess.exec(["nmcli", "radio", "wifi", nextState ? "on" : "off"]);
-    }
-
-    function connectNetwork(ssid, password) {
-      if (ssid === "") return;
-
-      const command = ["nmcli", "device", "wifi", "connect", ssid];
-      if (password !== "") command.push("password", password);
-
-      busy = true;
-      lastError = "";
-      pendingSsid = ssid;
-      connectProcess.exec(command);
-    }
-
-    function resetStatus() {
-      enabled = false;
-      hardwareEnabled = true;
-    }
-
-    function resetSaved() {
-      savedNetworks = ({})
-    }
-
-    function resetWifiList() {
-      connectedSsid = "";
-      connectedSignal = 0;
-      networks = [];
-    }
-
-    function resetRefreshState() {
-      resetStatus();
-      resetSaved();
-      resetWifiList();
-    }
-
-    function parseRefresh(text) {
-      const blocks = String(text || "").split("\n@@SAVED@@\n");
-      const statusBlock = blocks.length > 0 ? blocks[0] : "";
-      const remainder = blocks.length > 1 ? blocks[1] : "";
-      const savedBlocks = remainder.split("\n@@WIFI@@\n");
-      const savedBlock = savedBlocks.length > 0 ? savedBlocks[0] : "";
-      const wifiAndErrors = savedBlocks.length > 1 ? savedBlocks[1] : "";
-      const wifiBlocks = wifiAndErrors.split("\n@@ERRORS@@\n");
-      const wifiBlock = wifiBlocks.length > 0 ? wifiBlocks[0] : "";
-      const errorBlock = wifiBlocks.length > 1 ? wifiBlocks[1] : "";
-      const refreshErrors = parseRefreshErrors(errorBlock);
-
-      if (refreshErrors.statusFailed) resetStatus();
-      else parseStatus(statusBlock);
-
-      const nextSavedNetworks = refreshErrors.savedFailed ? ({}) : parseSaved(savedBlock);
-      savedNetworks = nextSavedNetworks;
-
-      if (refreshErrors.wifiFailed) resetWifiList();
-      else parseWifiList(wifiBlock, nextSavedNetworks);
-
-      return refreshErrors;
-    }
-
-    function parseRefreshErrors(text) {
-      const result = {
-        statusFailed: false,
-        savedFailed: false,
-        wifiFailed: false
-      };
-
-      const lines = String(text || "").split("\n");
-      for (let i = 0; i < lines.length; i += 1) {
-        const line = lines[i].trim();
-        if (line === "status") result.statusFailed = true;
-        else if (line === "saved") result.savedFailed = true;
-        else if (line === "wifi") result.wifiFailed = true;
-      }
-
-      return result;
-    }
-
-    function hasRefreshPayload(text) {
-      const payload = String(text || "");
-      return payload.indexOf("\n@@SAVED@@\n") >= 0
-        && payload.indexOf("\n@@WIFI@@\n") >= 0
-        && payload.indexOf("\n@@ERRORS@@\n") >= 0;
-    }
-
-    function refreshErrorText(refreshErrors, stderrText) {
-      if (stderrText !== "") return stderrText;
-      if (!refreshErrors) return "";
-      if (refreshErrors.statusFailed && refreshErrors.savedFailed && refreshErrors.wifiFailed) return "Unable to refresh Wi-Fi state.";
-      if (refreshErrors.statusFailed && refreshErrors.wifiFailed) return "Unable to refresh Wi-Fi status and networks.";
-      if (refreshErrors.statusFailed && refreshErrors.savedFailed) return "Unable to refresh Wi-Fi status and saved networks.";
-      if (refreshErrors.savedFailed && refreshErrors.wifiFailed) return "Unable to refresh saved networks and Wi-Fi networks.";
-      if (refreshErrors.statusFailed) return "Unable to refresh Wi-Fi status.";
-      if (refreshErrors.savedFailed) return "Unable to refresh saved Wi-Fi networks.";
-      if (refreshErrors.wifiFailed) return "Unable to refresh Wi-Fi networks.";
-      return "";
-    }
-
-    function parseStatus(text) {
-      const line = String(text || "").trim();
-      if (line === "") return;
-
-      const parts = line.split(":");
-      enabled = parts[0] === "enabled";
-      hardwareEnabled = parts.length < 2 ? true : parts[1] === "enabled";
-    }
-
-    function parseSaved(text) {
-      const lines = String(text || "").split("\n");
-      const known = {};
-
-      for (let i = 0; i < lines.length; i += 1) {
-        const line = lines[i];
-        if (line === "") continue;
-
-        const fields = splitEscaped(line);
-        const ssid = fields.length > 0 ? fields[0] : "";
-        if (ssid === "") continue;
-        known[ssid] = true;
-      }
-
-      return known;
-    }
-
-    function parseWifiList(text, knownNetworks) {
-      const lines = String(text || "").split("\n");
-      const deduped = {};
-      const known = knownNetworks || {};
-      let activeSsid = "";
-      let activeSignal = 0;
-
-      for (let i = 0; i < lines.length; i += 1) {
-        const line = lines[i];
-        if (line === "") continue;
-
-        const parts = splitEscaped(line);
-        if (parts.length < 5) continue;
-
-        const active = parts[0] === "*";
-        const bssid = parts[1];
-        const ssid = parts[2];
-        const signal = parseInt(parts[3]) || 0;
-        const security = parts[4];
-
-        if (ssid === "") continue;
-
-        const network = {
-          active,
-          bssid,
-          ssid,
-          signal,
-          security,
-          secure: security !== "",
-          known: known[ssid] === true
-        };
-
-        if (active) {
-          activeSsid = ssid;
-          activeSignal = signal;
-        }
-
-        const networkKey = bssid !== "" ? bssid : `${ssid}\u0000${security}`;
-        const existing = deduped[networkKey];
-        if (!existing || existing.signal < network.signal || (network.active && !existing.active)) {
-          deduped[networkKey] = network;
-        }
-      }
-
-      const nextNetworks = Object.values(deduped);
-      nextNetworks.sort((left, right) => {
-        if (left.active !== right.active) return left.active ? -1 : 1;
-        if (left.known !== right.known) return left.known ? -1 : 1;
-        if (left.signal !== right.signal) return right.signal - left.signal;
-        const byName = left.ssid.localeCompare(right.ssid);
-        if (byName !== 0) return byName;
-        return String(left.bssid || "").localeCompare(String(right.bssid || ""));
-      });
-
-      connectedSsid = activeSsid;
-      connectedSignal = activeSignal;
-      networks = nextNetworks;
-    }
-
-    StdioCollector {
-      id: wifiRefreshStdout
-      waitForEnd: true
-    }
-
-    StdioCollector {
-      id: wifiRefreshStderr
-      waitForEnd: true
-    }
-
-    Process {
-      id: refreshProcess
-
-      stdout: wifiRefreshStdout
-      stderr: wifiRefreshStderr
-
-      Component.onCompleted: exited.connect(function(exitCode) {
-
-        wifiController.busy = false;
-        wifiController.ready = true;
-        const stderrText = String(wifiRefreshStderr.text || "").trim();
-        const stdoutText = wifiRefreshStdout.text;
-
-        if (exitCode === 0 && wifiController.hasRefreshPayload(stdoutText)) {
-          const refreshErrors = wifiController.parseRefresh(stdoutText);
-          wifiController.lastError = wifiController.refreshErrorText(refreshErrors, stderrText);
-          return;
-        }
-
-        wifiController.resetRefreshState();
-        wifiController.lastError = stderrText !== "" ? stderrText : "Unable to refresh Wi-Fi state.";
-      })
-    }
-
-    StdioCollector {
-      id: wifiToggleStderr
-      waitForEnd: true
-    }
-
-    StdioCollector {
-      id: wifiScanStderr
-      waitForEnd: true
-    }
-
-    StdioCollector {
-      id: wifiConnectStderr
-      waitForEnd: true
-    }
-
-    Process {
-      id: toggleProcess
-      stderr: wifiToggleStderr
-      Component.onCompleted: exited.connect(function(exitCode) {
-
-        wifiController.lastError = exitCode === 0 ? "" : String(wifiToggleStderr.text || "").trim();
-        wifiController.refresh();
-      })
-    }
-
-    Process {
-      id: scanProcess
-      stderr: wifiScanStderr
-      Component.onCompleted: exited.connect(function(exitCode) {
-
-        wifiController.lastError = exitCode === 0 ? "" : String(wifiScanStderr.text || "").trim();
-        wifiRescanDelay.restart();
-      })
-    }
-
-    Process {
-      id: connectProcess
-      stderr: wifiConnectStderr
-      Component.onCompleted: exited.connect(function(exitCode) {
-
-        wifiController.lastError = exitCode === 0 ? "" : String(wifiConnectStderr.text || "").trim();
-        if (exitCode !== 0) wifiController.busy = false;
-        wifiController.pendingSsid = "";
-        wifiRescanDelay.restart();
-      })
-    }
-
-    Timer {
-      id: wifiRescanDelay
-      interval: 700
-      repeat: false
-      onTriggered: wifiController.refresh()
-    }
   }
 
   StdioCollector {
@@ -1660,312 +687,6 @@ FocusScope {
     interval: 90
     repeat: false
     onTriggered: brightnessService.applyScreenPercent(root.pendingScreenBrightness)
-  }
-
-  component NotificationInboxCard: UiSurface {
-    id: card
-
-    required property var entry
-    readonly property bool unread: !!(entry && entry.unread)
-    readonly property bool critical: !!(entry && entry.urgency === NotificationUrgency.Critical)
-    readonly property string primaryActionLabel: root.notificationCenter ? root.notificationCenter.primaryActionLabel(entry) : ""
-    readonly property string appLabel: root.notificationCenter ? root.notificationCenter.appLabel(entry) : "Notification"
-    readonly property string summaryLabel: root.notificationCenter ? root.notificationCenter.summaryLabel(entry) : ""
-    readonly property string bodyLabel: root.notificationCenter ? root.notificationCenter.bodyLabel(entry) : ""
-
-    width: parent ? parent.width : implicitWidth
-    implicitHeight: cardContent.implicitHeight + Theme.insetSm * 2
-    tone: critical ? "chip" : (unread ? "field" : "fieldAlt")
-    outlined: false
-    radius: Theme.radiusLg
-    border.width: Theme.stroke
-    border.color: critical
-      ? Qt.rgba(1, 1, 1, 0.16)
-      : (unread ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08))
-
-    Column {
-      id: cardContent
-
-      width: parent.width - Theme.insetLg
-      anchors.left: parent.left
-      anchors.leftMargin: Theme.insetSm
-      anchors.top: parent.top
-      anchors.topMargin: Theme.insetSm
-      spacing: Theme.gapXs
-
-      Row {
-        width: parent.width
-        spacing: Theme.gapSm
-
-        Item {
-          width: Theme.controlSm
-          height: Theme.controlSm
-
-          UiSurface {
-            anchors.fill: parent
-            tone: card.critical ? "accent" : "field"
-            radius: width / 2
-            outlined: false
-          }
-
-          UiIcon {
-            visible: !appIcon.visible
-            anchors.centerIn: parent
-            width: Theme.iconGlyphSm
-            height: Theme.iconGlyphSm
-            name: card.critical ? "bell-ring" : "bell"
-            strokeColor: card.critical ? Theme.textOnAccent : Theme.text
-          }
-
-          IconImage {
-            id: appIcon
-
-            visible: source !== ""
-            anchors.centerIn: parent
-            implicitSize: Theme.iconGlyphSm
-            asynchronous: true
-            mipmap: true
-            source: card.entry && card.entry.appIcon !== "" ? String(card.entry.appIcon) : ""
-          }
-        }
-
-        Column {
-          width: Math.max(0, parent.width - Theme.controlSm - metadataSlot.width - closeButton.implicitWidth - Theme.gapSm * 3)
-          spacing: Theme.nudge
-
-          UiText {
-            width: parent.width
-            text: card.appLabel
-            size: "xs"
-            tone: "muted"
-            font.weight: Font.DemiBold
-            elide: Text.ElideRight
-          }
-
-          UiText {
-            width: parent.width
-            text: card.summaryLabel
-            size: "sm"
-            font.weight: Font.DemiBold
-            wrapMode: Text.WordWrap
-            maximumLineCount: 2
-            elide: Text.ElideRight
-            textFormat: Text.PlainText
-          }
-        }
-
-        Item {
-          id: metadataSlot
-
-          width: ageLabel.implicitWidth + (unreadIndicator.visible ? unreadIndicator.width + Theme.gapXs : 0)
-          height: Math.max(ageLabel.implicitHeight, unreadIndicator.visible ? unreadIndicator.height : 0)
-
-          Rectangle {
-            id: unreadIndicator
-
-            visible: card.unread
-            width: 8
-            height: 8
-            radius: 4
-            color: card.critical ? Theme.accentStrong : Theme.toggleOn
-            anchors.left: parent.left
-            anchors.top: parent.top
-          }
-
-          UiText {
-            id: ageLabel
-
-            anchors.right: parent.right
-            anchors.top: parent.top
-            text: root.notificationCenter ? root.notificationCenter.ageLabel(card.entry) : ""
-            size: "xs"
-            tone: "subtle"
-          }
-        }
-
-        Controls.IconButton {
-          id: closeButton
-
-          variant: "minimal"
-          iconName: "x"
-          onClicked: {
-            if (root.notificationCenter) root.notificationCenter.forgetEntry(card.entry);
-          }
-        }
-      }
-
-      UiText {
-        visible: text !== ""
-        width: parent.width
-        text: card.bodyLabel
-        size: "xs"
-        tone: "subtle"
-        wrapMode: Text.WordWrap
-        maximumLineCount: 3
-        elide: Text.ElideRight
-        textFormat: Text.PlainText
-      }
-
-      Row {
-        visible: actionButton.visible
-        spacing: Theme.gapXs
-
-        Controls.Button {
-          id: actionButton
-
-          visible: card.primaryActionLabel !== ""
-          compact: true
-          text: card.primaryActionLabel
-          onClicked: {
-            if (root.notificationCenter) root.notificationCenter.invokePrimaryAction(card.entry);
-          }
-        }
-
-      }
-    }
-  }
-
-  component NotificationGroupSection: Column {
-    id: groupSection
-
-    required property var group
-    readonly property bool expandable: !!group && group.entryCount > 1
-    readonly property bool expanded: expandable && root.isNotificationGroupExpanded(group.key)
-    readonly property var latestEntry: group ? group.latestEntry : null
-
-    width: parent ? parent.width : implicitWidth
-    spacing: Theme.gapXs
-
-    UiSurface {
-      width: parent.width
-      implicitHeight: groupHeaderContent.implicitHeight + Theme.insetSm * 2
-      tone: groupSection.group && groupSection.group.criticalUnreadCount > 0
-        ? "chip"
-        : (groupSection.group && groupSection.group.unreadCount > 0 ? "field" : "fieldAlt")
-      outlined: false
-      radius: Theme.radiusLg
-      border.width: Theme.stroke
-      border.color: groupSection.group && groupSection.group.unreadCount > 0
-        ? Qt.rgba(1, 1, 1, 0.12)
-        : Qt.rgba(1, 1, 1, 0.08)
-
-      Column {
-        id: groupHeaderContent
-
-        width: parent.width - Theme.insetLg
-        anchors.left: parent.left
-        anchors.leftMargin: Theme.insetSm
-        anchors.top: parent.top
-        anchors.topMargin: Theme.insetSm
-        spacing: Theme.nudge
-
-        Row {
-          width: parent.width
-          spacing: Theme.gapXs
-
-          UiText {
-            width: Math.max(0, parent.width - groupClearButton.implicitWidth - Theme.gapXs)
-            text: groupSection.group ? groupSection.group.appName : "Notifications"
-            size: "xs"
-            tone: "muted"
-            font.weight: Font.DemiBold
-            elide: Text.ElideRight
-          }
-
-          Controls.IconButton {
-            id: groupClearButton
-
-            visible: groupSection.expandable
-            variant: "minimal"
-            iconName: "x"
-            onClicked: root.clearNotificationGroup(groupSection.group.key)
-          }
-        }
-
-        Item {
-          id: groupExpandRow
-
-          width: parent.width
-          height: Math.max(groupSummary.implicitHeight, Math.max(groupMeta.implicitHeight, groupChevron.height))
-
-          UiText {
-            id: groupSummary
-
-            anchors.left: parent.left
-            anchors.right: groupMeta.left
-            anchors.rightMargin: Theme.gapXs
-            anchors.verticalCenter: parent.verticalCenter
-            text: root.notificationCenter ? root.notificationCenter.summaryLabel(groupSection.latestEntry) : ""
-            size: "sm"
-            font.weight: Font.DemiBold
-            elide: Text.ElideRight
-            textFormat: Text.PlainText
-          }
-
-          UiText {
-            id: groupMeta
-
-            anchors.right: groupChevron.left
-            anchors.rightMargin: Theme.gapXs
-            anchors.verticalCenter: parent.verticalCenter
-            text: {
-              if (!groupSection.group) return "";
-              if (groupSection.group.entryCount === 1) return "1 message";
-              return `${groupSection.group.entryCount} messages`;
-            }
-            size: "xs"
-            tone: groupSection.group && groupSection.group.criticalUnreadCount > 0 ? "accent" : "subtle"
-          }
-
-          UiIcon {
-            id: groupChevron
-
-            visible: groupSection.expandable
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            width: Theme.iconGlyphSm
-            height: Theme.iconGlyphSm
-            name: groupSection.expanded ? "chevron-down" : "chevron-right"
-            strokeColor: Theme.textSubtle
-          }
-
-          MouseArea {
-            anchors.fill: parent
-            enabled: groupSection.expandable
-            onClicked: root.toggleNotificationGroup(groupSection.group.key)
-          }
-        }
-      }
-    }
-
-    Item {
-      width: parent.width
-      height: groupSection.expanded ? groupCards.implicitHeight : 0
-      clip: true
-
-      Behavior on height {
-        NumberAnimation {
-          duration: Theme.motionBase
-          easing.type: Easing.OutCubic
-        }
-      }
-
-      Column {
-        id: groupCards
-
-        width: parent.width
-        spacing: Theme.gapXs
-
-        Repeater {
-          model: groupSection.expandable && groupSection.group ? groupSection.group.entries : []
-
-          delegate: NotificationInboxCard {
-            required property var modelData
-            entry: modelData
-          }
-        }
-      }
-    }
   }
 
   UiSurface {
@@ -2280,7 +1001,7 @@ FocusScope {
               width: Math.floor((parent.width - parent.spacing) / 2)
               iconName: "bluetooth"
               title: root.bluetoothTileTitle()
-              active: !!(root.bluetoothAdapter && root.bluetoothAdapter.enabled)
+              active: bluetoothService.enabled
               menuOpen: root.expandedSection === "bluetooth"
               enabled: !root.tileMenuOpen
               onPrimaryClicked: root.toggleBluetoothEnabled()
@@ -2466,125 +1187,14 @@ FocusScope {
         onClicked: root.dismissOverlaySection()
       }
 
-      Patterns.HeroSheetPopover {
+      ControlCenterParts.NotificationsPopover {
         id: notificationMenuPanel
 
-        visible: root.notificationsOpen
+        controller: root
         width: content.width
         x: content.x
         y: content.y + notificationSection.y
         z: 1
-        iconName: root.notificationsCriticalUnread
-          ? "bell-ring"
-          : "bell"
-        title: "Notifications"
-        subtitle: root.unreadNotificationCount > 0 && root.notificationCenter
-          ? root.notificationCenter.unreadCountLabel()
-          : "You're all caught up."
-
-        Column {
-          width: parent.width
-          spacing: Theme.gapSm
-
-          Flickable {
-            id: notificationViewport
-
-            width: parent.width
-            height: Math.min(notificationContentColumn.implicitHeight, root.notificationViewportMaxHeight)
-            clip: true
-            contentWidth: width
-            contentHeight: notificationContentColumn.implicitHeight
-            boundsBehavior: Flickable.StopAtBounds
-
-            ScrollBar.vertical: ScrollBar {
-              policy: ScrollBar.AsNeeded
-            }
-
-            Column {
-              id: notificationContentColumn
-
-              width: notificationViewport.width
-              spacing: Theme.gapSm
-
-              Item {
-                width: parent.width
-                height: emptyNotificationsState.visible ? emptyNotificationsState.implicitHeight : 0
-                visible: root.notificationCount === 0
-
-                Column {
-                  id: emptyNotificationsState
-
-                  width: parent.width
-                  spacing: Theme.gapXs
-
-                  UiText {
-                    width: parent.width
-                    text: "No notifications"
-                    size: "sm"
-                    font.weight: Font.DemiBold
-                    horizontalAlignment: Text.AlignHCenter
-                  }
-
-                  UiText {
-                    width: parent.width
-                    text: "New messages will show up here."
-                    size: "xs"
-                    tone: "subtle"
-                    wrapMode: Text.WordWrap
-                    horizontalAlignment: Text.AlignHCenter
-                  }
-                }
-              }
-
-              Repeater {
-                model: root.notificationCenter ? root.notificationCenter.groupedEntries : []
-
-                delegate: Item {
-                  required property var modelData
-
-                  width: notificationContentColumn.width
-                  height: modelData && modelData.entryCount === 1
-                    ? singleNotificationCard.implicitHeight
-                    : groupedNotificationSection.implicitHeight
-
-                  NotificationInboxCard {
-                    id: singleNotificationCard
-
-                    visible: !!parent.modelData && parent.modelData.entryCount === 1
-                    width: parent.width
-                    entry: parent.modelData ? parent.modelData.latestEntry : null
-                  }
-
-                  NotificationGroupSection {
-                    id: groupedNotificationSection
-
-                    visible: !!parent.modelData && parent.modelData.entryCount > 1
-                    width: parent.width
-                    group: parent.modelData
-                  }
-                }
-              }
-            }
-          }
-
-          Column {
-            width: parent.width
-            spacing: 4
-            visible: root.notificationCount > 0
-
-            Controls.Divider {
-              horizontalInset: Theme.controlSm / 2
-            }
-
-            Controls.PopoverMenuAction {
-              width: parent.width
-              title: "Clear All"
-              onClicked: {
-                if (root.notificationCenter) root.notificationCenter.clearEntries();
-              }
-            }
-          }
-        }
       }
 
       Patterns.HeroSheetPopover {
@@ -2698,193 +1308,15 @@ FocusScope {
         }
       }
 
-      Patterns.HeroSheetPopover {
+      ControlCenterParts.WifiPopover {
         id: wifiMenuPanel
 
-        visible: root.expandedSection === "wifi"
+        controller: root
+        wifiService: wifiService
         width: content.width
         x: content.x
         y: content.y + quickTileStack.y + quickTileSection.y
         z: 1
-        iconName: "wifi"
-        title: root.wifiTileTitle()
-        subtitle: root.wifiHeroHint()
-        hasStatus: wifiService.ready
-        statusActive: wifiService.ready && wifiService.enabled && wifiService.hardwareEnabled
-        statusBusy: wifiService.busy
-        statusToggleEnabled: wifiService.ready && !wifiService.busy && wifiService.hardwareEnabled
-        onStatusClicked: root.toggleWifiEnabled()
-
-        Column {
-          width: parent.width
-          spacing: Theme.gapSm
-
-          Column {
-            width: parent.width
-            spacing: Theme.gapXs
-
-            UiText {
-              visible: root.wifiLoading && root.initialLoadDeadlineElapsed
-              text: "Loading Wi-Fi..."
-              size: "xs"
-              tone: "subtle"
-            }
-
-            UiText {
-              visible: !wifiService.hardwareEnabled
-              text: "Wi-Fi hardware is blocked."
-              size: "xs"
-              tone: "accent"
-              wrapMode: Text.WordWrap
-            }
-
-            UiText {
-              visible: wifiService.lastError !== ""
-              text: wifiService.lastError
-              size: "xs"
-              tone: "accent"
-              wrapMode: Text.WordWrap
-            }
-          }
-
-          Column {
-            width: parent.width
-            spacing: Theme.nudge
-            visible: wifiService.ready && wifiService.enabled && wifiService.networks.length > 0
-
-            Repeater {
-              model: wifiService.enabled ? Math.min(6, wifiService.networks.length) : 0
-
-              delegate: Controls.PopoverMenuAction {
-                id: wifiRow
-
-                required property int index
-                readonly property var network: wifiService.networks[index]
-
-                width: parent.width
-                visible: !!network
-                title: network ? network.ssid : ""
-                subtitle: network ? root.wifiNetworkSubtitle(network) : ""
-                actionText: network && !network.active ? "Connect" : ""
-                trailingIconName: network && network.active ? "check" : ""
-                trailingIconColor: Theme.text
-                active: network && network.active
-                enabled: !!network && !wifiService.busy
-                onClicked: root.beginWifiConnect(network)
-              }
-            }
-          }
-
-          UiSurface {
-            visible: root.wifiPasswordTarget !== ""
-            width: parent.width
-            implicitHeight: passwordColumn.implicitHeight + Theme.insetLg
-            tone: "panelOverlay"
-            outlined: false
-            radius: Theme.radiusLg
-            border.width: Theme.stroke
-            border.color: Qt.rgba(1, 1, 1, 0.08)
-
-            Column {
-              id: passwordColumn
-
-              width: parent.width - Theme.insetLg
-              anchors.left: parent.left
-              anchors.leftMargin: Theme.insetSm
-              anchors.top: parent.top
-              anchors.topMargin: Theme.insetSm
-              spacing: Theme.gapXs
-
-              UiText {
-                text: `Password required for ${root.wifiPasswordTarget}`
-                size: "xs"
-                font.weight: Font.DemiBold
-                wrapMode: Text.WordWrap
-              }
-
-              TextField {
-                id: wifiPasswordField
-
-                width: parent.width
-                height: Theme.controlMd
-                echoMode: TextInput.Password
-                color: Theme.text
-                placeholderText: "Network password"
-                placeholderTextColor: Theme.textSubtle
-                selectionColor: Theme.selection
-                selectedTextColor: Theme.textOnAccent
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.textSm
-                onTextChanged: root.wifiPassword = text
-                onVisibleChanged: {
-                  if (visible) {
-                    text = root.wifiPassword;
-                    forceActiveFocus();
-                  }
-                }
-                Binding on text {
-                  when: !wifiPasswordField.activeFocus
-                  value: root.wifiPassword
-                }
-                background: Rectangle {
-                  radius: Theme.radiusMd
-                  color: Theme.fieldAlt
-                  border.width: Theme.stroke
-                  border.color: Theme.divider
-                }
-              }
-
-              Row {
-                spacing: Theme.gapXs
-
-                Controls.Button {
-                  text: "Connect"
-                  active: true
-                  enabled: root.wifiPassword !== "" && !wifiService.busy
-                  onClicked: root.submitWifiPassword()
-                }
-
-                Controls.Button {
-                  text: "Cancel"
-                  onClicked: {
-                    root.wifiPasswordTarget = "";
-                    root.wifiPassword = "";
-                  }
-                }
-              }
-            }
-          }
-
-          UiText {
-            visible: wifiService.ready && wifiService.enabled && wifiService.networks.length === 0 && !wifiService.busy
-            text: "No networks available."
-            size: "xs"
-            tone: "subtle"
-          }
-
-          Column {
-            width: parent.width
-            spacing: 4
-
-            Controls.Divider {
-              horizontalInset: Theme.controlSm / 2
-            }
-
-            Controls.PopoverMenuAction {
-              width: parent.width
-              title: wifiService.enabled ? "Turn Off" : "Turn On"
-              enabled: wifiService.ready && !wifiService.busy
-              onClicked: wifiService.setEnabledState(!wifiService.enabled)
-            }
-
-            Controls.PopoverMenuAction {
-              width: parent.width
-              title: wifiService.busy ? "Refreshing" : "Rescan"
-              enabled: wifiService.ready && wifiService.enabled && !wifiService.busy
-              onClicked: wifiService.scan()
-            }
-          }
-        }
       }
 
       Patterns.HeroSheetPopover {
@@ -2899,10 +1331,10 @@ FocusScope {
         iconName: "bluetooth"
         title: root.bluetoothTileTitle()
         subtitle: root.bluetoothTileSubtitle()
-        hasStatus: !!root.bluetoothAdapter
-        statusActive: !!(root.bluetoothAdapter && root.bluetoothAdapter.enabled && !root.bluetoothBlocked)
-        statusBusy: root.bluetoothBusy
-        statusToggleEnabled: !!root.bluetoothAdapter && !root.bluetoothHardBlocked
+        hasStatus: !!bluetoothService.adapter
+        statusActive: !!(bluetoothService.adapter && bluetoothService.enabled && !bluetoothService.blocked)
+        statusBusy: bluetoothService.busy
+        statusToggleEnabled: !!bluetoothService.adapter && !bluetoothService.hardBlocked
         onStatusClicked: root.toggleBluetoothEnabled()
 
         Column {
@@ -2912,10 +1344,10 @@ FocusScope {
           Column {
             width: parent.width
             spacing: Theme.gapXs
-            visible: !root.bluetoothAdapter || root.bluetoothBlockedMessage() !== "" || root.bluetoothLastError !== ""
+            visible: !bluetoothService.adapter || root.bluetoothBlockedMessage() !== "" || bluetoothService.lastError !== ""
 
             UiText {
-              visible: !root.bluetoothAdapter
+              visible: !bluetoothService.adapter
               text: "No Bluetooth adapter found."
               size: "xs"
               tone: "accent"
@@ -2930,8 +1362,8 @@ FocusScope {
             }
 
             UiText {
-              visible: root.bluetoothLastError !== ""
-              text: root.bluetoothLastError
+              visible: bluetoothService.lastError !== ""
+              text: bluetoothService.lastError
               size: "xs"
               tone: "accent"
               wrapMode: Text.WordWrap
@@ -2941,7 +1373,7 @@ FocusScope {
           Column {
             width: parent.width
             spacing: 4
-            visible: root.bluetoothAdapter && root.bluetoothAdapter.enabled && root.bluetoothConnectedCount() > 0
+            visible: bluetoothService.enabled && bluetoothService.connectedCount > 0
 
             UiText {
               text: "Connected Devices"
@@ -2955,7 +1387,7 @@ FocusScope {
               spacing: 4
 
               Repeater {
-                model: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? root.bluetoothDevices : []
+                model: bluetoothService.enabled ? bluetoothService.devices : []
 
                 delegate: Controls.PopoverMenuAction {
                   id: connectedDeviceRow
@@ -2983,7 +1415,7 @@ FocusScope {
           Column {
             width: parent.width
             spacing: 4
-            visible: root.bluetoothAdapter && root.bluetoothAdapter.enabled && root.bluetoothAvailableCount() > 0
+            visible: bluetoothService.enabled && bluetoothService.availableCount > 0
 
             UiText {
               text: "Available Devices"
@@ -3013,7 +1445,7 @@ FocusScope {
                 spacing: 4
 
                 Repeater {
-                  model: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? root.bluetoothDevices : []
+                  model: bluetoothService.enabled ? bluetoothService.devices : []
 
                   delegate: Controls.PopoverMenuAction {
                     id: otherDeviceRow
@@ -3066,16 +1498,16 @@ FocusScope {
             Controls.PopoverMenuAction {
               width: parent.width
               title: root.bluetoothPrimaryActionText()
-              enabled: !!root.bluetoothAdapter && !root.bluetoothBusy && !root.bluetoothHardBlocked
+              enabled: !!bluetoothService.adapter && !bluetoothService.busy && !bluetoothService.hardBlocked
               onClicked: root.toggleBluetoothEnabled()
             }
 
             Controls.PopoverMenuAction {
               width: parent.width
-              title: root.bluetoothAdapter && root.bluetoothAdapter.discovering ? "Stop Scan" : "Scan"
-              enabled: !!root.bluetoothAdapter && root.bluetoothAdapter.enabled && !root.bluetoothBusy
+              title: bluetoothService.discovering ? "Stop Scan" : "Scan"
+              enabled: !!bluetoothService.adapter && bluetoothService.enabled && !bluetoothService.busy
               onClicked: {
-                if (root.bluetoothAdapter) root.bluetoothAdapter.discovering = !root.bluetoothAdapter.discovering;
+                bluetoothService.setDiscoveryEnabled(!bluetoothService.discovering);
               }
             }
           }

@@ -362,6 +362,57 @@ FocusScope {
     return bluetoothAdapter.discovering ? "Scanning" : "Ready";
   }
 
+  function bluetoothDeviceText(value) {
+    return String(value || "").trim();
+  }
+
+  function isBluetoothIdentifier(value) {
+    return /^([0-9A-F]{2}[:-]){5}[0-9A-F]{2}$/i.test(bluetoothDeviceText(value));
+  }
+
+  function bluetoothDeviceTitle(device) {
+    if (!device) return "";
+
+    const alias = bluetoothDeviceText(device.name);
+    const deviceName = bluetoothDeviceText(device.deviceName);
+    const address = bluetoothDeviceText(device.address);
+
+    if (alias !== "" && !isBluetoothIdentifier(alias)) return alias;
+    if (deviceName !== "" && !isBluetoothIdentifier(deviceName)) return deviceName;
+    if (alias !== "") return alias;
+    if (deviceName !== "") return deviceName;
+    return address;
+  }
+
+  function bluetoothDeviceAddressLabel(device) {
+    if (!device) return "";
+
+    const title = bluetoothDeviceTitle(device);
+    const address = bluetoothDeviceText(device.address);
+    if (address === "" || title === address) return "";
+    return address;
+  }
+
+  function bluetoothConnectedSubtitle(device) {
+    if (!device) return "";
+
+    const parts = [];
+    parts.push(device.batteryAvailable ? `${Math.round(device.battery * 100)}% battery` : "Connected");
+
+    const addressLabel = bluetoothDeviceAddressLabel(device);
+    if (addressLabel !== "") parts.push(addressLabel);
+    return parts.join(" - ");
+  }
+
+  function bluetoothAvailableSubtitle(device) {
+    if (!device) return "";
+
+    const parts = [device.paired || device.bonded ? "Paired" : "Available"];
+    const addressLabel = bluetoothDeviceAddressLabel(device);
+    if (addressLabel !== "") parts.push(addressLabel);
+    return parts.join(" - ");
+  }
+
   function bluetoothBlockedMessage() {
     if (!bluetoothBlocked) return "";
     if (bluetoothBusy && bluetoothEnableAfterUnblock) return "Unblocking Bluetooth...";
@@ -2855,10 +2906,8 @@ FocusScope {
 
                   visible: !!(device && device.connected)
                   width: parent.width
-                  title: device ? (device.deviceName || device.name || device.address) : ""
-                  subtitle: device
-                    ? (device.batteryAvailable ? `${Math.round(device.battery * 100)}% battery` : "Connected")
-                    : ""
+                  title: root.bluetoothDeviceTitle(device)
+                  subtitle: root.bluetoothConnectedSubtitle(device)
                   actionText: busyState ? "Working" : "Disconnect"
                   active: true
                   enabled: visible && !busyState
@@ -2915,8 +2964,8 @@ FocusScope {
 
                     visible: !!(device && !device.connected)
                     width: parent.width
-                    title: device ? (device.deviceName || device.name || device.address) : ""
-                    subtitle: device ? (device.paired || device.bonded ? "Paired" : "Available") : ""
+                    title: root.bluetoothDeviceTitle(device)
+                    subtitle: root.bluetoothAvailableSubtitle(device)
                     actionText: busyState ? "Working" : (device && (device.paired || device.bonded) ? "Connect" : "Pair")
                     enabled: visible && !busyState
                     onClicked: {

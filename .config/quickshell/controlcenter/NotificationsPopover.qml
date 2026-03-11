@@ -3,7 +3,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import Quickshell.Services.Notifications
-import Quickshell.Widgets
 import "../theme"
 import "../ui/primitives"
 import "../ui/controls" as Controls
@@ -79,7 +78,7 @@ Patterns.HeroSheetPopover {
             strokeColor: card.critical ? Theme.textOnAccent : Theme.text
           }
 
-          IconImage {
+          ResolvedIconImage {
             id: appIcon
 
             visible: appIcon.source !== ""
@@ -87,7 +86,9 @@ Patterns.HeroSheetPopover {
             implicitSize: Theme.iconGlyphSm
             asynchronous: true
             mipmap: true
-            source: card.entry && card.entry.appIcon !== "" ? String(card.entry.appIcon) : ""
+            icon: card.entry ? String(card.entry.appIcon || "") : ""
+            desktopEntry: card.entry ? String(card.entry.desktopEntry || "") : ""
+            appName: card.entry ? String(card.entry.appName || "") : ""
           }
         }
 

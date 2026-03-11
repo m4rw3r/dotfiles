@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell.Services.SystemTray
-import Quickshell.Widgets
 import "theme"
 import "ui/primitives"
 
@@ -235,13 +234,16 @@ FocusScope {
       strokeColor: button.attention ? Theme.textOnAccent : Theme.text
     }
 
-    IconImage {
+    ResolvedIconImage {
       visible: button.useTrayImage
       anchors.centerIn: primarySlot
       implicitSize: Theme.iconGlyphMd
       asynchronous: true
       mipmap: true
-      source: button.item && button.item.icon !== "" ? String(button.item.icon) : "image://icon/application-x-executable"
+      icon: button.item ? String(button.item.icon || "") : ""
+      desktopEntry: button.item ? String(button.item.id || "") : ""
+      appName: button.item ? String(button.item.title || "") : ""
+      fallback: "application-x-executable"
     }
 
     UiIcon {

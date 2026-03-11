@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell.Services.Notifications
-import Quickshell.Widgets
 import "theme"
 import "ui/controls" as Controls
 import "ui/primitives"
@@ -102,7 +101,7 @@ FocusScope {
             strokeColor: card.critical ? Theme.textOnAccent : Theme.text
           }
 
-          IconImage {
+          ResolvedIconImage {
             id: toastIcon
 
             visible: source !== ""
@@ -110,7 +109,9 @@ FocusScope {
             implicitSize: Theme.iconGlyphMd
             asynchronous: true
             mipmap: true
-            source: card.entry ? card.entry.appIcon : ""
+            icon: card.entry ? String(card.entry.appIcon || "") : ""
+            desktopEntry: card.entry ? String(card.entry.desktopEntry || "") : ""
+            appName: card.entry ? String(card.entry.appName || "") : ""
           }
         }
 

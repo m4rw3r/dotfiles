@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.impl as QtQuickControlsImpl
+import "../../icons" as Icons
 import "../../theme"
 
 Item {
@@ -13,15 +14,7 @@ Item {
   implicitWidth: Theme.iconGlyphSm
   implicitHeight: Theme.iconGlyphSm
 
-  readonly property var aliases: ({
-    "restart": "rotate-cw",
-    "logout": "log-out",
-    "speaker": "volume-2",
-    "speaker-muted": "volume-x",
-    "battery": "battery-medium"
-  })
-  readonly property string resolvedName: aliases[name] !== undefined ? aliases[name] : name
-  readonly property url sourceUrl: resolvedName === "" ? "" : Qt.resolvedUrl(`../../icons/${resolvedName}.svg`)
+  readonly property url sourceUrl: Icons.IconResolver.glyphSource(name)
 
   QtQuickControlsImpl.IconImage {
     anchors.fill: parent

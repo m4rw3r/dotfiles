@@ -5,7 +5,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
-import Quickshell.Widgets
 import "theme"
 import "ui/primitives"
 
@@ -972,7 +971,7 @@ Item {
                           property int absoluteIndex: pageItem.pageBase + index
                           readonly property var entry: root.launcherResults[absoluteIndex]
                           readonly property bool hasEntry: !!entry
-                          readonly property string entryIcon: hasEntry && entry.icon ? entry.icon : "application-x-executable"
+                          readonly property string entryIcon: hasEntry && entry.icon ? String(entry.icon) : ""
                           readonly property string entryName: hasEntry && entry.name ? entry.name : ""
                           readonly property string entryGenericName: hasEntry && entry.genericName ? entry.genericName : ""
                           property bool selected: root.launcherSelectedIndex === absoluteIndex
@@ -1004,12 +1003,15 @@ Item {
                               }
                             }
 
-                            IconImage {
+                            ResolvedIconImage {
                               anchors.horizontalCenter: parent.horizontalCenter
                               implicitSize: tile.selected ? Theme.launcherTileIconMd : Theme.launcherTileIconSm
                               asynchronous: true
                               mipmap: true
-                              source: `image://icon/${tile.entryIcon}`
+                              icon: tile.entryIcon
+                              desktopEntry: tile.hasEntry ? String(tile.entry.id || "") : ""
+                              appName: tile.entryName
+                              fallback: "application-x-executable"
                             }
 
                             UiText {

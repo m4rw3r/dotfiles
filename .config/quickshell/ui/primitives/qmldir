@@ -1,4 +1,5 @@
 UiIcon 1.0 UiIcon.qml
+ResolvedIconImage 1.0 ResolvedIconImage.qml
 UiScrim 1.0 UiScrim.qml
 UiSurface 1.0 UiSurface.qml
 UiText 1.0 UiText.qml

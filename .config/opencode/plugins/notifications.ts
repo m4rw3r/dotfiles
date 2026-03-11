@@ -21,6 +21,7 @@ interface Info {
 type SendNotification = (ctx: Context, info: Info) => Promise<void>;
 
 let sendNotificationImpl: SendNotification = bellNotification;
+let notifySendCommand: string | undefined = undefined;
 
 if (process.env.OPENCODE_NOTIFY?.toLowerCase() === "false") {
   sendNotificationImpl = async () => {};
@@ -31,6 +32,9 @@ else if (process.env.TERM?.includes("kitty")) {
 else if (process.platform === "linux" && os.release().includes("microsoft")) {
   sendNotificationImpl = wslNotification;
 }
+else if (process.platform === "linux" && (notifySendCommand = (Bun.which("notify-send-focus") ?? Bun.which("notify-send")))) {
+  sendNotificationImpl = linuxNotification;
+}
 else if (process.platform === "darwin") {
   sendNotificationImpl = macosNotification;
 }
@@ -39,7 +43,6 @@ async function bellNotification(): Promise<void> {
   await Bun.write(Bun.stdout, "\x07");
 }
 
-const KITTY_ALLOWED_CHARS = /[a-zA-Z0-9\-_\/+.,(){}[\]*&^%$#@!\`~]/;
 const NOTIFICATION_GROUP = "OpenCode";
 const THROTTLE_MS = 5000;
 /**
@@ -74,6 +77,33 @@ async function kittyNotification(ctx: Context, info: Info): Promise<void> {
   const bodyEscape = `\x1b]99;${props}:d=1:p=body;${info.body}\x1b\\`;
 
   await Bun.write(Bun.stdout, titleEscape + bodyEscape);
+}
+
+async function linuxNotification(ctx: Context, info: Info): Promise<void> {
+  if (!notifySendCommand) {
+    return bellNotification();
+  }
+
+  const title = info.title ?? ctx.projectName;
+
+  Bun.spawn({
+    cmd: [
+      notifySendCommand,
+      ...(notifySendCommand.includes("notify-send-focus") ? [
+        "--pid",
+        `${process.pid}`,
+      ] : []),
+      "--app-name",
+      NOTIFICATION_GROUP,
+      "--icon",
+      "utilities-terminal",
+      title,
+      info.body,
+    ],
+    stdin: "ignore",
+    stdout: "ignore",
+    stderr: "ignore",
+  });
 }
 
 /**

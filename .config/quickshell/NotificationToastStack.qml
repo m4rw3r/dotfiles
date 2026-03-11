@@ -32,6 +32,7 @@ FocusScope {
     readonly property int timeoutMs: notificationCenter ? notificationCenter.toastTimeoutMs(entry) : 0
     readonly property int remainingMs: notificationCenter ? notificationCenter.toastRemainingMs(entry) : 0
     readonly property bool autoDismiss: timeoutMs > 0
+    readonly property bool actionable: primaryActionLabel !== ""
 
     function dismissIfExpired() {
       if (notificationCenter && autoDismiss && !!entry && remainingMs <= 0) notificationCenter.dismissToast(toastUid);
@@ -51,6 +52,15 @@ FocusScope {
       NumberAnimation {
         duration: Theme.motionFast
         easing.type: Easing.OutCubic
+      }
+    }
+
+    MouseArea {
+      anchors.fill: parent
+      anchors.rightMargin: dismissButton.width
+      enabled: card.actionable
+      onClicked: {
+        if (card.notificationCenter) card.notificationCenter.invokePrimaryAction(card.toastUid);
       }
     }
 
@@ -164,21 +174,6 @@ FocusScope {
         }
       }
 
-      Row {
-        visible: actionButton.visible
-        spacing: Theme.gapXs
-
-        Controls.Button {
-          id: actionButton
-
-          visible: card.primaryActionLabel !== ""
-          compact: true
-          text: card.primaryActionLabel
-          onClicked: {
-            if (card.notificationCenter) card.notificationCenter.invokePrimaryAction(card.toastUid);
-          }
-        }
-      }
     }
 
     Timer {

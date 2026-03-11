@@ -2224,11 +2224,17 @@ FocusScope {
             anchors.verticalCenter: parent.verticalCenter
             spacing: Theme.nudge
 
-            Row {
+            Item {
               width: parent.width
+              height: sourceLabel.implicitHeight
 
               UiText {
-                width: Math.max(0, parent.width - unreadBadge.width - (unreadBadge.visible ? Theme.gapXs : 0))
+                id: sourceLabel
+
+                anchors.left: parent.left
+                anchors.right: unreadBadge.left
+                anchors.rightMargin: unreadBadge.visible ? Theme.gapXs : 0
+                anchors.verticalCenter: parent.verticalCenter
                 text: root.footerNotificationEntry && root.notificationCenter
                   ? root.notificationCenter.appLabel(root.footerNotificationEntry)
                   : "Notifications"
@@ -2242,11 +2248,12 @@ FocusScope {
                 id: unreadBadge
 
                 visible: root.unreadNotificationCount > 0
-                width: visible ? Math.max(Theme.controlSm, unreadBadgeLabel.implicitWidth + Theme.gapSm) : 0
-                height: visible ? Theme.controlSm - Theme.gapXs : 0
+                width: visible ? Math.max(Theme.iconGlyphMd, unreadBadgeLabel.implicitWidth + Theme.gapSm) : 0
+                height: visible ? Theme.iconGlyphMd : 0
                 radius: height / 2
                 color: root.notificationsCriticalUnread ? Theme.accent : Theme.toggleOn
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.right: parent.right
+                y: Math.round((notificationsFooter.height - height) / 2) - 7
 
                 UiText {
                   id: unreadBadgeLabel

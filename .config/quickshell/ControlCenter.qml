@@ -205,6 +205,11 @@ FocusScope {
 
   function dismissOverlaySection() {
     if (!overlayDismissActive) return;
+    if (notificationsOpen) {
+      toggleNotificationsSection();
+      return;
+    }
+
     toggleSection(expandedSection);
   }
 
@@ -655,7 +660,10 @@ FocusScope {
     }
   }
 
-  Keys.onEscapePressed: root.closeRequested()
+  Keys.onEscapePressed: {
+    if (overlayDismissActive) dismissOverlaySection();
+    else root.closeRequested();
+  }
 
   Timer {
     id: powerConfirmTimer

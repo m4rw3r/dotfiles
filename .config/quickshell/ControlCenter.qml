@@ -67,6 +67,8 @@ FocusScope {
     Theme.controlMd * 4,
     Math.min(Theme.controlMd * 8, parent ? parent.height * 0.36 : Theme.controlMd * 6)
   )
+  readonly property int bluetoothScanVisibleRowCount: 6
+  readonly property real bluetoothScanViewportMaxHeight: Theme.controlMd * bluetoothScanVisibleRowCount + 4 * (bluetoothScanVisibleRowCount - 1)
   readonly property bool powerMenuOpen: expandedSection === "power"
   readonly property bool outputMenuOpen: expandedSection === "outputs"
   readonly property bool selectorPopoverOpen: expandedSection === "profile" || (expandedSection === "lighting" && lightingService.commandAvailable)
@@ -75,6 +77,7 @@ FocusScope {
   readonly property var audioSink: Pipewire.defaultAudioSink
   readonly property var battery: UPower.displayDevice
   property var bluetoothAdapter: null
+  readonly property var bluetoothDevices: bluetoothAdapter && bluetoothAdapter.devices ? bluetoothAdapter.devices.values : []
   readonly property bool bluetoothBlocked: !!bluetoothAdapter
     && (bluetoothAdapter.state === BluetoothAdapterState.Blocked || bluetoothSoftBlocked || bluetoothHardBlocked)
   readonly property bool batteryAvailable: battery && battery.isPresent && battery.isLaptopBattery
@@ -301,20 +304,20 @@ FocusScope {
   }
 
   function bluetoothConnectedCount() {
-    if (!bluetoothAdapter || !bluetoothAdapter.devices) return 0;
+    if (!bluetoothAdapter || !bluetoothAdapter.enabled) return 0;
     let count = 0;
-    for (let i = 0; i < bluetoothAdapter.devices.count; i += 1) {
-      const device = bluetoothAdapter.devices.get(i);
+    for (let i = 0; i < bluetoothDevices.length; i += 1) {
+      const device = bluetoothDevices[i];
       if (device && device.connected) count += 1;
     }
     return count;
   }
 
   function bluetoothAvailableCount() {
-    if (!bluetoothAdapter || !bluetoothAdapter.devices) return 0;
+    if (!bluetoothAdapter || !bluetoothAdapter.enabled) return 0;
     let count = 0;
-    for (let i = 0; i < bluetoothAdapter.devices.count; i += 1) {
-      const device = bluetoothAdapter.devices.get(i);
+    for (let i = 0; i < bluetoothDevices.length; i += 1) {
+      const device = bluetoothDevices[i];
       if (device && !device.connected) count += 1;
     }
     return count;
@@ -2603,7 +2606,7 @@ FocusScope {
 
         Column {
           width: parent.width
-          spacing: Theme.gapMd
+          spacing: Theme.gapSm
 
           Column {
             width: parent.width
@@ -2792,7 +2795,7 @@ FocusScope {
 
         Column {
           width: parent.width
-          spacing: Theme.gapMd
+          spacing: Theme.gapSm
 
           Column {
             width: parent.width
@@ -2824,7 +2827,7 @@ FocusScope {
 
           Column {
             width: parent.width
-            spacing: 6
+            spacing: 4
             visible: root.bluetoothAdapter && root.bluetoothAdapter.enabled && root.bluetoothConnectedCount() > 0
 
             UiText {
@@ -2839,7 +2842,7 @@ FocusScope {
               spacing: 4
 
               Repeater {
-                model: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? root.bluetoothAdapter.devices : null
+                model: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? root.bluetoothDevices : []
 
                 delegate: Controls.PopoverMenuAction {
                   id: connectedDeviceRow
@@ -2852,7 +2855,7 @@ FocusScope {
                   width: parent.width
                   title: device ? (device.deviceName || device.name || device.address) : ""
                   subtitle: device
-                    ? (device.batteryAvailable ? `${Math.round(device.battery)}% battery` : "Connected")
+                    ? (device.batteryAvailable ? `${Math.round(device.battery * 100)}% battery` : "Connected")
                     : ""
                   actionText: busyState ? "Working" : "Disconnect"
                   active: true
@@ -2868,7 +2871,7 @@ FocusScope {
 
           Column {
             width: parent.width
-            spacing: 6
+            spacing: 4
             visible: root.bluetoothAdapter && root.bluetoothAdapter.enabled && root.bluetoothAvailableCount() > 0
 
             UiText {
@@ -2878,32 +2881,67 @@ FocusScope {
               font.weight: Font.DemiBold
             }
 
-            Column {
+            Flickable {
+              id: bluetoothScanViewport
+
               width: parent.width
-              spacing: 4
+              height: Math.min(bluetoothScanContent.implicitHeight, root.bluetoothScanViewportMaxHeight)
+              clip: true
+              contentWidth: width
+              contentHeight: bluetoothScanContent.implicitHeight
+              boundsBehavior: Flickable.StopAtBounds
 
-              Repeater {
-                model: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? root.bluetoothAdapter.devices : null
+              ScrollBar.vertical: ScrollBar {
+                policy: ScrollBar.AsNeeded
+              }
 
-                delegate: Controls.PopoverMenuAction {
-                  id: otherDeviceRow
+              Column {
+                id: bluetoothScanContent
 
-                  required property var modelData
-                  readonly property var device: modelData
-                  readonly property bool busyState: !!(device && (device.pairing || device.state === BluetoothDeviceState.Connecting))
+                width: bluetoothScanViewport.width
+                spacing: 4
 
-                  visible: !!(device && !device.connected)
-                  width: parent.width
-                  title: device ? (device.deviceName || device.name || device.address) : ""
-                  subtitle: device ? (device.paired || device.bonded ? "Paired" : "Available") : ""
-                  actionText: busyState ? "Working" : (device && (device.paired || device.bonded) ? "Connect" : "Pair")
-                  enabled: visible && !busyState
-                  onClicked: {
-                    if (busyState) return;
-                    if (device.paired || device.bonded) device.connect();
-                    else device.pair();
+                Repeater {
+                  model: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? root.bluetoothDevices : []
+
+                  delegate: Controls.PopoverMenuAction {
+                    id: otherDeviceRow
+
+                    required property var modelData
+                    readonly property var device: modelData
+                    readonly property bool busyState: !!(device && (device.pairing || device.state === BluetoothDeviceState.Connecting))
+
+                    visible: !!(device && !device.connected)
+                    width: parent.width
+                    title: device ? (device.deviceName || device.name || device.address) : ""
+                    subtitle: device ? (device.paired || device.bonded ? "Paired" : "Available") : ""
+                    actionText: busyState ? "Working" : (device && (device.paired || device.bonded) ? "Connect" : "Pair")
+                    enabled: visible && !busyState
+                    onClicked: {
+                      if (busyState) return;
+                      if (device.paired || device.bonded) device.connect();
+                      else device.pair();
+                    }
                   }
                 }
+              }
+            }
+
+            Item {
+              width: parent.width
+              height: chevronIndicator.visible ? Theme.iconGlyphSm : 0
+
+              UiIcon {
+                id: chevronIndicator
+
+                visible: bluetoothScanViewport.contentHeight > bluetoothScanViewport.height
+                  && bluetoothScanViewport.contentY + bluetoothScanViewport.height < bluetoothScanViewport.contentHeight - 1
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: Theme.iconGlyphSm
+                height: Theme.iconGlyphSm
+                name: "chevron-down"
+                strokeColor: Theme.textSubtle
+                opacity: 0.8
               }
             }
           }

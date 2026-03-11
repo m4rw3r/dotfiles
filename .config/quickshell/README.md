@@ -81,6 +81,7 @@ The gallery opens as its own overlay and automatically closes the launcher or sh
 - If the control center opens while the tray is visible, the tray shifts left and becomes a companion rail beside it.
 - If the tray was opened from the peek, closing the control center leaves the tray expanded in the top-right corner.
 - If the tray was opened only from the control-center button, closing the control center collapses it back to a peek or hides it.
+- In expanded mode, menu-capable tray items expose a separate menu affordance so the default action and the context menu are both reachable.
 
 From a shell, you can exercise the tray directly:
 

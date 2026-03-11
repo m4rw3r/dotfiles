@@ -37,6 +37,9 @@ After this change, the shell will have a Quickshell-backed system tray that does
 - Observation: `SystemTrayItem.icon` is an image source string, not the local glyph name format used by `UiIcon`.
   Evidence: the first tray implementation rendered local glyph placeholders instead of real application icons until `TrayRail.qml` switched real tray items to `Quickshell.Widgets.IconImage`.
 
+- Observation: relying on long-press or right-click alone is not enough for tray menus on this touch-first shell.
+  Evidence: after initial implementation, the tray could technically open menus, but there was no obvious explicit affordance for menu-capable items that also expose a default action.
+
 ## Decision Log
 
 - Decision: the tray will be a separate vertical rail rather than another section inside `ControlCenter.qml`.
@@ -66,6 +69,10 @@ After this change, the shell will have a Quickshell-backed system tray that does
 - Decision: use native tray menus first through `SystemTrayItem.display(...)` rather than a custom DBus menu renderer.
   Rationale: native menus are already exposed by Quickshell and are sufficient for a first pass; custom menu rendering remains a fallback only if the native menus prove unusable on this machine.
   Date/Author: 2026-03-10 / OpenCode
+
+- Decision: expanded tray items with menus should expose a dedicated secondary menu hit target instead of overloading the primary tap gesture.
+  Rationale: the user needs both the default action and the context menu to be reachable without hidden gestures, especially on a tablet-style device.
+  Date/Author: 2026-03-10 / user and OpenCode
 
 ## Outcomes & Retrospective
 
@@ -252,4 +259,4 @@ In `quickshell/TrayRail.qml`, define a reusable content component with this inte
 
 `TrayRail.qml` must import `Quickshell.Services.SystemTray` and use `SystemTray.items` as the single source of tray data. Use `Status.NeedsAttention`, `Status.Active`, and `Status.Passive` to sort items into urgent, active, and passive groups. Use existing theme tokens from `quickshell/theme/Theme.qml` for spacing, corner radius, and touch-target sizing. Do not add a permanent tray strip to the launcher or to the main shell edge.
 
-Revision note: updated on 2026-03-10 after implementation to record the final two-host tray approach, lint constraints around `SystemTray.items`, the real tray-icon rendering fix via `IconImage`, and the completed smoke-test steps.
+Revision note: updated on 2026-03-10 after implementation to record the final two-host tray approach, lint constraints around `SystemTray.items`, the real tray-icon rendering fix via `IconImage`, the split default-action/menu tray interaction, and the completed smoke-test steps.

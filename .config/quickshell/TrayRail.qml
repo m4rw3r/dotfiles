@@ -122,14 +122,19 @@ FocusScope {
     property bool placeholder: false
     property bool holdTriggered: false
     property string iconName: ""
+    readonly property bool showSecondaryArea: root.expanded && !button.placeholder && !button.peekButton && !!button.item && button.item.hasMenu
+    readonly property int secondaryWidth: showSecondaryArea ? 28 : 0
     readonly property bool useTrayImage: !button.placeholder && button.iconName === "" && !!button.item
+
+    signal primaryTriggered()
+    signal secondaryTriggered()
 
     width: railColumn.width
     height: Theme.controlMd + Theme.gapXs
     radius: Theme.radiusMd
     tone: attention ? "accent" : "field"
     outlined: false
-    pressed: touchArea.pressed
+    pressed: primaryTouch.pressed || secondaryTouch.pressed
     opacity: item || placeholder ? 1 : 0.5
     border.width: Theme.stroke
     border.color: attention ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.08)
@@ -139,9 +144,89 @@ FocusScope {
       return pressed ? Theme.fieldPressed : Theme.field;
     }
 
+    function triggerPrimary(buttonCode) {
+      if (button.peekButton) {
+        root.expandRequested();
+        return;
+      }
+
+      if (button.placeholder || !button.item) {
+        button.primaryTriggered();
+        return;
+      }
+
+      if (buttonCode === Qt.RightButton && button.item.hasMenu) {
+        root.openMenu(button.item, button.showSecondaryArea ? secondarySlot : button);
+        return;
+      }
+
+      if (button.item.onlyMenu) {
+        if (button.item.hasMenu) root.openMenu(button.item, button.showSecondaryArea ? secondarySlot : button);
+        return;
+      }
+
+      button.item.activate();
+    }
+
+    function triggerSecondary() {
+      if (button.placeholder || !button.item) {
+        button.secondaryTriggered();
+        return;
+      }
+
+      if (button.item.hasMenu) {
+        root.openMenu(button.item, secondarySlot);
+        return;
+      }
+
+      if (!button.item.onlyMenu) button.item.activate();
+    }
+
+    Rectangle {
+      visible: button.showSecondaryArea
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      anchors.right: parent.right
+      width: button.secondaryWidth
+      radius: Theme.radiusMd
+      color: secondaryTouch.pressed
+        ? (button.attention ? Theme.accentStrong : Theme.fieldAlt)
+        : "transparent"
+    }
+
+    Rectangle {
+      visible: button.showSecondaryArea
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      anchors.right: parent.right
+      anchors.rightMargin: button.secondaryWidth
+      width: Theme.stroke
+      color: button.attention ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.08)
+    }
+
+    Item {
+      id: primarySlot
+
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.rightMargin: button.secondaryWidth
+    }
+
+    Item {
+      id: secondarySlot
+
+      visible: button.showSecondaryArea
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      anchors.right: parent.right
+      width: button.secondaryWidth
+    }
+
     UiIcon {
       visible: !button.useTrayImage
-      anchors.centerIn: parent
+      anchors.centerIn: primarySlot
       width: Theme.iconGlyphMd
       height: Theme.iconGlyphMd
       name: button.iconName !== ""
@@ -152,11 +237,20 @@ FocusScope {
 
     IconImage {
       visible: button.useTrayImage
-      anchors.centerIn: parent
+      anchors.centerIn: primarySlot
       implicitSize: Theme.iconGlyphMd
       asynchronous: true
       mipmap: true
       source: button.item && button.item.icon !== "" ? String(button.item.icon) : "image://icon/application-x-executable"
+    }
+
+    UiIcon {
+      visible: button.showSecondaryArea
+      anchors.centerIn: secondarySlot
+      width: Theme.iconGlyphSm
+      height: Theme.iconGlyphSm
+      name: "more-horizontal"
+      strokeColor: button.attention ? Theme.textOnAccent : Theme.textMuted
     }
 
     Rectangle {
@@ -172,39 +266,62 @@ FocusScope {
     }
 
     MouseArea {
-      id: touchArea
+      id: primaryTouch
 
-      anchors.fill: parent
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.rightMargin: button.secondaryWidth
       enabled: button.placeholder || !!button.item
       acceptedButtons: Qt.LeftButton | Qt.RightButton
       pressAndHoldInterval: 300
 
-      onPressed: button.holdTriggered = false
+      onPressed: mouse => {
+        button.holdTriggered = false;
+        if (!button.item || button.peekButton) return;
+        if (mouse.button === Qt.RightButton && button.item.hasMenu) {
+          button.holdTriggered = true;
+          root.openMenu(button.item, button.showSecondaryArea ? secondarySlot : button);
+          mouse.accepted = true;
+        }
+      }
 
       onPressAndHold: {
-        if (!button.item || button.peekButton) return;
+        if (!button.item || button.peekButton || !button.item.hasMenu) return;
         button.holdTriggered = true;
-        root.openMenu(button.item, button);
+        root.openMenu(button.item, button.showSecondaryArea ? secondarySlot : button);
       }
 
       onClicked: mouse => {
         if (button.holdTriggered) return;
-        if (button.peekButton) {
-          root.expandRequested();
+        button.triggerPrimary(mouse.button);
+      }
+    }
+
+    MouseArea {
+      id: secondaryTouch
+
+      visible: button.showSecondaryArea
+      anchors.top: parent.top
+      anchors.bottom: parent.bottom
+      anchors.right: parent.right
+      width: button.secondaryWidth
+      enabled: button.showSecondaryArea
+      acceptedButtons: Qt.LeftButton | Qt.RightButton
+      onPressed: mouse => {
+        if (mouse.button === Qt.RightButton) {
+          button.holdTriggered = true;
+          button.triggerSecondary();
+          mouse.accepted = true;
           return;
         }
 
-        if (!button.item) {
-          root.dismissRequested();
-          return;
-        }
-
-        if (mouse.button === Qt.RightButton || button.item.onlyMenu) {
-          root.openMenu(button.item, button);
-          return;
-        }
-
-        button.item.activate();
+        button.holdTriggered = false;
+      }
+      onClicked: {
+        if (button.holdTriggered) return;
+        button.triggerSecondary();
       }
     }
   }
@@ -213,7 +330,7 @@ FocusScope {
     id: railSurface
 
     width: implicitWidth
-    implicitWidth: root.expanded ? 76 : 60
+    implicitWidth: root.expanded ? 104 : 60
     implicitHeight: railColumn.implicitHeight + Theme.insetSm * 2
     tone: "panelOverlay"
     outlined: false
@@ -231,11 +348,29 @@ FocusScope {
       spacing: Theme.gapXs
 
       TrayItemButton {
-        visible: root.showPlaceholder
+        visible: root.showPlaceholder && !root.expanded
         item: null
         attention: root.hasAttention
         peekButton: !root.expanded
         placeholder: true
+      }
+
+      TrayItemButton {
+        visible: root.expanded
+        item: null
+        attention: false
+        peekButton: false
+        placeholder: true
+        iconName: "x"
+        onPrimaryTriggered: root.dismissRequested()
+      }
+
+      Rectangle {
+        visible: root.expanded && (root.hasAnyItems || root.passiveCount > 0)
+        width: parent.width
+        height: 1
+        color: Theme.divider
+        opacity: 0.55
       }
 
       Repeater {
@@ -287,11 +422,7 @@ FocusScope {
         peekButton: false
         placeholder: true
         iconName: root.showPassive ? "chevron-up" : "more-horizontal"
-
-        MouseArea {
-          anchors.fill: parent
-          onClicked: root.showPassive = !root.showPassive
-        }
+        onPrimaryTriggered: root.showPassive = !root.showPassive
       }
 
       Repeater {
@@ -316,19 +447,6 @@ FocusScope {
         horizontalAlignment: Text.AlignHCenter
       }
 
-      TrayItemButton {
-        visible: root.expanded
-        item: null
-        attention: false
-        peekButton: false
-        placeholder: true
-        iconName: "x"
-
-        MouseArea {
-          anchors.fill: parent
-          onClicked: root.dismissRequested()
-        }
-      }
     }
   }
 }

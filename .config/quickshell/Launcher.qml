@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQml
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -48,6 +49,10 @@ Item {
 
   function hideInputPanel() {
     if (inputMethod) inputMethod.hide();
+  }
+
+  function withAlpha(color, alpha) {
+    return Qt.rgba(color.r, color.g, color.b, alpha);
   }
 
   function screenName(screen) {
@@ -617,6 +622,10 @@ Item {
         LayoutMirroring.enabled: false
         LayoutMirroring.childrenInherit: true
         Keys.priority: Keys.BeforeItem
+        readonly property int backdropOuterInset: Theme.gapLg + Theme.gapXs
+        readonly property int backdropCoreInset: Theme.gapXs
+        readonly property int backdropRadius: Theme.radiusLg + Theme.gapSm
+        readonly property int backdropBlurPadding: Theme.gapLg + Theme.gapSm
 
         Keys.onPressed: function(event) {
           if (!launcherWindow.visible || searchInput.activeFocus) return;
@@ -686,6 +695,38 @@ Item {
           anchors.fill: parent
         }
 
+        Item {
+          id: launcherBackdropSource
+          anchors.fill: launcherColumn
+          anchors.margins: -(launcherContent.backdropOuterInset + launcherContent.backdropBlurPadding)
+          visible: false
+
+          Rectangle {
+            anchors.fill: parent
+            anchors.margins: launcherContent.backdropBlurPadding + launcherContent.backdropOuterInset - launcherContent.backdropCoreInset
+            radius: launcherContent.backdropRadius
+            color: root.withAlpha(Theme.panelOverlay, 0.52)
+          }
+        }
+
+        MultiEffect {
+          anchors.fill: launcherBackdropSource
+          source: launcherBackdropSource
+          autoPaddingEnabled: false
+          blurEnabled: true
+          blur: 1.0
+          blurMax: 64
+        }
+
+        Rectangle {
+          anchors.fill: launcherColumn
+          anchors.margins: -launcherContent.backdropCoreInset
+          radius: launcherContent.backdropRadius
+          color: root.withAlpha(Theme.panelOverlay, 0.9)
+          border.width: 1
+          border.color: root.withAlpha(Theme.border, 0.65)
+        }
+
         Column {
           id: launcherColumn
           anchors.fill: parent
@@ -697,7 +738,7 @@ Item {
 
             UiSurface {
               id: searchBar
-              width: Math.max(0, parent.width - pagerArea.arrowGutter * 2)
+              width: Math.max(0, pagerArea.tileWidth * 2 + pagerArea.tileSpacing)
               height: parent.height
               anchors.horizontalCenter: parent.horizontalCenter
               tone: "field"

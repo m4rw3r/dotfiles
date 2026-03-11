@@ -1332,6 +1332,27 @@ FocusScope {
       connectProcess.exec(command);
     }
 
+    function resetStatus() {
+      enabled = false;
+      hardwareEnabled = true;
+    }
+
+    function resetSaved() {
+      savedNetworks = ({})
+    }
+
+    function resetWifiList() {
+      connectedSsid = "";
+      connectedSignal = 0;
+      networks = [];
+    }
+
+    function resetRefreshState() {
+      resetStatus();
+      resetSaved();
+      resetWifiList();
+    }
+
     function parseRefresh(text) {
       const blocks = String(text || "").split("\n@@SAVED@@\n");
       const statusBlock = blocks.length > 0 ? blocks[0] : "";
@@ -1344,9 +1365,16 @@ FocusScope {
       const errorBlock = wifiBlocks.length > 1 ? wifiBlocks[1] : "";
       const refreshErrors = parseRefreshErrors(errorBlock);
 
-      if (!refreshErrors.statusFailed) parseStatus(statusBlock);
-      if (!refreshErrors.savedFailed) parseSaved(savedBlock);
-      if (!refreshErrors.wifiFailed) parseWifiList(wifiBlock);
+      if (refreshErrors.statusFailed) resetStatus();
+      else parseStatus(statusBlock);
+
+      const nextSavedNetworks = refreshErrors.savedFailed ? ({}) : parseSaved(savedBlock);
+      savedNetworks = nextSavedNetworks;
+
+      if (refreshErrors.wifiFailed) resetWifiList();
+      else parseWifiList(wifiBlock, nextSavedNetworks);
+
+      return refreshErrors;
     }
 
     function parseRefreshErrors(text) {
@@ -1374,6 +1402,19 @@ FocusScope {
         && payload.indexOf("\n@@ERRORS@@\n") >= 0;
     }
 
+    function refreshErrorText(refreshErrors, stderrText) {
+      if (stderrText !== "") return stderrText;
+      if (!refreshErrors) return "";
+      if (refreshErrors.statusFailed && refreshErrors.savedFailed && refreshErrors.wifiFailed) return "Unable to refresh Wi-Fi state.";
+      if (refreshErrors.statusFailed && refreshErrors.wifiFailed) return "Unable to refresh Wi-Fi status and networks.";
+      if (refreshErrors.statusFailed && refreshErrors.savedFailed) return "Unable to refresh Wi-Fi status and saved networks.";
+      if (refreshErrors.savedFailed && refreshErrors.wifiFailed) return "Unable to refresh saved networks and Wi-Fi networks.";
+      if (refreshErrors.statusFailed) return "Unable to refresh Wi-Fi status.";
+      if (refreshErrors.savedFailed) return "Unable to refresh saved Wi-Fi networks.";
+      if (refreshErrors.wifiFailed) return "Unable to refresh Wi-Fi networks.";
+      return "";
+    }
+
     function parseStatus(text) {
       const line = String(text || "").trim();
       if (line === "") return;
@@ -1397,12 +1438,13 @@ FocusScope {
         known[ssid] = true;
       }
 
-      savedNetworks = known;
+      return known;
     }
 
-    function parseWifiList(text) {
+    function parseWifiList(text, knownNetworks) {
       const lines = String(text || "").split("\n");
       const deduped = {};
+      const known = knownNetworks || {};
       let activeSsid = "";
       let activeSignal = 0;
 
@@ -1428,7 +1470,7 @@ FocusScope {
           signal,
           security,
           secure: security !== "",
-          known: savedNetworks[ssid] === true
+          known: known[ssid] === true
         };
 
         if (active) {
@@ -1482,11 +1524,12 @@ FocusScope {
         const stdoutText = wifiRefreshStdout.text;
 
         if (exitCode === 0 && wifiController.hasRefreshPayload(stdoutText)) {
-          wifiController.parseRefresh(stdoutText);
-          wifiController.lastError = stderrText;
+          const refreshErrors = wifiController.parseRefresh(stdoutText);
+          wifiController.lastError = wifiController.refreshErrorText(refreshErrors, stderrText);
           return;
         }
 
+        wifiController.resetRefreshState();
         wifiController.lastError = stderrText !== "" ? stderrText : "Unable to refresh Wi-Fi state.";
       })
     }

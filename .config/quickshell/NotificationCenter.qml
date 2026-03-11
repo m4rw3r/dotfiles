@@ -141,7 +141,7 @@ Item {
   function toastTimeoutMs(entry) {
     if (!entry || entry.urgency === NotificationUrgency.Critical) return 0;
 
-    const timeoutMs = Math.round(Number(entry.expireTimeout || 0) * 1000);
+    const timeoutMs = Math.round(Number(entry.expireTimeout || 0));
     if (timeoutMs > 0) return Math.max(3500, Math.min(12000, timeoutMs));
     return defaultToastTimeoutMs;
   }
@@ -203,7 +203,7 @@ Item {
     const expireTimeout = Number(notification.expireTimeout || 0);
     const timeoutMs = notification.urgency === NotificationUrgency.Critical
       ? 0
-      : (expireTimeout > 0 ? Math.max(3500, Math.min(12000, Math.round(expireTimeout * 1000))) : defaultToastTimeoutMs);
+      : (expireTimeout > 0 ? Math.max(3500, Math.min(12000, Math.round(expireTimeout))) : defaultToastTimeoutMs);
 
     return {
       uid: uid,

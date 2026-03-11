@@ -263,9 +263,35 @@ Item {
     else openLauncher("");
   }
 
+  function launchCommand(entry) {
+    const entryCommand = [];
+    for (let i = 0; i < entry.command.length; i += 1) {
+      entryCommand.push(String(entry.command[i]));
+    }
+
+    if (entryCommand.length === 0) return false;
+
+    const command = ["systemd-run", "--user", "--scope", "--quiet", "--collect"];
+    const workingDirectory = String(entry.workingDirectory || "");
+    if (workingDirectory !== "") command.push(`--working-directory=${workingDirectory}`);
+
+    if (entry.runInTerminal) {
+      command.push("alacritty");
+      if (workingDirectory !== "") command.push("--working-directory", workingDirectory);
+      command.push("-e");
+    }
+
+    for (let i = 0; i < entryCommand.length; i += 1) {
+      command.push(entryCommand[i]);
+    }
+
+    Quickshell.execDetached(command);
+    return true;
+  }
+
   function launchEntry(entry) {
     if (!entry) return;
-    entry.execute();
+    if (!launchCommand(entry)) return;
     closeLauncher();
   }
 

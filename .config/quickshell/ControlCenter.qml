@@ -65,11 +65,12 @@ FocusScope {
   readonly property bool selectorPopoverOpen: expandedSection === "profile" || (expandedSection === "lighting" && lightingService.commandAvailable)
   readonly property bool tileMenuOpen: expandedSection === "wifi" || expandedSection === "bluetooth"
   readonly property bool overlayDismissActive: selectorPopoverOpen || tileMenuOpen || powerMenuOpen || outputMenuOpen || notificationsOpen
-  readonly property var audioSink: Pipewire.defaultAudioSink
+  property var audioSink: null
+  readonly property var audioState: audioSink && audioSink.audio ? audioSink.audio : null
   readonly property var battery: UPower.displayDevice
   readonly property bool batteryAvailable: battery && battery.isPresent && battery.isLaptopBattery
-  readonly property bool audioReady: audioService.ready
-  readonly property bool audioLoading: panelOpen && !audioService.settled
+  readonly property bool audioReady: Pipewire.ready && !!audioSink && audioSink.ready && !!audioState
+  readonly property bool audioLoading: panelOpen && (!Pipewire.ready || (!!audioSink && !audioSink.ready))
   readonly property bool brightnessLoading: panelOpen && !brightnessService.settled
   readonly property bool wifiLoading: panelOpen && !wifiService.ready
   readonly property var powerMenuEntries: [
@@ -110,6 +111,14 @@ FocusScope {
   Component.onCompleted: {
     refreshPanelData();
     panelRefreshTimer.restart();
+  }
+  onAudioSinkChanged: {
+    audioCommitTimer.stop();
+    syncPendingAudioVolume();
+  }
+  onAudioStateChanged: {
+    audioCommitTimer.stop();
+    syncPendingAudioVolume();
   }
   onNotificationsOpenChanged: {
     if (notificationsOpen && unreadNotificationCount > 0) notificationReadTimer.restart();
@@ -423,29 +432,41 @@ FocusScope {
 
   function outputMenuSubtitle() {
     if (!Pipewire.ready) return initialLoadDeadlineElapsed ? "Loading audio..." : "";
-    if (!audioReady) return audioService.lastError !== "" ? "Unavailable" : "Audio unavailable";
+    if (!audioSink) return "No audio output";
+    if (!audioReady) return "Audio unavailable";
     return audioVolumePercentText();
   }
 
   function audioVolumeValue() {
     if (!audioReady) return 0;
-    return clamp(Number(audioService.volume), 0, 1);
+    return clamp(Number(audioState.volume), 0, 1);
   }
 
   function audioVolumePercentText() {
     if (!audioReady) return "Unavailable";
-    if (audioService.muted) return "Muted";
+    if (audioState.muted) return "Muted";
     return `${Math.round(audioVolumeValue() * 100)}%`;
   }
 
   function refreshPanelData() {
-    audioService.refresh();
     brightnessService.refresh();
     lightingService.refresh();
     wifiService.refresh();
     bluetoothService.refreshRfkillState();
-    pendingAudioVolume = audioService.volume;
+    pendingAudioVolume = audioVolumeValue();
     pendingScreenBrightness = brightnessService.screenPercent;
+  }
+
+  function syncPendingAudioVolume() {
+    if (!audioCommitTimer.running) pendingAudioVolume = audioVolumeValue();
+  }
+
+  function applyAudioVolume(value) {
+    if (!audioReady) return;
+
+    const nextVolume = clamp(Number(value), 0, 1);
+    audioState.muted = false;
+    audioState.volume = nextVolume;
   }
 
   function beginWifiConnect(network) {
@@ -591,14 +612,6 @@ FocusScope {
     id: lightingService
   }
 
-  Services.AudioService {
-    id: audioService
-
-    onVolumeChanged: {
-      if (!audioCommitTimer.running) root.pendingAudioVolume = volume;
-    }
-  }
-
   Services.WifiService {
     id: wifiService
 
@@ -684,7 +697,38 @@ FocusScope {
     id: audioCommitTimer
     interval: 75
     repeat: false
-    onTriggered: audioService.setVolume(root.pendingAudioVolume)
+    onTriggered: root.applyAudioVolume(root.pendingAudioVolume)
+  }
+
+  Connections {
+    target: Pipewire
+    ignoreUnknownSignals: true
+
+    function onReadyChanged() {
+      root.syncPendingAudioVolume();
+    }
+  }
+
+  Connections {
+    target: root.audioSink
+    ignoreUnknownSignals: true
+
+    function onReadyChanged() {
+      root.syncPendingAudioVolume();
+    }
+  }
+
+  Connections {
+    target: root.audioState
+    ignoreUnknownSignals: true
+
+    function onVolumeChanged() {
+      root.syncPendingAudioVolume();
+    }
+
+    function onMutedChanged() {
+      root.syncPendingAudioVolume();
+    }
   }
 
   Timer {
@@ -837,11 +881,11 @@ FocusScope {
               anchors.centerIn: parent
               width: implicitWidth
               variant: "minimal"
-              iconName: root.audioReady && audioService.muted ? "speaker-muted" : "speaker"
-              active: root.audioReady && audioService.muted
+              iconName: root.audioReady && root.audioState.muted ? "speaker-muted" : "speaker"
+              active: root.audioReady && root.audioState.muted
               enabled: root.audioReady
               onClicked: {
-                if (root.audioReady) audioService.toggleMuted();
+                if (root.audioReady) root.audioState.muted = !root.audioState.muted;
               }
             }
           ]
@@ -862,13 +906,14 @@ FocusScope {
           onValueMoved: function(value) {
             if (!root.audioReady) return;
             root.pendingAudioVolume = value;
+            if (root.audioState.muted) root.audioState.muted = false;
             audioCommitTimer.restart();
           }
           onValueCommitted: function(value) {
             if (!root.audioReady) return;
             root.pendingAudioVolume = value;
             audioCommitTimer.stop();
-            audioService.setVolume(value);
+            root.applyAudioVolume(value);
           }
         }
       }
@@ -881,8 +926,8 @@ FocusScope {
       }
 
       UiText {
-        visible: audioService.settled && !root.audioReady && !root.audioLoading
-        text: audioService.lastError !== "" ? audioService.lastError : "Audio unavailable."
+        visible: !root.audioLoading && !root.audioReady && Pipewire.ready
+        text: root.audioSink ? "Audio unavailable." : "No audio output available."
         size: "xs"
         tone: "accent"
         wrapMode: Text.WordWrap
@@ -1250,21 +1295,23 @@ FocusScope {
         x: content.x
         y: content.y + outputsPopoverSpacer.y
         z: 1
-        iconName: root.audioReady && audioService.muted ? "speaker-muted" : "speaker"
+        iconName: root.audioReady && root.audioState.muted ? "speaker-muted" : "speaker"
         title: root.outputMenuTitle()
         subtitle: root.outputMenuSubtitle()
         hasStatus: root.audioReady
-        statusActive: root.audioReady && !audioService.muted
+        statusActive: root.audioReady && !root.audioState.muted
         statusToggleEnabled: root.audioReady
-        onStatusClicked: audioService.toggleMuted()
+        onStatusClicked: {
+          if (root.audioReady) root.audioState.muted = !root.audioState.muted;
+        }
 
         Column {
           width: parent.width
           spacing: 8
 
           UiText {
-            visible: audioService.settled && !root.audioReady && !root.audioLoading
-            text: audioService.lastError !== "" ? audioService.lastError : "Audio unavailable."
+            visible: !root.audioLoading && !root.audioReady && Pipewire.ready
+            text: root.audioSink ? "Audio unavailable." : "No audio output available."
             size: "xs"
             tone: "accent"
             wrapMode: Text.WordWrap

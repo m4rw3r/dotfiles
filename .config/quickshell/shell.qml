@@ -25,6 +25,10 @@ ShellRoot {
   property real volumeOverlayValue: 0
   property bool volumeOverlayMuted: false
   readonly property var volumeTrackedSink: Pipewire.defaultAudioSink
+  readonly property var volumeTrackedAudio: volumeTrackedSink && volumeTrackedSink.audio ? volumeTrackedSink.audio : null
+  readonly property bool volumeTrackedReady: Pipewire.ready && !!volumeTrackedSink && volumeTrackedSink.ready && !!volumeTrackedAudio
+  readonly property real volumeTrackedValue: volumeTrackedReady ? normalizeVolumeValue(volumeTrackedAudio.volume) : 0
+  readonly property bool volumeTrackedMuted: volumeTrackedReady ? !!volumeTrackedAudio.muted : false
   readonly property bool trayHasAttention: trayAttentionCount > 0
   // qmllint disable missing-property
   readonly property bool trayHasItems: trayTracker.count > 0
@@ -45,16 +49,14 @@ ShellRoot {
     return Math.max(0, Math.min(1, Number(value) || 0));
   }
 
-  function syncVolumeOverlayFromTrackedSink(shouldReveal) {
-    const sink = volumeTrackedSink;
-    const audio = sink && sink.audio ? sink.audio : null;
-    if (!Pipewire.ready || !sink || !sink.ready || !audio) {
-      if (!sink) volumeOverlayInitialized = false;
+  function syncVolumeOverlayState(shouldReveal) {
+    if (!volumeTrackedReady) {
+      if (!volumeTrackedSink) volumeOverlayInitialized = false;
       return;
     }
 
-    const nextVolume = normalizeVolumeValue(audio.volume);
-    const nextMuted = !!audio.muted;
+    const nextVolume = volumeTrackedValue;
+    const nextMuted = volumeTrackedMuted;
     const volumeChanged = !volumeOverlayInitialized
       || Math.abs(nextVolume - volumeOverlayValue) > 0.0005
       || nextMuted !== volumeOverlayMuted;
@@ -71,6 +73,17 @@ ShellRoot {
       volumeOverlayActive = true;
       volumeOverlayTimer.restart();
     }
+  }
+
+  function flashVolumeOverlay() {
+    syncVolumeOverlayState(false);
+    if (!volumeTrackedReady || root.shadeOpen) return;
+    volumeOverlayActive = true;
+    volumeOverlayTimer.restart();
+  }
+
+  function requestVolumeOverlayFlash() {
+    volumeOverlayFlashTimer.restart();
   }
 
   function collapseTrayToPeekOrHidden() {
@@ -122,7 +135,7 @@ ShellRoot {
     if (!trayUserPinned) collapseTrayToPeekOrHidden();
   }
 
-  Component.onCompleted: syncVolumeOverlayFromTrackedSink(false)
+  Component.onCompleted: syncVolumeOverlayState(false)
 
   onShadeOpenChanged: {
     if (!shadeOpen) return;
@@ -132,7 +145,24 @@ ShellRoot {
 
   onVolumeTrackedSinkChanged: {
     volumeOverlayInitialized = false;
-    syncVolumeOverlayFromTrackedSink(false);
+    syncVolumeOverlayState(false);
+  }
+
+  onVolumeTrackedReadyChanged: syncVolumeOverlayState(false)
+
+  onVolumeTrackedValueChanged: syncVolumeOverlayState(true)
+
+  onVolumeTrackedMutedChanged: syncVolumeOverlayState(true)
+
+  onVolumeTrackedAudioChanged: {
+    volumeOverlayInitialized = false;
+    if (!volumeTrackedAudio) {
+      volumeOverlayActive = false;
+      volumeOverlayTimer.stop();
+      return;
+    }
+
+    syncVolumeOverlayState(false);
   }
 
   onTrayHasAttentionChanged: {
@@ -447,35 +477,11 @@ ShellRoot {
     onTriggered: root.volumeOverlayActive = false
   }
 
-  Connections {
-    target: Pipewire
-    ignoreUnknownSignals: true
-
-    function onReadyChanged() {
-      root.syncVolumeOverlayFromTrackedSink(false);
-    }
-  }
-
-  Connections {
-    target: root.volumeTrackedSink
-    ignoreUnknownSignals: true
-
-    function onReadyChanged() {
-      root.syncVolumeOverlayFromTrackedSink(false);
-    }
-  }
-
-  Connections {
-    target: root.volumeTrackedSink && root.volumeTrackedSink.audio ? root.volumeTrackedSink.audio : null
-    ignoreUnknownSignals: true
-
-    function onVolumeChanged() {
-      root.syncVolumeOverlayFromTrackedSink(true);
-    }
-
-    function onMutedChanged() {
-      root.syncVolumeOverlayFromTrackedSink(true);
-    }
+  Timer {
+    id: volumeOverlayFlashTimer
+    interval: 60
+    repeat: false
+    onTriggered: root.flashVolumeOverlay()
   }
 
   IpcHandler {
@@ -489,6 +495,14 @@ ShellRoot {
     }
     function hideControlCenter() {
       root.closeControlCenter();
+    }
+  }
+
+  IpcHandler {
+    target: "volume"
+
+    function flash() {
+      root.requestVolumeOverlayFlash();
     }
   }
 
@@ -578,7 +592,7 @@ ShellRoot {
     exclusionMode: ExclusionMode.Ignore
     aboveWindows: true
     color: "transparent"
-    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: sessionActions.errorVisible ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     SessionActionBanner {
@@ -611,7 +625,7 @@ ShellRoot {
     exclusionMode: ExclusionMode.Ignore
     aboveWindows: true
     color: "transparent"
-    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
     NotificationToastStack {
@@ -638,7 +652,7 @@ ShellRoot {
     exclusionMode: ExclusionMode.Ignore
     aboveWindows: true
     color: "transparent"
-    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: root.trayMode === "expanded" ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     onVisibleChanged: {
@@ -667,12 +681,16 @@ ShellRoot {
   PanelWindow {
     id: volumeOverlayWindow
 
-    visible: volumeHud.visible && !root.shadeOpen
+    visible: true
     anchors { top: true; bottom: true; right: true }
     implicitWidth: volumeHud.implicitWidth + Theme.overlayMargin * 2
     exclusionMode: ExclusionMode.Ignore
     aboveWindows: true
     color: "transparent"
+    mask: Region {
+      width: 0
+      height: 0
+    }
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
@@ -753,6 +771,7 @@ ShellRoot {
     ControlCenter {
       id: controlCenter
 
+      audioSink: root.volumeTrackedSink
       panelOpen: root.shadeOpen
       notificationCenter: notifications
       sessionActions: sessionActions

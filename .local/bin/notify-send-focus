@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+find_terminal_pid() {
+    local pid=$1
+    local comm
+
+    while (( pid > 1 )); do
+        comm=$(ps -o comm= -p "$pid" 2>/dev/null | tr -d '[:space:]') || return 1
+
+        case "$comm" in
+            alacritty|kitty)
+                printf '%s\n' "$pid"
+                return 0
+                ;;
+        esac
+
+        pid=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d '[:space:]') || return 1
+        [[ -n "$pid" ]] || return 1
+    done
+
+    return 1
+}
+
+find_niri_window_metadata() {
+    local target_pid=$1
+
+    niri msg windows | awk -v target_pid="$target_pid" '
+        /^Window ID / {
+            id = $3
+            sub(/:$/, "", id)
+            app_id = ""
+            next
+        }
+
+        /^[[:space:]]+App ID: / {
+            app_id = $0
+            sub(/^[[:space:]]+App ID: "/, "", app_id)
+            sub(/"$/, "", app_id)
+            next
+        }
+
+        /^[[:space:]]+PID: / {
+            if ($2 == target_pid) {
+                print id "\t" app_id
+                found = 1
+                exit
+            }
+        }
+
+        END {
+            if (!found)
+                exit 1
+        }
+    '
+}
+
+command -v notify-send >/dev/null 2>&1
+
+source_pid=
+show_help=0
+notify_args=()
+
+while (($#)); do
+    case "$1" in
+        --help|-?)
+            show_help=1
+            notify_args+=("$1")
+            shift
+            ;;
+        --pid)
+            (($# >= 2)) || {
+                printf '%s\n' 'notify-send-focus: --pid requires a value' >&2
+                exit 2
+            }
+
+            source_pid=$2
+            shift 2
+            ;;
+        --pid=*)
+            source_pid=${1#--pid=}
+            shift
+            ;;
+        *)
+            notify_args+=("$1")
+            shift
+            ;;
+    esac
+done
+
+if (( show_help )); then
+    notify-send --help
+    printf '\nAdditional Options:\n'
+    printf '  --pid=PID                     Resolve the source terminal and attach Niri focus metadata.\n'
+    printf '  --pid PID                     Same as --pid=PID.\n'
+    exit 0
+fi
+
+if [[ -z "$source_pid" ]]; then
+    exec notify-send "${notify_args[@]}"
+fi
+
+command -v niri >/dev/null 2>&1
+command -v ps >/dev/null 2>&1
+command -v awk >/dev/null 2>&1
+
+terminal_pid=$(find_terminal_pid "$source_pid") || exec notify-send "${notify_args[@]}"
+window_metadata=$(find_niri_window_metadata "$terminal_pid") || exec notify-send "${notify_args[@]}"
+window_id=${window_metadata%%$'\t'*}
+app_id=${window_metadata#*$'\t'}
+
+[[ -n "$window_id" ]] || exec notify-send "${notify_args[@]}"
+
+notify_hints=(-h "int:x-niri-window-id:${window_id}")
+
+if [[ -n "$app_id" ]]; then
+    notify_hints+=(-h "string:desktop-entry:${app_id}")
+fi
+
+exec notify-send "${notify_hints[@]}" "${notify_args[@]}"

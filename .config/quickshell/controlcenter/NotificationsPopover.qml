@@ -130,8 +130,10 @@ Patterns.HeroSheetPopover {
     readonly property string appLabel: popover.notificationCenter ? popover.notificationCenter.appLabel(entry) : "Notification"
     readonly property string summaryLabel: popover.notificationCenter ? popover.notificationCenter.summaryLabel(entry) : ""
     readonly property string bodyLabel: popover.notificationCenter ? popover.notificationCenter.bodyLabel(entry) : ""
+    readonly property bool hasFocusTarget: popover.notificationCenter ? popover.notificationCenter.entryHasFocusTarget(entry) : false
     readonly property bool hasBody: bodyLabel !== ""
     readonly property bool hasPrimaryAction: primaryActionLabel !== ""
+    readonly property bool rowClickable: hasFocusTarget || hasPrimaryAction
     property bool dividerVisible: false
     property int frameHorizontalPadding: Theme.gapSm
     readonly property real detailInset: showSourceBadge ? Theme.controlSm + Theme.gapSm : 0
@@ -148,10 +150,10 @@ Patterns.HeroSheetPopover {
 
       width: parent.width
       critical: card.critical
-      clickable: card.hasPrimaryAction
+      clickable: card.rowClickable
       horizontalPadding: card.frameHorizontalPadding
       onClicked: {
-        if (popover.notificationCenter) popover.notificationCenter.invokePrimaryAction(card.entry);
+        if (popover.notificationCenter) popover.notificationCenter.activateEntry(card.entry);
       }
 
       Row {

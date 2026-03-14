@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtMultimedia
+import Quickshell.Io
 import Quickshell.Services.Notifications
 
 Item {
@@ -11,6 +12,9 @@ Item {
   property var toastUids: []
   property int revision: 0
   property int nextUid: 1
+  property int pendingFocusUid: -1
+  property int pendingFocusWindowId: 0
+  property bool focusLookupBusy: false
   property int maxToasts: 3
   readonly property var groupedEntries: buildGroups(entries)
   readonly property int unreadCount: countUnread(entries)
@@ -26,6 +30,30 @@ Item {
 
   function cleanText(text) {
     return String(text || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  function integerHint(hints, name) {
+    if (!hints || name === "") return 0;
+
+    const value = Number(hints[name]);
+    if (!Number.isInteger(value) || value <= 0) return 0;
+    return value;
+  }
+
+  function windowListContainsId(text, windowId) {
+    if (windowId <= 0) return false;
+
+    try {
+      const windows = JSON.parse(String(text || "[]"));
+      for (let index = 0; index < windows.length; index += 1) {
+        const window = windows[index];
+        if (Number(window && window.id) === windowId) return true;
+      }
+    } catch (error) {
+      return false;
+    }
+
+    return false;
   }
 
   function appLabel(entry) {
@@ -159,6 +187,11 @@ Item {
     return null;
   }
 
+  function entryHasFocusTarget(entryOrUid) {
+    const entry = typeof entryOrUid === "number" ? entryForUid(entryOrUid) : entryOrUid;
+    return !!entry && Number(entry.niriWindowId || 0) > 0;
+  }
+
   function setEntries(nextEntries) {
     entries = nextEntries;
     revision += 1;
@@ -167,6 +200,15 @@ Item {
   function setToastUids(nextToastUids) {
     toastUids = nextToastUids;
     revision += 1;
+  }
+
+  function requestEntryFocus(uid, windowId) {
+    if (uid < 0 || windowId <= 0 || focusLookupBusy) return;
+
+    pendingFocusUid = uid;
+    pendingFocusWindowId = windowId;
+    focusLookupBusy = true;
+    notificationWindowLookupProcess.exec(["niri", "msg", "-j", "windows"]);
   }
 
   function countUnread(list) {
@@ -220,6 +262,7 @@ Item {
       summary: cleanText(notification.summary),
       body: cleanText(notification.body),
       image: String(notification.image || ""),
+      niriWindowId: integerHint(notification.hints, "x-niri-window-id"),
       receivedAt: receivedAt,
       expireTimeout: expireTimeout,
       toastExpiresAt: timeoutMs > 0 ? receivedAt + timeoutMs : 0,
@@ -328,6 +371,18 @@ Item {
     action.invoke();
   }
 
+  function activateEntry(entryOrUid) {
+    const entry = typeof entryOrUid === "number" ? entryForUid(entryOrUid) : entryOrUid;
+    if (!entry) return;
+
+    if (entryHasFocusTarget(entry)) {
+      requestEntryFocus(entry.uid, Number(entry.niriWindowId || 0));
+      return;
+    }
+
+    invokePrimaryAction(entry);
+  }
+
   function closeLive(entryOrUid) {
     const entry = typeof entryOrUid === "number" ? entryForUid(entryOrUid) : entryOrUid;
     if (!entry) return;
@@ -404,6 +459,41 @@ Item {
     onNotification: function(notification) {
       root.trackNotification(notification);
     }
+  }
+
+  StdioCollector {
+    id: notificationWindowLookupStdout
+
+    waitForEnd: true
+  }
+
+  Process {
+    id: notificationWindowLookupProcess
+
+    stdout: notificationWindowLookupStdout
+
+    Component.onCompleted: exited.connect(function(exitCode) {
+      const focusUid = root.pendingFocusUid;
+      const focusWindowId = root.pendingFocusWindowId;
+
+      root.pendingFocusUid = -1;
+      root.pendingFocusWindowId = 0;
+      root.focusLookupBusy = false;
+
+      if (exitCode !== 0) return;
+
+      const focusEntry = root.entryForUid(focusUid);
+      if (!focusEntry || Number(focusEntry.niriWindowId || 0) !== focusWindowId) return;
+      if (!root.windowListContainsId(notificationWindowLookupStdout.text, focusWindowId)) return;
+
+      root.markRead(focusUid);
+      root.dismissToast(focusUid);
+      notificationFocusProcess.exec(["niri", "msg", "action", "focus-window", "--id", `${focusWindowId}`]);
+    })
+  }
+
+  Process {
+    id: notificationFocusProcess
   }
 
   AudioOutput {

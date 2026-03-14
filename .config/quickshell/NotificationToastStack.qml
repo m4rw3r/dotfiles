@@ -28,10 +28,11 @@ FocusScope {
     }
     readonly property bool critical: !!(entry && entry.urgency === NotificationUrgency.Critical)
     readonly property string primaryActionLabel: notificationCenter ? notificationCenter.primaryActionLabel(entry) : ""
+    readonly property bool focusable: notificationCenter ? notificationCenter.entryHasFocusTarget(entry) : false
     readonly property int timeoutMs: notificationCenter ? notificationCenter.toastTimeoutMs(entry) : 0
     readonly property int remainingMs: notificationCenter ? notificationCenter.toastRemainingMs(entry) : 0
     readonly property bool autoDismiss: timeoutMs > 0
-    readonly property bool actionable: primaryActionLabel !== ""
+    readonly property bool actionable: focusable || primaryActionLabel !== ""
 
     function dismissIfExpired() {
       if (notificationCenter && autoDismiss && !!entry && remainingMs <= 0) notificationCenter.dismissToast(toastUid);
@@ -59,7 +60,7 @@ FocusScope {
       anchors.rightMargin: dismissButton.width
       enabled: card.actionable
       onClicked: {
-        if (card.notificationCenter) card.notificationCenter.invokePrimaryAction(card.toastUid);
+        if (card.notificationCenter) card.notificationCenter.activateEntry(card.toastUid);
       }
     }
 

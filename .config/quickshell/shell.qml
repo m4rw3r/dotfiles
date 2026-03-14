@@ -4,6 +4,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.Pipewire
 import Quickshell.Services.SystemTray
 import Quickshell.Wayland
 import "theme"
@@ -19,6 +20,11 @@ ShellRoot {
   property bool trayUserPinned: false
   property bool trayPeekForced: false
   property int trayAttentionCount: 0
+  property bool volumeOverlayActive: false
+  property bool volumeOverlayInitialized: false
+  property real volumeOverlayValue: 0
+  property bool volumeOverlayMuted: false
+  readonly property var volumeTrackedSink: Pipewire.defaultAudioSink
   readonly property bool trayHasAttention: trayAttentionCount > 0
   // qmllint disable missing-property
   readonly property bool trayHasItems: trayTracker.count > 0
@@ -33,6 +39,38 @@ ShellRoot {
     }
     // qmllint enable missing-property
     trayAttentionCount = attention;
+  }
+
+  function normalizeVolumeValue(value) {
+    return Math.max(0, Math.min(1, Number(value) || 0));
+  }
+
+  function syncVolumeOverlayFromTrackedSink(shouldReveal) {
+    const sink = volumeTrackedSink;
+    const audio = sink && sink.audio ? sink.audio : null;
+    if (!Pipewire.ready || !sink || !sink.ready || !audio) {
+      if (!sink) volumeOverlayInitialized = false;
+      return;
+    }
+
+    const nextVolume = normalizeVolumeValue(audio.volume);
+    const nextMuted = !!audio.muted;
+    const volumeChanged = !volumeOverlayInitialized
+      || Math.abs(nextVolume - volumeOverlayValue) > 0.0005
+      || nextMuted !== volumeOverlayMuted;
+
+    volumeOverlayValue = nextVolume;
+    volumeOverlayMuted = nextMuted;
+
+    if (!volumeOverlayInitialized) {
+      volumeOverlayInitialized = true;
+      return;
+    }
+
+    if (shouldReveal && volumeChanged && !root.shadeOpen) {
+      volumeOverlayActive = true;
+      volumeOverlayTimer.restart();
+    }
   }
 
   function collapseTrayToPeekOrHidden() {
@@ -82,6 +120,19 @@ ShellRoot {
   function closeControlCenter() {
     shadeOpen = false;
     if (!trayUserPinned) collapseTrayToPeekOrHidden();
+  }
+
+  Component.onCompleted: syncVolumeOverlayFromTrackedSink(false)
+
+  onShadeOpenChanged: {
+    if (!shadeOpen) return;
+    volumeOverlayActive = false;
+    volumeOverlayTimer.stop();
+  }
+
+  onVolumeTrackedSinkChanged: {
+    volumeOverlayInitialized = false;
+    syncVolumeOverlayFromTrackedSink(false);
   }
 
   onTrayHasAttentionChanged: {
@@ -385,6 +436,48 @@ ShellRoot {
     id: notifications
   }
 
+  PwObjectTracker {
+    objects: [root.volumeTrackedSink]
+  }
+
+  Timer {
+    id: volumeOverlayTimer
+    interval: 1100
+    repeat: false
+    onTriggered: root.volumeOverlayActive = false
+  }
+
+  Connections {
+    target: Pipewire
+    ignoreUnknownSignals: true
+
+    function onReadyChanged() {
+      root.syncVolumeOverlayFromTrackedSink(false);
+    }
+  }
+
+  Connections {
+    target: root.volumeTrackedSink
+    ignoreUnknownSignals: true
+
+    function onReadyChanged() {
+      root.syncVolumeOverlayFromTrackedSink(false);
+    }
+  }
+
+  Connections {
+    target: root.volumeTrackedSink && root.volumeTrackedSink.audio ? root.volumeTrackedSink.audio : null
+    ignoreUnknownSignals: true
+
+    function onVolumeChanged() {
+      root.syncVolumeOverlayFromTrackedSink(true);
+    }
+
+    function onMutedChanged() {
+      root.syncVolumeOverlayFromTrackedSink(true);
+    }
+  }
+
   IpcHandler {
     target: "ui"
     function toggleControlCenter() {
@@ -566,6 +659,32 @@ ShellRoot {
 
       onDismissRequested: root.closeTray()
       onExpandRequested: root.openTrayFromPeek()
+    }
+  }
+  // qmllint enable uncreatable-type
+
+  // qmllint disable uncreatable-type
+  PanelWindow {
+    id: volumeOverlayWindow
+
+    visible: volumeHud.visible && !root.shadeOpen
+    anchors { top: true; bottom: true; right: true }
+    implicitWidth: volumeHud.implicitWidth + Theme.overlayMargin * 2
+    exclusionMode: ExclusionMode.Ignore
+    aboveWindows: true
+    color: "transparent"
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+    VolumeOverlay {
+      id: volumeHud
+
+      value: root.volumeOverlayValue
+      muted: root.volumeOverlayMuted
+      active: root.volumeOverlayActive
+      anchors.right: parent.right
+      anchors.rightMargin: Theme.overlayMargin
+      anchors.verticalCenter: parent.verticalCenter
     }
   }
   // qmllint enable uncreatable-type

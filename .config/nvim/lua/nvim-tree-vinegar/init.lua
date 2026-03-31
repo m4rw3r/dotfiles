@@ -9,7 +9,7 @@ local treeApi = require("nvim-tree.api")
 
 local treeCore = require("nvim-tree.core")
 local treeUtils = require("nvim-tree.utils")
-local treeView = require("nvim-tree.view")
+local treeViewState = require("nvim-tree.view-state")
 
 local actions = require("nvim-tree-vinegar.actions")
 local open = require("nvim-tree-vinegar.open")
@@ -20,8 +20,8 @@ M.open = open
 
 -- By removing the window width/height fixing any splits will split the current browser
 -- We modify the template for the view here
-treeView.View.winopts.winfixwidth = nil
-treeView.View.winopts.winfixheight = nil
+treeViewState.Active.winopts.winfixwidth = nil
+treeViewState.Active.winopts.winfixheight = nil
 
 local function registerAutocmds()
   local group = vim.api.nvim_create_augroup("NvimTree", { clear = false })

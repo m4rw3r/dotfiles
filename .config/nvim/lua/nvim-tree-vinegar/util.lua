@@ -1,5 +1,6 @@
 local treeCore = require("nvim-tree.core")
 local treeView = require("nvim-tree.view")
+local treeViewState = require("nvim-tree.view-state")
 
 local M = {
   _fixHeight = false
@@ -13,7 +14,7 @@ end
 function M.save_tab_state(tabnr)
   local tabpage = tabnr or vim.api.nvim_get_current_tabpage()
 
-  treeView.View.cursors[tabpage] = vim.api.nvim_win_get_cursor(treeView.get_winnr(tabpage) or 0)
+  treeViewState.Active.cursors[tabpage] = vim.api.nvim_win_get_cursor(treeView.get_winnr(tabpage) or 0)
 end
 
 function M.drawTree()

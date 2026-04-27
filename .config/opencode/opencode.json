@@ -103,18 +103,22 @@
       "*.env.*": "deny",
       "*.env.example": "allow",
       "~/.cargo/registry/*": "allow",
+      "/var/cache/cargo/*": "allow",
     },
     "grep": {
       "*": "allow",
       "~/.cargo/registry/*": "allow",
+      "/var/cache/cargo/*": "allow",
     },
     "glob": {
       "*": "allow",
       "~/.cargo/registry/*": "allow",
+      "/var/cache/cargo/*": "allow",
     },
     "list": {
       "*": "allow",
       "~/.cargo/registry/*": "allow",
+      "/var/cache/cargo/*": "allow",
     },
   },
   "theme": "system",

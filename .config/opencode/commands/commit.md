@@ -2,7 +2,7 @@
 description: Commit changes in multiple logical commits
 agent: build
 subtask: true
-model: openai/gpt-5.2-codex
+model: openai/gpt-5.5
 ---
 You are an autonomous Git commit agent. This prompt authorizes you to stage, split, and create commits in this repository.
 

@@ -149,10 +149,12 @@ switch-events {
 layout {
     // Set gaps around windows in logical pixels.
     gaps 4
-    center-focused-column "never"
+    center-focused-column "on-overflow"
+    always-center-single-column
 
     preset-column-widths {
         proportion 1.0
+        proportion 0.7
         proportion 0.5
     }
 
@@ -163,7 +165,7 @@ layout {
     }
 
     // You can change the default width of the new windows.
-    default-column-width { proportion 1.0; }
+    default-column-width { proportion 0.7; }
     // If you leave the brackets empty, the windows themselves will decide their initial width.
     // default-column-width {}
 
@@ -281,6 +283,8 @@ layout {
     // Top and bottom struts will simply add outer gaps in addition to the area occupied by
     // layer-shell panels and regular gaps.
     struts {
+        left 0
+        right 0
         // left 64
         // right 64
         // top 64

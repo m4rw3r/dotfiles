@@ -10,4 +10,6 @@ size = 12
 # We want to use PragmataPro
 builtin_box_drawing = false
 [keyboard]
-bindings = []
+bindings = [
+  { key = "N", mods = "Control|Shift", action = "SpawnNewInstance" }
+]

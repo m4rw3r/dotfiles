@@ -48,3 +48,6 @@ export AWS_PAGER=""
 
 # OpenCode: Do not download Language-Servers automatically
 export OPENCODE_DISABLE_LSP_DOWNLOAD="true"
+
+# Pi agent configuration
+export PI_CODING_AGENT_DIR="$XDG_CONFIG_HOME/pi"

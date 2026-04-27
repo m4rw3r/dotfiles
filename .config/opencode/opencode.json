@@ -122,6 +122,7 @@
     },
   },
   "theme": "system",
+  "lsp": false,
   // Explicitly enable compaction
   "compaction": {
     "auto": true,

@@ -160,7 +160,11 @@ function M.config()
   })
 
   configLsp("rust_analyzer", {})
-  configLsp("ts_ls", {})
+  -- configLsp("ts_ls", {})
+
+  -- Better typescript support compared to ts_ls
+  -- npm install -g @vtsls/language-server
+  configLsp("vtsls", {})
 
   -- Requires lua-language-server
   --

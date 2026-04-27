@@ -11,6 +11,7 @@ local M = {
     jsonc = { expandtab = true, indent = 2, trim = true },
     kdl = { expandtab = true, indent = 4, trim = true },
     lua = { indent = 2, expandtab = true, trim = true },
+    latex = { indent = 2, expandtab = true, trim = true },
     markdown = { indent = 2, expandtab = true, trim = true },
     markdown_inline = { indent = 2, expandtab = true, trim = true },
     php = { expandtab = true, trim = true, autoindent = false },

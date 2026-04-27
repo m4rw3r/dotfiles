@@ -1,0 +1,11 @@
+partial alphanumeric_keys modifier_keys
+
+xkb_symbols "rog_scandi_escape" {
+    include "%S/us(basic)"
+    include "capslock(escape)"
+    include "level3(ralt_switch)"
+    name[Group1] = "English (US, Caps as Escape, AltGr A/S/D = Å/Ä/Ö)";
+    key <AC01> { [ a, A, aring, Aring ], type[Group1] = "FOUR_LEVEL_ALPHABETIC" };
+    key <AC02> { [ s, S, adiaeresis, Adiaeresis ], type[Group1] = "FOUR_LEVEL_ALPHABETIC" };
+    key <AC03> { [ d, D, odiaeresis, Odiaeresis ], type[Group1] = "FOUR_LEVEL_ALPHABETIC" };
+};

@@ -10,7 +10,8 @@ input {
     keyboard {
         xkb {
             layout "us"
-            options "caps:escape"
+            // options "caps:escape"
+            variant "rog_scandi_escape"
 
             // You can set rules, model, layout, variant and options.
             // For more information, see xkeyboard-config(7).

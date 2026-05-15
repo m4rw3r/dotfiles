@@ -15,8 +15,38 @@ Item {
   readonly property string entryName: hasEntry && entry.name ? entry.name : ""
   readonly property string entryGenericName: hasEntry && entry.genericName ? entry.genericName : ""
 
+  function withAlpha(color, alpha) {
+    return Qt.rgba(color.r, color.g, color.b, alpha);
+  }
+
   signal pressed(int index)
   signal activated(var entry)
+
+  Rectangle {
+    anchors.centerIn: parent
+    width: Math.max(0, parent.width - Theme.gapSm)
+    height: Math.max(0, parent.height - Theme.gapXs)
+    radius: Math.min(Theme.radiusLg, height / 2)
+    opacity: root.selected ? (tileTouch.pressed ? 0.72 : 0.9) : 0
+    scale: root.selected ? 1 : 0.96
+    color: root.withAlpha(Theme.accent, 0.18)
+    border.width: 1
+    border.color: root.withAlpha(Theme.accentStrong, root.selected ? 0.42 : 0)
+
+    Behavior on opacity {
+      NumberAnimation {
+        duration: Theme.motionFast
+        easing.type: Easing.OutCubic
+      }
+    }
+
+    Behavior on scale {
+      NumberAnimation {
+        duration: Theme.motionFast
+        easing.type: Easing.OutCubic
+      }
+    }
+  }
 
   MouseArea {
     id: tileTouch
@@ -58,7 +88,7 @@ Item {
       maximumLineCount: 2
       elide: Text.ElideRight
       text: root.entryName
-      color: root.selected ? Theme.textOnAccent : Theme.text
+      color: Theme.text
       size: "md"
       font.weight: Font.DemiBold
     }

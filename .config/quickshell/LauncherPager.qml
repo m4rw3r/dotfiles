@@ -14,6 +14,8 @@ Item {
   property int rows: 3
   readonly property int tileHeight: Theme.controlMd * 2 + Theme.gapLg + Theme.gapXs
   readonly property int tileSpacing: Theme.gapSm
+  readonly property int gridHeight: rows * tileHeight + Math.max(0, rows - 1) * tileSpacing
+  readonly property int pageIndicatorHeight: pageCount > 1 ? Theme.gapLg : 0
   readonly property int arrowGutter: Theme.controlMd + Theme.gapLg + Theme.gapXs
   readonly property real tileWidth: Math.floor((pageFrame.width - (columns - 1) * tileSpacing) / columns)
   readonly property int pageSize: columns * rows
@@ -30,7 +32,7 @@ Item {
   signal focusGridRequested
 
   width: parent ? parent.width : implicitWidth
-  height: rows * tileHeight + Math.max(0, rows - 1) * tileSpacing
+  height: gridHeight + pageIndicatorHeight
 
   function pageItemCount(targetPage) {
     const start = targetPage * pageSize;
@@ -159,7 +161,10 @@ Item {
 
   Item {
     id: pageFrame
-    anchors.fill: parent
+    height: root.gridHeight
+    anchors.top: parent.top
+    anchors.left: parent.left
+    anchors.right: parent.right
     anchors.leftMargin: root.arrowGutter
     anchors.rightMargin: root.arrowGutter
     clip: true
@@ -287,6 +292,65 @@ Item {
                   root.entryActivated(entry);
                 }
               }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Item {
+    id: pageDots
+    width: pageFrame.width
+    height: Theme.gapMd
+    anchors.top: pageFrame.bottom
+    anchors.topMargin: Theme.gapXs
+    anchors.horizontalCenter: pageFrame.horizontalCenter
+    visible: root.pageCount > 1
+
+    Row {
+      anchors.centerIn: parent
+      spacing: 2
+
+      Repeater {
+        model: root.pageCount
+
+        delegate: Item {
+          id: pageDotDelegate
+
+          required property int index
+
+          width: Theme.gapLg
+          height: pageDots.height
+
+          Rectangle {
+            anchors.centerIn: parent
+            width: pageDotDelegate.index === root.page ? 18 : 7
+            height: 7
+            radius: height / 2
+            color: pageDotDelegate.index === root.page ? Theme.accentStrong : Qt.rgba(Theme.textSubtle.r, Theme.textSubtle.g, Theme.textSubtle.b, 0.38)
+
+            Behavior on width {
+              NumberAnimation {
+                duration: Theme.motionFast
+                easing.type: Easing.OutCubic
+              }
+            }
+
+            Behavior on color {
+              ColorAnimation {
+                duration: Theme.motionFast
+                easing.type: Easing.OutCubic
+              }
+            }
+          }
+
+          MouseArea {
+            anchors.fill: parent
+            onClicked: {
+              root.interactionStarted();
+              root.setPage(pageDotDelegate.index);
+              root.focusGridRequested();
             }
           }
         }

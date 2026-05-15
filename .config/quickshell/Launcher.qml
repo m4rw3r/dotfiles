@@ -151,6 +151,7 @@ Item {
       return;
     if (!launchCommand(entry))
       return;
+    launcherSearch.recordLaunch(entry);
     closeLauncher();
   }
 

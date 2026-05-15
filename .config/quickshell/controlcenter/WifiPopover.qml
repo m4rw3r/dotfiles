@@ -111,7 +111,7 @@ Patterns.HeroSheetPopover {
               id: wifiRow
 
               required property int index
-              readonly property var network: popover.wifiService.networks[index]
+              readonly property var network: popover.wifiService.networks[index] || null
 
               width: parent.width
               visible: !!network
@@ -120,7 +120,7 @@ Patterns.HeroSheetPopover {
               actionText: network && !network.active ? "Connect" : ""
               trailingIconName: network && network.active ? "check" : ""
               trailingIconColor: Theme.text
-              active: network && network.active
+              active: !!(network && network.active)
               enabled: !!network && !popover.wifiService.busy
               onClicked: popover.controller.beginWifiConnect(network)
             }

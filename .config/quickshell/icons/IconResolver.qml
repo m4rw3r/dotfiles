@@ -247,14 +247,14 @@ Singleton {
 
   function resolve(icon, options) {
     const opts = options || {};
+    const aliasOnlySource = resolveAliasOnly(icon, opts.desktopEntry, opts.appName);
+    if (aliasOnlySource !== "") return aliasOnlySource;
+
     const directSource = passthroughSource(icon);
     if (directSource !== "") return directSource;
 
     const themedIcon = resolveTheme(icon, opts.desktopEntry, opts.appName);
     if (themedIcon !== "") return themedIcon;
-
-    const aliasOnlySource = resolveAliasOnly(icon, opts.desktopEntry, opts.appName);
-    if (aliasOnlySource !== "") return aliasOnlySource;
 
     const directAlias = resolveAlias(icon, opts.desktopEntry, opts.appName);
     if (directAlias !== "") return directAlias;

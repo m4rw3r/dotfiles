@@ -9,7 +9,7 @@ Item {
   property string query: ""
   property int limit: 240
   property var results: []
-  property var hiddenEntries: []
+  property var hiddenEntries: ["id:amdgpu_top.desktop", "id:amdgpu_top-tui.desktop", "id:bssh.desktop", "id:bvnc.desktop", "id:btop.desktop", "id:calf.desktop", "id:dropbox.desktop", "id:htop.desktop", "id:nm-connection-editor.desktop", "id:org.gnome.Extensions.desktop", "id:org.gnome.Shell.Extensions.desktop", "id:assistant.desktop", "id:linguist.desktop", "id:qdbusviewer.desktop", "id:qt6ct.desktop", "id:qv4l2.desktop", "id:qvidcap.desktop", "id:org.gnome.Settings.desktop", "id:wpa_gui.desktop", "id:zellij.desktop"]
   property var boostedEntries: []
   property int boostedEntryScore: 180
   property int maxUsageRecords: 160
@@ -74,12 +74,27 @@ Item {
       keys.push(key);
   }
 
+  function addDesktopIdMatchKeys(keys, value) {
+    const id = normalizeText(value).trim();
+    if (id === "")
+      return;
+
+    addMatchKey(keys, id);
+    addMatchKey(keys, `id:${id}`);
+    if (id.endsWith(".desktop")) {
+      const withoutSuffix = id.substring(0, id.length - 8);
+      addMatchKey(keys, withoutSuffix);
+      addMatchKey(keys, `id:${withoutSuffix}`);
+    } else {
+      addMatchKey(keys, `${id}.desktop`);
+      addMatchKey(keys, `id:${id}.desktop`);
+    }
+  }
+
   function entryMatchKeys(entry) {
     const keys = [];
     const id = normalizeText(entry.id).trim();
-    addMatchKey(keys, id);
-    if (id !== "")
-      addMatchKey(keys, `id:${id}`);
+    addDesktopIdMatchKeys(keys, id);
     addMatchKey(keys, entryKey(entry));
     addMatchKey(keys, entry.name);
     addMatchKey(keys, entry.genericName);

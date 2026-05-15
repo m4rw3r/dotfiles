@@ -1,0 +1,43 @@
+#!/usr/bin/env zsh
+
+emulate -L zsh
+setopt pipefail
+
+[[ -n ${NIRI_SOCKET:-} ]] || return 0
+command -v niri >/dev/null 2>&1 || return 0
+command -v jq >/dev/null 2>&1 || return 0
+command -v ps >/dev/null 2>&1 || return 0
+
+local pid=${1:-$$}
+local ppid
+local -a pids
+
+while [[ -n $pid && $pid == <-> && $pid -gt 1 ]]; do
+  pids+=("$pid")
+  ppid=$(ps -o ppid= -p "$pid" 2>/dev/null) || break
+  ppid=${ppid//[[:space:]]/}
+
+  [[ -n $ppid && $ppid != "$pid" ]] || break
+
+  pid=$ppid
+done
+
+local meta
+
+meta=$(
+  niri msg -j windows |
+    jq -r --argjson pids "[${(j:,:)pids}]" '
+      .[]
+      | select(.pid as $pid | $pids | index($pid))
+      | [.id, (.app_id // "")]
+      | @tsv
+    ' |
+    command head -n 1
+) || return 0
+
+# echo "$meta"
+
+[[ -n $meta ]] || return 0
+
+export NIRI_WINDOW_ID="${meta%%$'\t'*}"
+export NIRI_APP_ID="${meta#*$'\t'}"

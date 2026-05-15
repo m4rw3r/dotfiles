@@ -55,6 +55,40 @@ find_niri_window_metadata() {
     '
 }
 
+notify() {
+    exec notify-send "$@" "${notify_args[@]}"
+}
+
+notify_for_window() {
+    local window_id=$1
+    local app_id=${2:-}
+    local -a hints=(-h "int:x-niri-window-id:${window_id}")
+
+    [[ -n "$app_id" ]] && hints+=(-h "string:desktop-entry:${app_id}")
+
+    notify "${hints[@]}"
+}
+
+resolve_niri_window_metadata() {
+    if [[ "${NIRI_WINDOW_ID:-}" =~ ^[0-9]+$ ]]; then
+        printf '%s\t%s\n' "$NIRI_WINDOW_ID" "${NIRI_APP_ID:-}"
+
+        return 0
+    fi
+
+    [[ -n "$source_pid" ]] || return 1
+
+    command -v niri >/dev/null 2>&1
+    command -v ps >/dev/null 2>&1
+    command -v awk >/dev/null 2>&1
+
+    local terminal_pid
+
+    terminal_pid=$(find_terminal_pid "$source_pid") || return 1
+
+    find_niri_window_metadata "$terminal_pid"
+}
+
 command -v notify-send >/dev/null 2>&1
 
 source_pid=
@@ -96,25 +130,10 @@ if (( show_help )); then
     exit 0
 fi
 
-if [[ -z "$source_pid" ]]; then
-    exec notify-send "${notify_args[@]}"
-fi
-
-command -v niri >/dev/null 2>&1
-command -v ps >/dev/null 2>&1
-command -v awk >/dev/null 2>&1
-
-terminal_pid=$(find_terminal_pid "$source_pid") || exec notify-send "${notify_args[@]}"
-window_metadata=$(find_niri_window_metadata "$terminal_pid") || exec notify-send "${notify_args[@]}"
+window_metadata=$(resolve_niri_window_metadata) || notify
 window_id=${window_metadata%%$'\t'*}
 app_id=${window_metadata#*$'\t'}
 
-[[ -n "$window_id" ]] || exec notify-send "${notify_args[@]}"
+[[ -n "$window_id" ]] || notify
 
-notify_hints=(-h "int:x-niri-window-id:${window_id}")
-
-if [[ -n "$app_id" ]]; then
-    notify_hints+=(-h "string:desktop-entry:${app_id}")
-fi
-
-exec notify-send "${notify_hints[@]}" "${notify_args[@]}"
+notify_for_window "$window_id" "$app_id"

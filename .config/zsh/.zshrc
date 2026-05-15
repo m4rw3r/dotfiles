@@ -230,5 +230,15 @@ fi
 	}
 }
 
+_set_niri_window_env_once() {
+  set_niri_window_env
+
+  if [[ -n ${NIRI_WINDOW_ID:-} ]]; then
+    add-zsh-hook -d precmd _set_niri_window_env_once
+  fi
+}
+
+add-zsh-hook precmd _set_niri_window_env_once
+
 eval "$(starship init zsh)"
 

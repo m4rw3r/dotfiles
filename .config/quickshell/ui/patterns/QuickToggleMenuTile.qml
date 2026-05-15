@@ -9,8 +9,8 @@ Item {
   property string title: ""
   property bool active: false
   property bool menuOpen: false
-  signal primaryClicked()
-  signal secondaryClicked()
+  signal primaryClicked
+  signal secondaryClicked
 
   implicitWidth: parent ? Math.floor((parent.width - Theme.gapSm) / 2) : Theme.popoverWidthSm
   implicitHeight: Theme.tileHeight
@@ -25,22 +25,16 @@ Item {
     anchors.fill: parent
     iconName: root.iconName
     title: root.title
-    backgroundColor: root.active
-      ? (root.primaryPressed ? Theme.toggleOnStrong : Theme.toggleOn)
-      : (root.primaryPressed ? Theme.fieldPressed : Theme.field)
-    borderColor: root.active
-      ? Qt.rgba(1, 1, 1, 0.12)
-      : (root.menuOpen ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08))
+    backgroundColor: root.active ? (root.primaryPressed ? Theme.toggleOnStrong : Theme.toggleOn) : (root.primaryPressed ? Theme.fieldPressed : Theme.field)
+    borderColor: root.active ? Theme.borderStrong : (root.menuOpen ? Theme.borderStrong : Theme.borderSubtle)
     iconColor: root.active ? Theme.textOnAccent : Theme.text
     textTone: root.active ? "onAccent" : "primary"
     split: true
     trailingWidth: root.splitWidth
     splitWidth: root.splitWidth
     splitInset: root.splitInset
-    splitColor: root.active
-      ? (root.secondaryPressed ? Theme.toggleOnStrong : Qt.lighter(backgroundColor, 1.05))
-      : ((root.secondaryPressed || root.menuOpen) ? Theme.fieldAlt : Qt.lighter(backgroundColor, 1.03))
-    separatorColor: root.active ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.08)
+    splitColor: root.active ? (root.secondaryPressed ? Theme.toggleOnStrong : Qt.lighter(backgroundColor, 1.05)) : ((root.secondaryPressed || root.menuOpen) ? Theme.fieldAlt : Qt.lighter(backgroundColor, 1.03))
+    separatorColor: root.active ? Theme.borderAccent : Theme.borderSubtle
 
     Ui.UiIcon {
       anchors.centerIn: parent

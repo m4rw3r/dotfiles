@@ -50,7 +50,7 @@ Item {
     outlined: false
     radius: Theme.radiusLg
     border.width: Theme.stroke
-    border.color: Qt.rgba(1, 1, 1, 0.12)
+    border.color: Theme.borderStrong
 
     Column {
       anchors.fill: parent
@@ -76,7 +76,7 @@ Item {
         radius: width / 2
         color: Theme.field
         border.width: Theme.stroke
-        border.color: Qt.rgba(1, 1, 1, 0.08)
+        border.color: Theme.borderSubtle
 
         Rectangle {
           anchors.left: parent.left

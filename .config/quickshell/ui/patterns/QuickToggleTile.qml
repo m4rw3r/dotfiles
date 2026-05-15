@@ -7,7 +7,7 @@ Item {
   property string iconName: "wifi"
   property string title: ""
   property bool active: false
-  signal clicked()
+  signal clicked
 
   implicitWidth: parent ? Math.floor((parent.width - Theme.gapSm) / 2) : Theme.popoverWidthSm
   implicitHeight: Theme.tileHeight
@@ -19,10 +19,8 @@ Item {
     anchors.fill: parent
     iconName: root.iconName
     title: root.title
-    backgroundColor: root.active
-      ? (root.pressed ? Theme.toggleOnStrong : Theme.toggleOn)
-      : (root.pressed ? Theme.fieldPressed : Theme.field)
-    borderColor: root.active ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08)
+    backgroundColor: root.active ? (root.pressed ? Theme.toggleOnStrong : Theme.toggleOn) : (root.pressed ? Theme.fieldPressed : Theme.field)
+    borderColor: root.active ? Theme.borderStrong : Theme.borderSubtle
     iconColor: root.active ? Theme.textOnAccent : Theme.text
     textTone: root.active ? "onAccent" : "primary"
   }

@@ -14,6 +14,8 @@ Item {
   property int nextUid: 1
   property int pendingFocusUid: -1
   property int pendingFocusWindowId: 0
+  property int queuedFocusUid: -1
+  property int queuedFocusWindowId: 0
   property bool focusLookupBusy: false
   property int maxToasts: 3
   readonly property var groupedEntries: buildGroups(entries)
@@ -33,21 +35,25 @@ Item {
   }
 
   function integerHint(hints, name) {
-    if (!hints || name === "") return 0;
+    if (!hints || name === "")
+      return 0;
 
     const value = Number(hints[name]);
-    if (!Number.isInteger(value) || value <= 0) return 0;
+    if (!Number.isInteger(value) || value <= 0)
+      return 0;
     return value;
   }
 
   function windowListContainsId(text, windowId) {
-    if (windowId <= 0) return false;
+    if (windowId <= 0)
+      return false;
 
     try {
       const windows = JSON.parse(String(text || "[]"));
       for (let index = 0; index < windows.length; index += 1) {
         const window = windows[index];
-        if (Number(window && window.id) === windowId) return true;
+        if (Number(window && window.id) === windowId)
+          return true;
       }
     } catch (error) {
       return false;
@@ -57,60 +63,79 @@ Item {
   }
 
   function appLabel(entry) {
-    if (!entry) return "Notifications";
-    if (entry.appName !== "") return entry.appName;
-    if (entry.desktopEntry !== "") return entry.desktopEntry;
+    if (!entry)
+      return "Notifications";
+    if (entry.appName !== "")
+      return entry.appName;
+    if (entry.desktopEntry !== "")
+      return entry.desktopEntry;
     return "Notification";
   }
 
   function summaryLabel(entry) {
-    if (!entry) return "No notifications";
-    if (entry.summary !== "") return entry.summary;
-    if (entry.body !== "") return entry.body;
+    if (!entry)
+      return "No notifications";
+    if (entry.summary !== "")
+      return entry.summary;
+    if (entry.body !== "")
+      return entry.body;
     return appLabel(entry);
   }
 
   function bodyLabel(entry) {
-    if (!entry) return "";
-    if (entry.body === "" || entry.body === entry.summary) return "";
+    if (!entry)
+      return "";
+    if (entry.body === "" || entry.body === entry.summary)
+      return "";
     return entry.body;
   }
 
   function ageLabel(entry) {
-    if (!entry || !entry.receivedAt) return "";
+    if (!entry || !entry.receivedAt)
+      return "";
 
     const elapsedSeconds = Math.max(1, Math.floor((Date.now() - entry.receivedAt) / 1000));
-    if (elapsedSeconds < 60) return `${elapsedSeconds}s`;
+    if (elapsedSeconds < 60)
+      return `${elapsedSeconds}s`;
 
     const elapsedMinutes = Math.floor(elapsedSeconds / 60);
-    if (elapsedMinutes < 60) return `${elapsedMinutes}m`;
+    if (elapsedMinutes < 60)
+      return `${elapsedMinutes}m`;
 
     const elapsedHours = Math.floor(elapsedMinutes / 60);
-    if (elapsedHours < 24) return `${elapsedHours}h`;
+    if (elapsedHours < 24)
+      return `${elapsedHours}h`;
 
     return `${Math.floor(elapsedHours / 24)}d`;
   }
 
   function unreadCountLabel() {
-    if (unreadCount <= 0) return "";
-    if (unreadCount === 1) return "1 unread";
+    if (unreadCount <= 0)
+      return "";
+    if (unreadCount === 1)
+      return "1 unread";
     return `${unreadCount} unread`;
   }
 
   function trackedCountLabel() {
-    if (trackedCount <= 0) return "";
-    if (trackedCount === 1) return "1 item";
+    if (trackedCount <= 0)
+      return "";
+    if (trackedCount === 1)
+      return "1 item";
     return `${trackedCount} items`;
   }
 
   function sourceKey(entry) {
-    if (!entry) return "notifications";
+    if (!entry)
+      return "notifications";
 
     const desktopEntry = cleanText(entry.desktopEntry);
-    if (desktopEntry !== "") return `desktop:${desktopEntry}`;
+    if (desktopEntry !== "")
+      return `desktop:${desktopEntry}`;
 
     const appName = cleanText(entry.appName);
-    if (appName !== "") return `app:${appName}`;
+    if (appName !== "")
+      return `app:${appName}`;
 
     return `fallback:${cleanText(entry.appIcon)}:${cleanText(entry.summary)}`;
   }
@@ -143,45 +168,60 @@ Item {
       const group = groups[groupIndex];
       group.entries.push(entry);
       group.entryCount += 1;
-      if (entry.unread) group.unreadCount += 1;
-      if (entry.unread && entry.urgency === NotificationUrgency.Critical) group.criticalUnreadCount += 1;
-      if (entry.live) group.liveCount += 1;
+      if (entry.unread)
+        group.unreadCount += 1;
+      if (entry.unread && entry.urgency === NotificationUrgency.Critical)
+        group.criticalUnreadCount += 1;
+      if (entry.live)
+        group.liveCount += 1;
     }
 
     return groups;
   }
 
   function primaryAction(entry) {
-    if (!entry || !entry.notification || !entry.live) return null;
-    if (!entry.notification.actions || entry.notification.actions.length <= 0) return null;
+    if (!entry || !entry.notification || !entry.live)
+      return null;
+    if (!entry.notification.actions || entry.notification.actions.length <= 0)
+      return null;
     return entry.notification.actions[0];
   }
 
   function primaryActionLabel(entry) {
     const action = primaryAction(entry);
-    if (!action) return "";
+    if (!action)
+      return "";
 
     const text = cleanText(action.text);
-    if (text === "") return "Open";
+    if (text === "")
+      return "Open";
     return text.length > 14 ? "Open" : text;
   }
 
   function toastTimeoutMs(entry) {
-    if (!entry || entry.urgency === NotificationUrgency.Critical) return 0;
+    if (!entry || entry.urgency === NotificationUrgency.Critical)
+      return 0;
 
     const timeoutMs = Math.round(Number(entry.expireTimeout || 0));
-    if (timeoutMs > 0) return Math.max(3500, Math.min(12000, timeoutMs));
+    if (timeoutMs > 0)
+      return Math.max(3500, Math.min(12000, timeoutMs));
     return defaultToastTimeoutMs;
   }
 
   function toastRemainingMs(entry) {
-    if (!entry || !entry.toastExpiresAt) return 0;
+    if (!entry)
+      return 0;
+    if (Number(entry.toastPausedRemainingMs || 0) > 0)
+      return Number(entry.toastPausedRemainingMs);
+    if (!entry.toastExpiresAt)
+      return 0;
     return Math.max(0, entry.toastExpiresAt - Date.now());
   }
 
   function entryForUid(uid) {
     for (let index = 0; index < entries.length; index += 1) {
-      if (entries[index].uid === uid) return entries[index];
+      if (entries[index].uid === uid)
+        return entries[index];
     }
 
     return null;
@@ -202,20 +242,69 @@ Item {
     revision += 1;
   }
 
-  function requestEntryFocus(uid, windowId) {
-    if (uid < 0 || windowId <= 0 || focusLookupBusy) return;
-
+  function startEntryFocusLookup(uid, windowId) {
     pendingFocusUid = uid;
     pendingFocusWindowId = windowId;
     focusLookupBusy = true;
     notificationWindowLookupProcess.exec(["niri", "msg", "-j", "windows"]);
   }
 
+  function requestEntryFocus(uid, windowId) {
+    if (uid < 0 || windowId <= 0)
+      return;
+
+    if (focusLookupBusy) {
+      queuedFocusUid = uid;
+      queuedFocusWindowId = windowId;
+      return;
+    }
+
+    startEntryFocusLookup(uid, windowId);
+  }
+
+  function pauseToast(uid) {
+    const entry = entryForUid(uid);
+    if (!entry || Number(entry.toastExpiresAt || 0) <= 0 || Number(entry.toastPausedRemainingMs || 0) > 0)
+      return;
+
+    const nextEntries = entries.slice();
+    for (let index = 0; index < nextEntries.length; index += 1) {
+      if (nextEntries[index].uid !== uid)
+        continue;
+      nextEntries[index] = Object.assign({}, nextEntries[index], {
+        toastPausedRemainingMs: Math.max(1, toastRemainingMs(entry)),
+        toastExpiresAt: 0
+      });
+      setEntries(nextEntries);
+      return;
+    }
+  }
+
+  function resumeToast(uid) {
+    const entry = entryForUid(uid);
+    const remainingMs = Number(entry && entry.toastPausedRemainingMs || 0);
+    if (!entry || remainingMs <= 0)
+      return;
+
+    const nextEntries = entries.slice();
+    for (let index = 0; index < nextEntries.length; index += 1) {
+      if (nextEntries[index].uid !== uid)
+        continue;
+      nextEntries[index] = Object.assign({}, nextEntries[index], {
+        toastPausedRemainingMs: 0,
+        toastExpiresAt: Date.now() + remainingMs
+      });
+      setEntries(nextEntries);
+      return;
+    }
+  }
+
   function countUnread(list) {
     let count = 0;
 
     for (let index = 0; index < list.length; index += 1) {
-      if (list[index].unread) count += 1;
+      if (list[index].unread)
+        count += 1;
     }
 
     return count;
@@ -226,7 +315,8 @@ Item {
 
     for (let index = 0; index < list.length; index += 1) {
       const entry = list[index];
-      if (entry.unread && entry.urgency === NotificationUrgency.Critical) count += 1;
+      if (entry.unread && entry.urgency === NotificationUrgency.Critical)
+        count += 1;
     }
 
     return count;
@@ -234,7 +324,8 @@ Item {
 
   function firstUnread(list) {
     for (let index = 0; index < list.length; index += 1) {
-      if (list[index].unread) return list[index];
+      if (list[index].unread)
+        return list[index];
     }
 
     return null;
@@ -243,9 +334,7 @@ Item {
   function snapshot(notification, uid) {
     const receivedAt = Date.now();
     const expireTimeout = Number(notification.expireTimeout || 0);
-    const timeoutMs = notification.urgency === NotificationUrgency.Critical
-      ? 0
-      : (expireTimeout > 0 ? Math.max(3500, Math.min(12000, Math.round(expireTimeout))) : defaultToastTimeoutMs);
+    const timeoutMs = notification.urgency === NotificationUrgency.Critical ? 0 : (expireTimeout > 0 ? Math.max(3500, Math.min(12000, Math.round(expireTimeout))) : defaultToastTimeoutMs);
 
     return {
       uid: uid,
@@ -266,12 +355,14 @@ Item {
       receivedAt: receivedAt,
       expireTimeout: expireTimeout,
       toastExpiresAt: timeoutMs > 0 ? receivedAt + timeoutMs : 0,
+      toastPausedRemainingMs: 0,
       lastGeneration: notification.lastGeneration
     };
   }
 
   function trackNotification(notification) {
-    if (!notification) return;
+    if (!notification)
+      return;
 
     notification.tracked = true;
 
@@ -281,17 +372,20 @@ Item {
     const entry = snapshot(notification, uid);
     const replacedUids = [];
     const nextEntries = entries.filter(existing => {
-      if (existing.id !== notification.id) return true;
+      if (existing.id !== notification.id)
+        return true;
       replacedUids.push(existing.uid);
       return false;
     });
     nextEntries.unshift(entry);
     setEntries(nextEntries);
-    if (replacedUids.length > 0) setToastUids(toastUids.filter(existingUid => replacedUids.indexOf(existingUid) < 0));
+    if (replacedUids.length > 0)
+      setToastUids(toastUids.filter(existingUid => replacedUids.indexOf(existingUid) < 0));
 
-    if (!notification.lastGeneration) queueToast(uid);
+    if (!notification.lastGeneration)
+      queueToast(uid);
 
-    notification.closed.connect(function() {
+    notification.closed.connect(function () {
       root.markClosed(uid);
     });
   }
@@ -299,21 +393,25 @@ Item {
   function queueToast(uid) {
     const nextToastUids = toastUids.filter(existingUid => existingUid !== uid);
     nextToastUids.unshift(uid);
-    if (nextToastUids.length > maxToasts) nextToastUids.length = maxToasts;
+    if (nextToastUids.length > maxToasts)
+      nextToastUids.length = maxToasts;
     setToastUids(nextToastUids);
     playToastSound();
   }
 
   function playToastSound() {
-    if (notificationSoundPlayer.mediaStatus === MediaPlayer.InvalidMedia) return;
-    if (notificationSoundPlayer.playbackState === MediaPlayer.PlayingState) notificationSoundPlayer.stop();
+    if (notificationSoundPlayer.mediaStatus === MediaPlayer.InvalidMedia)
+      return;
+    if (notificationSoundPlayer.playbackState === MediaPlayer.PlayingState)
+      notificationSoundPlayer.stop();
     notificationSoundPlayer.position = 0;
     notificationSoundPlayer.play();
   }
 
   function dismissToast(uid) {
     const nextToastUids = toastUids.filter(existingUid => existingUid !== uid);
-    if (nextToastUids.length !== toastUids.length) setToastUids(nextToastUids);
+    if (nextToastUids.length !== toastUids.length)
+      setToastUids(nextToastUids);
   }
 
   function markClosed(uid) {
@@ -323,39 +421,52 @@ Item {
     let updated = false;
 
     for (let index = 0; index < nextEntries.length; index += 1) {
-      if (nextEntries[index].uid !== uid) continue;
-      nextEntries[index] = Object.assign({}, nextEntries[index], { notification: null, live: false });
+      if (nextEntries[index].uid !== uid)
+        continue;
+      nextEntries[index] = Object.assign({}, nextEntries[index], {
+        notification: null,
+        live: false
+      });
       updated = true;
       break;
     }
 
-    if (updated) setEntries(nextEntries);
+    if (updated)
+      setEntries(nextEntries);
   }
 
   function markRead(entryOrUid) {
     const uid = typeof entryOrUid === "number" ? entryOrUid : (entryOrUid ? entryOrUid.uid : -1);
-    if (uid < 0) return;
+    if (uid < 0)
+      return;
 
     const nextEntries = entries.slice();
     let updated = false;
 
     for (let index = 0; index < nextEntries.length; index += 1) {
-      if (nextEntries[index].uid !== uid || !nextEntries[index].unread) continue;
-      nextEntries[index] = Object.assign({}, nextEntries[index], { unread: false });
+      if (nextEntries[index].uid !== uid || !nextEntries[index].unread)
+        continue;
+      nextEntries[index] = Object.assign({}, nextEntries[index], {
+        unread: false
+      });
       updated = true;
       break;
     }
 
-    if (updated) setEntries(nextEntries);
+    if (updated)
+      setEntries(nextEntries);
   }
 
   function markAllRead() {
-    if (!hasUnread) return;
+    if (!hasUnread)
+      return;
 
     const nextEntries = [];
     for (let index = 0; index < entries.length; index += 1) {
       const entry = entries[index];
-      nextEntries.push(entry.unread ? Object.assign({}, entry, { unread: false }) : entry);
+      nextEntries.push(entry.unread ? Object.assign({}, entry, {
+        unread: false
+      }) : entry);
     }
 
     setEntries(nextEntries);
@@ -364,7 +475,8 @@ Item {
   function invokePrimaryAction(entryOrUid) {
     const entry = typeof entryOrUid === "number" ? entryForUid(entryOrUid) : entryOrUid;
     const action = primaryAction(entry);
-    if (!action) return;
+    if (!action)
+      return;
 
     markRead(entry.uid);
     dismissToast(entry.uid);
@@ -373,7 +485,8 @@ Item {
 
   function activateEntry(entryOrUid) {
     const entry = typeof entryOrUid === "number" ? entryForUid(entryOrUid) : entryOrUid;
-    if (!entry) return;
+    if (!entry)
+      return;
 
     if (entryHasFocusTarget(entry)) {
       requestEntryFocus(entry.uid, Number(entry.niriWindowId || 0));
@@ -385,27 +498,30 @@ Item {
 
   function closeLive(entryOrUid) {
     const entry = typeof entryOrUid === "number" ? entryForUid(entryOrUid) : entryOrUid;
-    if (!entry) return;
+    if (!entry)
+      return;
 
     dismissToast(entry.uid);
-    if (entry.notification && entry.live) entry.notification.dismiss();
+    if (entry.notification && entry.live)
+      entry.notification.dismiss();
   }
 
   function forgetEntry(entryOrUid) {
     const uid = typeof entryOrUid === "number" ? entryOrUid : (entryOrUid ? entryOrUid.uid : -1);
-    if (uid < 0) return;
+    if (uid < 0)
+      return;
 
     const entry = entryForUid(uid);
     dismissToast(uid);
     setEntries(entries.filter(existing => existing.uid !== uid));
-    if (entry && entry.notification && entry.live) entry.notification.dismiss();
+    if (entry && entry.notification && entry.live)
+      entry.notification.dismiss();
   }
 
   function forgetGroup(groupOrKey) {
-    const groupKey = typeof groupOrKey === "string"
-      ? groupOrKey
-      : (groupOrKey && groupOrKey.key ? String(groupOrKey.key) : "");
-    if (groupKey === "") return;
+    const groupKey = typeof groupOrKey === "string" ? groupOrKey : (groupOrKey && groupOrKey.key ? String(groupOrKey.key) : "");
+    if (groupKey === "")
+      return;
 
     const liveNotifications = [];
     const removedUids = [];
@@ -419,10 +535,12 @@ Item {
       }
 
       removedUids.push(entry.uid);
-      if (entry.notification && entry.live) liveNotifications.push(entry.notification);
+      if (entry.notification && entry.live)
+        liveNotifications.push(entry.notification);
     }
 
-    if (removedUids.length === 0) return;
+    if (removedUids.length === 0)
+      return;
 
     setEntries(nextEntries);
     setToastUids(toastUids.filter(existingUid => removedUids.indexOf(existingUid) < 0));
@@ -437,7 +555,8 @@ Item {
 
     for (let index = 0; index < entries.length; index += 1) {
       const entry = entries[index];
-      if (entry.notification && entry.live) liveNotifications.push(entry.notification);
+      if (entry.notification && entry.live)
+        liveNotifications.push(entry.notification);
     }
 
     setEntries([]);
@@ -456,7 +575,7 @@ Item {
     imageSupported: true
     keepOnReload: true
 
-    onNotification: function(notification) {
+    onNotification: function (notification) {
       root.trackNotification(notification);
     }
   }
@@ -472,23 +591,32 @@ Item {
 
     stdout: notificationWindowLookupStdout
 
-    Component.onCompleted: exited.connect(function(exitCode) {
+    Component.onCompleted: exited.connect(function (exitCode) {
       const focusUid = root.pendingFocusUid;
       const focusWindowId = root.pendingFocusWindowId;
+      const focusEntry = root.entryForUid(focusUid);
 
       root.pendingFocusUid = -1;
       root.pendingFocusWindowId = 0;
       root.focusLookupBusy = false;
 
-      if (exitCode !== 0) return;
+      const canFocus = exitCode === 0 && !!focusEntry && Number(focusEntry.niriWindowId || 0) === focusWindowId && root.windowListContainsId(notificationWindowLookupStdout.text, focusWindowId);
 
-      const focusEntry = root.entryForUid(focusUid);
-      if (!focusEntry || Number(focusEntry.niriWindowId || 0) !== focusWindowId) return;
-      if (!root.windowListContainsId(notificationWindowLookupStdout.text, focusWindowId)) return;
+      if (canFocus) {
+        root.markRead(focusUid);
+        root.dismissToast(focusUid);
+        notificationFocusProcess.exec(["niri", "msg", "action", "focus-window", "--id", `${focusWindowId}`]);
+      } else if (root.primaryAction(focusEntry)) {
+        root.invokePrimaryAction(focusEntry);
+      }
 
-      root.markRead(focusUid);
-      root.dismissToast(focusUid);
-      notificationFocusProcess.exec(["niri", "msg", "action", "focus-window", "--id", `${focusWindowId}`]);
+      if (root.queuedFocusUid >= 0 && root.queuedFocusWindowId > 0) {
+        const nextUid = root.queuedFocusUid;
+        const nextWindowId = root.queuedFocusWindowId;
+        root.queuedFocusUid = -1;
+        root.queuedFocusWindowId = 0;
+        root.startEntryFocusLookup(nextUid, nextWindowId);
+      }
     })
   }
 

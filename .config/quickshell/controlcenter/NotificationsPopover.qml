@@ -17,9 +17,7 @@ Patterns.HeroSheetPopover {
   visible: controller ? controller.notificationsOpen : false
   iconName: popover.controller && popover.controller.notificationsCriticalUnread ? "bell-ring" : "bell"
   title: "Notifications"
-  subtitle: popover.controller && popover.controller.unreadNotificationCount > 0 && notificationCenter
-    ? notificationCenter.unreadCountLabel()
-    : "You're all caught up."
+  subtitle: popover.controller && popover.controller.unreadNotificationCount > 0 && notificationCenter ? notificationCenter.unreadCountLabel() : "You're all caught up."
 
   function withAlpha(color, alpha) {
     return Qt.rgba(color.r, color.g, color.b, alpha);
@@ -40,7 +38,7 @@ Patterns.HeroSheetPopover {
     property int horizontalPadding: Theme.gapSm
     property int verticalPadding: Theme.insetSm
     default property alias content: frameColumn.data
-    signal clicked()
+    signal clicked
 
     width: parent ? parent.width : implicitWidth
     implicitWidth: 1
@@ -50,11 +48,9 @@ Patterns.HeroSheetPopover {
     Rectangle {
       anchors.fill: parent
       radius: Theme.radiusMd
-      color: frame.critical
-        ? Theme.chip
-        : (frame.active ? Qt.rgba(1, 1, 1, 0.06) : (frameTouch.pressed ? Qt.rgba(1, 1, 1, 0.035) : "transparent"))
+      color: frame.critical ? Theme.chip : (frame.active ? Theme.overlayActive : (frameTouch.pressed ? Theme.overlayPressed : "transparent"))
       border.width: frame.critical || frame.active ? Theme.stroke : 0
-      border.color: frame.critical ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.1)
+      border.color: frame.critical ? Theme.borderAccent : Theme.borderNormal
     }
 
     MouseArea {
@@ -93,7 +89,7 @@ Patterns.HeroSheetPopover {
       radius: width / 2
       color: badge.critical ? Theme.accent : (badge.active ? Theme.toggleOn : Theme.field)
       border.width: badge.critical || badge.active ? 0 : Theme.stroke
-      border.color: Qt.rgba(1, 1, 1, 0.08)
+      border.color: Theme.borderSubtle
     }
 
     UiIcon {
@@ -153,7 +149,8 @@ Patterns.HeroSheetPopover {
       clickable: card.rowClickable
       horizontalPadding: card.frameHorizontalPadding
       onClicked: {
-        if (popover.notificationCenter) popover.notificationCenter.activateEntry(card.entry);
+        if (popover.notificationCenter)
+          popover.notificationCenter.activateEntry(card.entry);
       }
 
       Row {
@@ -171,11 +168,7 @@ Patterns.HeroSheetPopover {
         }
 
         Column {
-          width: Math.max(
-            0,
-            parent.width - closeButton.implicitWidth
-            - (card.showSourceBadge ? cardBadge.width + Theme.gapSm * 2 : 0)
-          )
+          width: Math.max(0, parent.width - closeButton.implicitWidth - (card.showSourceBadge ? cardBadge.width + Theme.gapSm * 2 : 0))
           spacing: Theme.nudge
 
           Item {
@@ -239,7 +232,8 @@ Patterns.HeroSheetPopover {
           variant: "minimal"
           iconName: "x"
           onClicked: {
-            if (popover.notificationCenter) popover.notificationCenter.forgetEntry(card.entry);
+            if (popover.notificationCenter)
+              popover.notificationCenter.forgetEntry(card.entry);
           }
         }
       }
@@ -280,7 +274,8 @@ Patterns.HeroSheetPopover {
           active: true
           text: card.primaryActionLabel
           onClicked: {
-            if (popover.notificationCenter) popover.notificationCenter.invokePrimaryAction(card.entry);
+            if (popover.notificationCenter)
+              popover.notificationCenter.invokePrimaryAction(card.entry);
           }
         }
       }
@@ -310,7 +305,8 @@ Patterns.HeroSheetPopover {
       critical: !!(groupSection.group && groupSection.group.criticalUnreadCount > 0)
       clickable: groupSection.expandable && !!popover.controller
       onClicked: {
-        if (popover.controller) popover.controller.toggleNotificationGroup(groupSection.group.key);
+        if (popover.controller)
+          popover.controller.toggleNotificationGroup(groupSection.group.key);
       }
 
       Item {
@@ -335,7 +331,8 @@ Patterns.HeroSheetPopover {
           variant: "minimal"
           iconName: "x"
           onClicked: {
-            if (popover.controller) popover.controller.clearNotificationGroup(groupSection.group.key);
+            if (popover.controller)
+              popover.controller.clearNotificationGroup(groupSection.group.key);
           }
         }
 
@@ -354,8 +351,10 @@ Patterns.HeroSheetPopover {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             text: {
-              if (!groupSection.group) return "";
-              if (groupSection.group.entryCount === 1) return "1 message";
+              if (!groupSection.group)
+                return "";
+              if (groupSection.group.entryCount === 1)
+                return "1 message";
               return `${groupSection.group.entryCount} messages`;
             }
             size: "xs"
@@ -471,8 +470,7 @@ Patterns.HeroSheetPopover {
     readonly property real scrollIndicatorHeight: Theme.controlSm
     readonly property bool notificationListOverflowing: notificationViewport.contentHeight > notificationViewport.height + 1
     readonly property bool notificationListHasMoreAbove: notificationListOverflowing && notificationViewport.contentY > 1
-    readonly property bool notificationListHasMoreBelow: notificationListOverflowing
-      && notificationViewport.contentY + notificationViewport.height < notificationViewport.contentHeight - 1
+    readonly property bool notificationListHasMoreBelow: notificationListOverflowing && notificationViewport.contentY + notificationViewport.height < notificationViewport.contentHeight - 1
 
     NotificationSectionLabel {
       visible: popover.controller && popover.controller.notificationCount > 0
@@ -540,9 +538,7 @@ Patterns.HeroSheetPopover {
               required property var modelData
 
               width: notificationContentColumn.width
-              height: modelData && modelData.entryCount === 1
-                ? singleNotificationCard.implicitHeight
-                : groupedNotificationSection.implicitHeight
+              height: modelData && modelData.entryCount === 1 ? singleNotificationCard.implicitHeight : groupedNotificationSection.implicitHeight
 
               NotificationInboxCard {
                 id: singleNotificationCard
@@ -575,8 +571,14 @@ Patterns.HeroSheetPopover {
           color: "transparent"
           opacity: notificationListColumn.notificationListHasMoreAbove ? 1 : 0
           gradient: Gradient {
-            GradientStop { position: 0.0; color: popover.withAlpha(Theme.submenu, 1) }
-            GradientStop { position: 1.0; color: popover.withAlpha(Theme.submenu, 0) }
+            GradientStop {
+              position: 0.0
+              color: popover.withAlpha(Theme.submenu, 1)
+            }
+            GradientStop {
+              position: 1.0
+              color: popover.withAlpha(Theme.submenu, 0)
+            }
           }
         }
 
@@ -602,8 +604,14 @@ Patterns.HeroSheetPopover {
           color: "transparent"
           opacity: notificationListColumn.notificationListHasMoreBelow ? 1 : 0
           gradient: Gradient {
-            GradientStop { position: 0.0; color: popover.withAlpha(Theme.submenu, 0) }
-            GradientStop { position: 1.0; color: popover.withAlpha(Theme.submenu, 1) }
+            GradientStop {
+              position: 0.0
+              color: popover.withAlpha(Theme.submenu, 0)
+            }
+            GradientStop {
+              position: 1.0
+              color: popover.withAlpha(Theme.submenu, 1)
+            }
           }
         }
 
@@ -634,7 +642,8 @@ Patterns.HeroSheetPopover {
         width: parent.width
         title: "Clear All"
         onClicked: {
-          if (popover.notificationCenter) popover.notificationCenter.clearEntries();
+          if (popover.notificationCenter)
+            popover.notificationCenter.clearEntries();
         }
       }
     }

@@ -15,7 +15,7 @@ Ui.UiSurface {
   radius: Theme.radiusMd
 
   border.width: Theme.stroke
-  border.color: Qt.rgba(1, 1, 1, 0.08)
+  border.color: Theme.borderSubtle
 
   Column {
     id: listColumn

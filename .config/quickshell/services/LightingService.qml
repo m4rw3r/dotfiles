@@ -13,17 +13,21 @@ Item {
   property string lastError: ""
 
   function refresh() {
-    stateReadProcess.exec([
-      "zsh",
-      "-lc",
-      "command -v z13ctl >/dev/null 2>&1 || exit 127; state_file=${XDG_STATE_HOME:-$HOME/.local/state}/z13ctl/state.json; [ -r \"$state_file\" ] || exit 66; command cat \"$state_file\""
-    ]);
+    stateReadProcess.exec(["zsh", "-lc", "command -v z13ctl >/dev/null 2>&1 || exit 127; state_file=${XDG_STATE_HOME:-$HOME/.local/state}/z13ctl/state.json; [ -r \"$state_file\" ] || exit 66; command cat \"$state_file\""]);
   }
 
   function applyLevel(nextLevel) {
-    if (!available) return;
+    const requestedLevel = String(nextLevel || "");
+    const validLevel = requestedLevel === "off" || requestedLevel === "low" || requestedLevel === "medium" || requestedLevel === "high";
+    if (!validLevel) {
+      lastError = `Invalid lighting level: ${requestedLevel}`;
+      return;
+    }
+
+    if (!available)
+      return;
     lastError = "";
-    lightingWriteProcess.exec(["zsh", "-lc", `z13ctl brightness ${nextLevel}`]);
+    lightingWriteProcess.exec(["z13ctl", "brightness", requestedLevel]);
   }
 
   function parseState(text) {
@@ -51,12 +55,8 @@ Item {
       return;
     }
 
-    const enabled = lighting && lighting.enabled !== undefined
-      ? Boolean(lighting.enabled)
-      : (keyboard && keyboard.enabled !== undefined ? Boolean(keyboard.enabled) : false);
-    const brightness = lighting && lighting.brightness !== undefined
-      ? Number(lighting.brightness)
-      : (keyboard && keyboard.brightness !== undefined ? Number(keyboard.brightness) : 0);
+    const enabled = lighting && lighting.enabled !== undefined ? Boolean(lighting.enabled) : (keyboard && keyboard.enabled !== undefined ? Boolean(keyboard.enabled) : false);
+    const brightness = lighting && lighting.brightness !== undefined ? Number(lighting.brightness) : (keyboard && keyboard.brightness !== undefined ? Number(keyboard.brightness) : 0);
 
     commandAvailable = true;
     available = true;
@@ -97,7 +97,7 @@ Item {
     stdout: stateStdout
     stderr: stateStderr
 
-    Component.onCompleted: exited.connect(function(exitCode) {
+    Component.onCompleted: exited.connect(function (exitCode) {
       root.settled = true;
       if (exitCode === 0) {
         root.parseState(stateStdout.text);
@@ -107,9 +107,7 @@ Item {
       root.commandAvailable = exitCode !== 127;
       root.available = false;
       root.level = "off";
-      root.lastError = exitCode === 127
-        ? ""
-        : (exitCode === 66 ? "Lighting state unavailable." : String(stateStderr.text || "").trim());
+      root.lastError = exitCode === 127 ? "" : (exitCode === 66 ? "Lighting state unavailable." : String(stateStderr.text || "").trim());
     })
   }
 
@@ -123,7 +121,7 @@ Item {
 
     stderr: writeStderr
 
-    Component.onCompleted: exited.connect(function(exitCode) {
+    Component.onCompleted: exited.connect(function (exitCode) {
       root.lastError = exitCode === 0 ? "" : String(writeStderr.text || "").trim();
       refreshTimer.restart();
     })

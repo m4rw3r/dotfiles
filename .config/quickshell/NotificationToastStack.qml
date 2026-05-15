@@ -35,7 +35,17 @@ FocusScope {
     readonly property bool actionable: focusable || primaryActionLabel !== ""
 
     function dismissIfExpired() {
-      if (notificationCenter && autoDismiss && !!entry && remainingMs <= 0) notificationCenter.dismissToast(toastUid);
+      if (!suspended && notificationCenter && autoDismiss && !!entry && remainingMs <= 0)
+        notificationCenter.dismissToast(toastUid);
+    }
+
+    function syncSuspension() {
+      if (!notificationCenter || !autoDismiss || !entry)
+        return;
+      if (suspended)
+        notificationCenter.pauseToast(toastUid);
+      else
+        notificationCenter.resumeToast(toastUid);
     }
 
     visible: !!entry
@@ -45,7 +55,7 @@ FocusScope {
     outlined: false
     radius: Theme.radiusLg
     border.width: Theme.stroke
-    border.color: critical ? Theme.accentStrong : Qt.rgba(1, 1, 1, 0.12)
+    border.color: critical ? Theme.accentStrong : Theme.borderStrong
     opacity: entry ? 1 : 0
 
     Behavior on opacity {
@@ -60,7 +70,8 @@ FocusScope {
       anchors.rightMargin: dismissButton.width
       enabled: card.actionable
       onClicked: {
-        if (card.notificationCenter) card.notificationCenter.activateEntry(card.toastUid);
+        if (card.notificationCenter)
+          card.notificationCenter.activateEntry(card.toastUid);
       }
     }
 
@@ -171,25 +182,29 @@ FocusScope {
           variant: "minimal"
           iconName: "x"
           onClicked: {
-            if (card.notificationCenter) card.notificationCenter.closeLive(card.toastUid);
+            if (card.notificationCenter)
+              card.notificationCenter.closeLive(card.toastUid);
           }
         }
       }
-
     }
 
     Timer {
       interval: Math.max(1, card.remainingMs)
-      running: card.autoDismiss && !!card.entry && card.remainingMs > 0
+      running: !card.suspended && card.autoDismiss && !!card.entry && card.remainingMs > 0
       repeat: false
       onTriggered: {
-        if (card.notificationCenter) card.notificationCenter.dismissToast(card.toastUid);
+        if (card.notificationCenter)
+          card.notificationCenter.dismissToast(card.toastUid);
       }
     }
 
-    Component.onCompleted: dismissIfExpired()
+    Component.onCompleted: {
+      Qt.callLater(card.syncSuspension);
+      dismissIfExpired();
+    }
     onEntryChanged: dismissIfExpired()
-    onSuspendedChanged: dismissIfExpired()
+    onSuspendedChanged: Qt.callLater(card.syncSuspension)
   }
 
   Column {

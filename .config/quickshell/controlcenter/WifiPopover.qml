@@ -67,8 +67,7 @@ Patterns.HeroSheetPopover {
       readonly property real viewportMaxHeight: Theme.controlMd * visibleRowCount + Theme.nudge * (visibleRowCount - 1)
       readonly property bool networkListOverflowing: wifiNetworkViewport.contentHeight > wifiNetworkViewport.height + 1
       readonly property bool networkListHasMoreAbove: networkListOverflowing && wifiNetworkViewport.contentY > 1
-      readonly property bool networkListHasMoreBelow: networkListOverflowing
-        && wifiNetworkViewport.contentY + wifiNetworkViewport.height < wifiNetworkViewport.contentHeight - 1
+      readonly property bool networkListHasMoreBelow: networkListOverflowing && wifiNetworkViewport.contentY + wifiNetworkViewport.height < wifiNetworkViewport.contentHeight - 1
 
       Item {
         width: parent.width
@@ -151,7 +150,7 @@ Patterns.HeroSheetPopover {
       outlined: false
       radius: Theme.radiusLg
       border.width: Theme.stroke
-      border.color: Qt.rgba(1, 1, 1, 0.08)
+      border.color: Theme.borderSubtle
 
       Column {
         id: passwordColumn

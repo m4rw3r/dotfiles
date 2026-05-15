@@ -13,13 +13,15 @@ Ui.UiSurface {
   property int iconSize: Theme.iconGlyphSm
   property int pressAndHoldInterval: 700
   property color iconColor: {
-    if (!enabled) return Theme.textSubtle;
-    if (variant === "minimal") return active ? Theme.text : Theme.textMuted;
+    if (!enabled)
+      return Theme.textSubtle;
+    if (variant === "minimal")
+      return active ? Theme.text : Theme.textMuted;
     return active ? Theme.textOnAccent : Theme.iconSecondary;
   }
   property bool holdTriggered: false
-  signal clicked()
-  signal pressAndHold()
+  signal clicked
+  signal pressAndHold
 
   width: implicitWidth
   implicitWidth: variant === "minimal" ? Theme.iconGlyphMd : (circular ? Theme.controlSm : Theme.controlMd)
@@ -30,13 +32,15 @@ Ui.UiSurface {
   pressed: interactive && touchArea.pressed
   opacity: enabled ? 1 : 0.45
   color: {
-    if (variant === "minimal") return "transparent";
-    if (active) return Theme.toggleOn;
+    if (variant === "minimal")
+      return "transparent";
+    if (active)
+      return Theme.toggleOn;
     return touchArea.pressed ? Theme.fieldPressed : Theme.field;
   }
 
   border.width: variant === "minimal" ? 0 : Theme.stroke
-  border.color: active ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08)
+  border.color: active ? Theme.borderStrong : Theme.borderSubtle
 
   Ui.UiIcon {
     anchors.centerIn: parent

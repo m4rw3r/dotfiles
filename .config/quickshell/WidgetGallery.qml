@@ -10,7 +10,7 @@ import "ui/patterns" as Patterns
 FocusScope {
   id: root
 
-  signal closeRequested()
+  signal closeRequested
 
   property bool wifiEnabled: true
   property bool bluetoothEnabled: false
@@ -253,7 +253,7 @@ FocusScope {
 
                     UiIcon {
                       anchors.centerIn: parent
-                        name: String(iconSample.modelData)
+                      name: String(iconSample.modelData)
                       strokeColor: Theme.iconSecondary
                     }
                   }
@@ -299,11 +299,25 @@ FocusScope {
               width: parent.width
               spacing: Theme.gapXs
 
-              Controls.Button { text: "Default" }
-              Controls.Button { text: "Accent"; variant: "accent" }
-              Controls.Button { text: "Active"; active: true }
-              Controls.Button { text: "Compact"; compact: true }
-              Controls.Button { text: "Disabled"; enabled: false }
+              Controls.Button {
+                text: "Default"
+              }
+              Controls.Button {
+                text: "Accent"
+                variant: "accent"
+              }
+              Controls.Button {
+                text: "Active"
+                active: true
+              }
+              Controls.Button {
+                text: "Compact"
+                compact: true
+              }
+              Controls.Button {
+                text: "Disabled"
+                enabled: false
+              }
             }
           }
 
@@ -315,12 +329,30 @@ FocusScope {
               width: parent.width
               spacing: Theme.gapXs
 
-              Controls.IconButton { iconName: "speaker" }
-              Controls.IconButton { iconName: "speaker-muted"; active: true }
-              Controls.IconButton { iconName: "power"; circular: true }
-              Controls.IconButton { iconName: "lock"; circular: true; active: true }
-              Controls.IconButton { iconName: "sun"; interactive: false }
-              Controls.IconButton { iconName: "bluetooth"; enabled: false }
+              Controls.IconButton {
+                iconName: "speaker"
+              }
+              Controls.IconButton {
+                iconName: "speaker-muted"
+                active: true
+              }
+              Controls.IconButton {
+                iconName: "power"
+                circular: true
+              }
+              Controls.IconButton {
+                iconName: "lock"
+                circular: true
+                active: true
+              }
+              Controls.IconButton {
+                iconName: "sun"
+                interactive: false
+              }
+              Controls.IconButton {
+                iconName: "bluetooth"
+                enabled: false
+              }
             }
           }
 
@@ -338,7 +370,7 @@ FocusScope {
                 description: root.wifiEnabled ? "Connected to Studio 5G" : "Radio disabled"
                 iconName: "wifi"
                 checked: root.wifiEnabled
-                onToggled: function(checked) {
+                onToggled: function (checked) {
                   root.wifiEnabled = checked;
                 }
               }
@@ -349,7 +381,7 @@ FocusScope {
                 description: root.bluetoothEnabled ? "2 devices available" : "Hidden from nearby devices"
                 iconName: "bluetooth"
                 checked: root.bluetoothEnabled
-                onToggled: function(checked) {
+                onToggled: function (checked) {
                   root.bluetoothEnabled = checked;
                 }
               }
@@ -360,7 +392,7 @@ FocusScope {
                 description: "Silence banners and sounds until tomorrow morning"
                 iconName: "moon"
                 checked: root.doNotDisturb
-                onToggled: function(checked) {
+                onToggled: function (checked) {
                   root.doNotDisturb = checked;
                 }
               }
@@ -382,10 +414,10 @@ FocusScope {
                 value: root.mediaLevel
                 showValueText: true
                 valueText: `${Math.round(root.mediaLevel * 100)}%`
-                onValueMoved: function(value) {
+                onValueMoved: function (value) {
                   root.mediaLevel = value;
                 }
-                onValueCommitted: function(value) {
+                onValueCommitted: function (value) {
                   root.mediaLevel = value;
                 }
               }
@@ -399,10 +431,10 @@ FocusScope {
                 value: root.brightnessLevel
                 showValueText: true
                 valueText: `${Math.round(root.brightnessLevel)}%`
-                onValueMoved: function(value) {
+                onValueMoved: function (value) {
                   root.brightnessLevel = value;
                 }
-                onValueCommitted: function(value) {
+                onValueCommitted: function (value) {
                   root.brightnessLevel = value;
                 }
               }
@@ -416,10 +448,10 @@ FocusScope {
                 value: root.keyboardLevel
                 showValueText: true
                 valueText: ["Off", "Low", "Med", "High"][Math.round(root.keyboardLevel)]
-                onValueMoved: function(value) {
+                onValueMoved: function (value) {
                   root.keyboardLevel = value;
                 }
-                onValueCommitted: function(value) {
+                onValueCommitted: function (value) {
                   root.keyboardLevel = value;
                 }
               }
@@ -507,7 +539,7 @@ FocusScope {
                 radius: Theme.radiusLg
 
                 border.width: 1
-                border.color: Qt.rgba(1, 1, 1, 0.12)
+                border.color: Theme.borderStrong
 
                 UiScrim {
                   anchors.fill: parent
@@ -581,7 +613,7 @@ FocusScope {
                 radius: Theme.radiusLg
 
                 border.width: 1
-                border.color: Qt.rgba(1, 1, 1, 0.12)
+                border.color: Theme.borderStrong
 
                 UiScrim {
                   anchors.fill: parent
@@ -591,11 +623,12 @@ FocusScope {
 
                 TapHandler {
                   enabled: root.galleryWifiMenuOpen
-                  onTapped: function(eventPoint) {
+                  onTapped: function (eventPoint) {
                     const point = eventPoint.position;
                     const x = menuPreviewPanel.x;
                     const y = menuPreviewPanel.y;
-                    if (point.x >= x && point.x <= x + menuPreviewPanel.width && point.y >= y && point.y <= y + menuPreviewPanel.height) return;
+                    if (point.x >= x && point.x <= x + menuPreviewPanel.width && point.y >= y && point.y <= y + menuPreviewPanel.height)
+                      return;
                     root.galleryWifiMenuOpen = false;
                   }
                 }

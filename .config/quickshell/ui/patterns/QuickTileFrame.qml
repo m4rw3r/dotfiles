@@ -8,7 +8,7 @@ Item {
   property string iconName: "wifi"
   property string title: ""
   property color backgroundColor: Theme.field
-  property color borderColor: Qt.rgba(1, 1, 1, 0.08)
+  property color borderColor: Theme.borderSubtle
   property color iconColor: Theme.text
   property string textTone: "primary"
   property bool split: false
@@ -16,7 +16,7 @@ Item {
   property int splitWidth: Theme.tileSplitWidth
   property int splitInset: Theme.stroke
   property color splitColor: "transparent"
-  property color separatorColor: Qt.rgba(1, 1, 1, 0.08)
+  property color separatorColor: Theme.borderSubtle
   property real tileRadius: Theme.radiusMd
   default property alias trailingContent: trailingSlot.data
 

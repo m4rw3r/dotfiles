@@ -9,7 +9,7 @@ Item {
   property bool active: false
   property bool useActiveStyling: true
   property bool open: false
-  signal clicked()
+  signal clicked
 
   implicitWidth: parent ? Math.floor((parent.width - Theme.gapSm) / 2) : Theme.popoverWidthSm
   implicitHeight: Theme.tileHeight
@@ -22,12 +22,8 @@ Item {
     anchors.fill: parent
     iconName: root.iconName
     title: root.title
-    backgroundColor: root.highlighted
-      ? (root.pressed ? Theme.toggleOnStrong : Theme.toggleOn)
-      : ((root.pressed || root.open) ? Theme.fieldAlt : Theme.field)
-    borderColor: root.highlighted
-      ? Qt.rgba(1, 1, 1, 0.12)
-      : (root.open ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08))
+    backgroundColor: root.highlighted ? (root.pressed ? Theme.toggleOnStrong : Theme.toggleOn) : ((root.pressed || root.open) ? Theme.fieldAlt : Theme.field)
+    borderColor: root.highlighted ? Theme.borderStrong : (root.open ? Theme.borderStrong : Theme.borderSubtle)
     iconColor: root.highlighted ? Theme.textOnAccent : Theme.text
     textTone: root.highlighted ? "onAccent" : "primary"
   }

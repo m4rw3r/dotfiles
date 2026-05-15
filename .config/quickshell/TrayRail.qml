@@ -13,40 +13,30 @@ FocusScope {
   property bool forcedVisible: false
   property bool showPassive: false
   property var panelWindow: null
+  property var stateController: null
   readonly property bool expanded: mode === "expanded"
-  // qmllint disable missing-property
-  readonly property bool hasAnyItems: trayItems.count > 0
-  // qmllint enable missing-property
-  readonly property int urgentCount: countItems(Status.NeedsAttention)
-  readonly property int activeCount: countItems(Status.Active)
-  readonly property int passiveCount: countItems(Status.Passive)
-  readonly property bool hasAttention: urgentCount > 0
+  readonly property bool hasAnyItems: stateController ? stateController.hasItems : false
+  readonly property int urgentCount: stateController ? stateController.attentionCount : 0
+  readonly property int activeCount: stateController ? stateController.activeCount : 0
+  readonly property int passiveCount: stateController ? stateController.passiveCount : 0
+  readonly property bool hasAttention: stateController ? stateController.hasAttention : false
   readonly property bool showPlaceholder: !hasAnyItems || (forcedVisible && !hasAttention && !expanded)
   property real offsetX: 0
 
-  signal dismissRequested()
-  signal expandRequested()
+  signal dismissRequested
+  signal expandRequested
 
   implicitWidth: railSurface.implicitWidth
   implicitHeight: railSurface.implicitHeight
 
   Keys.onEscapePressed: {
-    if (expanded) dismissRequested();
-  }
-
-  function countItems(status) {
-    let count = 0;
-    // qmllint disable missing-property
-    for (let i = 0; i < SystemTray.items.count; i += 1) {
-      const item = SystemTray.items.get(i);
-      if (item && item.status === status) count += 1;
-    }
-    // qmllint enable missing-property
-    return count;
+    if (expanded)
+      dismissRequested();
   }
 
   function openMenu(item, target) {
-    if (!item || !item.hasMenu || !panelWindow || !target) return;
+    if (!item || !item.hasMenu || !panelWindow || !target)
+      return;
     const point = target.mapToItem(null, target.width, Math.round(target.height / 2));
     item.display(panelWindow, Math.round(point.x), Math.round(point.y));
   }
@@ -59,21 +49,9 @@ FocusScope {
 
   Component.onCompleted: triggerIntro()
 
-  Instantiator {
-    id: trayItems
-
-    model: SystemTray.items
-
-    delegate: Item {
-      required property var modelData
-      visible: false
-      width: 0
-      height: 0
-    }
-  }
-
   onModeChanged: {
-    if (!expanded) showPassive = false;
+    if (!expanded)
+      showPassive = false;
     triggerIntro();
   }
 
@@ -84,7 +62,8 @@ FocusScope {
     ignoreUnknownSignals: true
 
     function onVisibleChanged() {
-      if (root.panelWindow && root.panelWindow.visible) root.triggerIntro();
+      if (root.panelWindow && root.panelWindow.visible)
+        root.triggerIntro();
     }
   }
 
@@ -125,8 +104,8 @@ FocusScope {
     readonly property int secondaryWidth: showSecondaryArea ? 28 : 0
     readonly property bool useTrayImage: !button.placeholder && button.iconName === "" && !!button.item
 
-    signal primaryTriggered()
-    signal secondaryTriggered()
+    signal primaryTriggered
+    signal secondaryTriggered
 
     width: railColumn.width
     height: Theme.controlMd + Theme.gapXs
@@ -136,10 +115,11 @@ FocusScope {
     pressed: primaryTouch.pressed || secondaryTouch.pressed
     opacity: item || placeholder ? 1 : 0.5
     border.width: Theme.stroke
-    border.color: attention ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.08)
+    border.color: attention ? Theme.borderAccent : Theme.borderSubtle
 
     color: {
-      if (attention) return pressed ? Theme.accentStrong : Theme.accent;
+      if (attention)
+        return pressed ? Theme.accentStrong : Theme.accent;
       return pressed ? Theme.fieldPressed : Theme.field;
     }
 
@@ -160,7 +140,8 @@ FocusScope {
       }
 
       if (button.item.onlyMenu) {
-        if (button.item.hasMenu) root.openMenu(button.item, button.showSecondaryArea ? secondarySlot : button);
+        if (button.item.hasMenu)
+          root.openMenu(button.item, button.showSecondaryArea ? secondarySlot : button);
         return;
       }
 
@@ -178,7 +159,8 @@ FocusScope {
         return;
       }
 
-      if (!button.item.onlyMenu) button.item.activate();
+      if (!button.item.onlyMenu)
+        button.item.activate();
     }
 
     Rectangle {
@@ -188,9 +170,7 @@ FocusScope {
       anchors.right: parent.right
       width: button.secondaryWidth
       radius: Theme.radiusMd
-      color: secondaryTouch.pressed
-        ? (button.attention ? Theme.accentStrong : Theme.fieldAlt)
-        : "transparent"
+      color: secondaryTouch.pressed ? (button.attention ? Theme.accentStrong : Theme.fieldAlt) : "transparent"
     }
 
     Rectangle {
@@ -200,7 +180,7 @@ FocusScope {
       anchors.right: parent.right
       anchors.rightMargin: button.secondaryWidth
       width: Theme.stroke
-      color: button.attention ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.08)
+      color: button.attention ? Theme.borderAccent : Theme.borderSubtle
     }
 
     Item {
@@ -228,9 +208,7 @@ FocusScope {
       anchors.centerIn: primarySlot
       width: Theme.iconGlyphMd
       height: Theme.iconGlyphMd
-      name: button.iconName !== ""
-        ? button.iconName
-        : (button.placeholder ? (root.expanded ? "panel-right-open" : "panel-right") : String(button.item.icon || "panel-right"))
+      name: button.iconName !== "" ? button.iconName : (button.placeholder ? (root.expanded ? "panel-right-open" : "panel-right") : String(button.item.icon || "panel-right"))
       strokeColor: button.attention ? Theme.textOnAccent : Theme.text
     }
 
@@ -281,7 +259,8 @@ FocusScope {
 
       onPressed: mouse => {
         button.holdTriggered = false;
-        if (!button.item || button.peekButton) return;
+        if (!button.item || button.peekButton)
+          return;
         if (mouse.button === Qt.RightButton && button.item.hasMenu) {
           button.holdTriggered = true;
           root.openMenu(button.item, button.showSecondaryArea ? secondarySlot : button);
@@ -290,13 +269,15 @@ FocusScope {
       }
 
       onPressAndHold: {
-        if (!button.item || button.peekButton || !button.item.hasMenu) return;
+        if (!button.item || button.peekButton || !button.item.hasMenu)
+          return;
         button.holdTriggered = true;
         root.openMenu(button.item, button.showSecondaryArea ? secondarySlot : button);
       }
 
       onClicked: mouse => {
-        if (button.holdTriggered) return;
+        if (button.holdTriggered)
+          return;
         button.triggerPrimary(mouse.button);
       }
     }
@@ -322,7 +303,8 @@ FocusScope {
         button.holdTriggered = false;
       }
       onClicked: {
-        if (button.holdTriggered) return;
+        if (button.holdTriggered)
+          return;
         button.triggerSecondary();
       }
     }
@@ -338,7 +320,7 @@ FocusScope {
     outlined: false
     radius: Theme.radiusLg
     border.width: Theme.stroke
-    border.color: Qt.rgba(1, 1, 1, 0.12)
+    border.color: Theme.borderStrong
 
     Column {
       id: railColumn
@@ -448,7 +430,6 @@ FocusScope {
         tone: "subtle"
         horizontalAlignment: Text.AlignHCenter
       }
-
     }
   }
 }

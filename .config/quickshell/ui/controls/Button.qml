@@ -9,25 +9,20 @@ Ui.UiSurface {
   property bool active: false
   property bool compact: false
   property string variant: "secondary"
-  signal clicked()
+  signal clicked
 
   width: implicitWidth
-  implicitWidth: Math.max(
-    compact ? Theme.controlSm * 2 + Theme.gapSm : Theme.controlMd * 2 + Theme.gapSm,
-    label.implicitWidth + Theme.gapLg
-  )
+  implicitWidth: Math.max(compact ? Theme.controlSm * 2 + Theme.gapSm : Theme.controlMd * 2 + Theme.gapSm, label.implicitWidth + Theme.gapLg)
   implicitHeight: compact ? Theme.controlSm : Theme.controlMd
   tone: "field"
   outlined: false
   radius: Theme.radiusMd
   pressed: touchArea.pressed
   opacity: enabled ? 1 : 0.45
-  color: active || variant === "accent"
-    ? (touchArea.pressed ? Theme.accentStrong : Theme.accent)
-    : (touchArea.pressed ? Theme.fieldPressed : Theme.field)
+  color: active || variant === "accent" ? (touchArea.pressed ? Theme.accentStrong : Theme.accent) : (touchArea.pressed ? Theme.fieldPressed : Theme.field)
 
   border.width: Theme.stroke
-  border.color: active || variant === "accent" ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08)
+  border.color: active || variant === "accent" ? Theme.borderStrong : Theme.borderSubtle
 
   Ui.UiText {
     id: label

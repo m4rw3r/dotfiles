@@ -11,7 +11,7 @@ Item {
   property string trailingIconName: ""
   property color trailingIconColor: Theme.textMuted
   property bool active: false
-  signal clicked()
+  signal clicked
 
   width: parent ? parent.width : implicitWidth
   implicitWidth: 1
@@ -21,11 +21,9 @@ Item {
   Rectangle {
     anchors.fill: parent
     radius: Theme.radiusMd
-    color: root.active
-      ? Qt.rgba(1, 1, 1, 0.06)
-      : (touchArea.pressed ? Qt.rgba(1, 1, 1, 0.035) : "transparent")
+    color: root.active ? Theme.overlayActive : (touchArea.pressed ? Theme.overlayPressed : "transparent")
     border.width: root.active ? Theme.stroke : 0
-    border.color: Qt.rgba(1, 1, 1, 0.1)
+    border.color: Theme.borderNormal
   }
 
   Column {
@@ -80,8 +78,8 @@ Item {
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
       visible: name !== ""
-      width: 16
-      height: 16
+      width: Theme.iconGlyphSm
+      height: Theme.iconGlyphSm
       name: root.trailingIconName
       strokeColor: root.trailingIconColor
     }

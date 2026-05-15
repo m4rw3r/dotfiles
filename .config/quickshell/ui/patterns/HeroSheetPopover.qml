@@ -16,7 +16,7 @@ Ui.UiSurface {
   property int verticalPadding: Theme.insetSm
   property int sectionSpacing: Theme.gapSm
   default property alias content: bodyColumn.data
-  signal statusClicked()
+  signal statusClicked
 
   readonly property bool statusInteractive: hasStatus && statusToggleEnabled && !statusBusy
 
@@ -31,7 +31,7 @@ Ui.UiSurface {
   clip: true
 
   border.width: Theme.stroke
-  border.color: Qt.rgba(1, 1, 1, 0.08)
+  border.color: Theme.borderSubtle
 
   Column {
     id: sheetColumn
@@ -54,13 +54,16 @@ Ui.UiSurface {
         height: Theme.controlMd
         radius: width / 2
         color: {
-          if (!root.hasStatus) return Qt.rgba(1, 1, 1, 0.16);
-          if (root.statusActive) return heroTouch.pressed ? Theme.toggleOnStrong : Theme.toggleOn;
-          if (!root.statusToggleEnabled) return Theme.field;
+          if (!root.hasStatus)
+            return Theme.borderAccent;
+          if (root.statusActive)
+            return heroTouch.pressed ? Theme.toggleOnStrong : Theme.toggleOn;
+          if (!root.statusToggleEnabled)
+            return Theme.field;
           return heroTouch.pressed ? Theme.fieldPressed : Theme.toggleOff;
         }
         border.width: root.hasStatus && !root.statusActive ? Theme.stroke : 0
-        border.color: Qt.rgba(1, 1, 1, 0.08)
+        border.color: Theme.borderSubtle
 
         Ui.UiIcon {
           anchors.centerIn: parent

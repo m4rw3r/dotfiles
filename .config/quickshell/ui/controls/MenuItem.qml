@@ -15,7 +15,7 @@ Item {
   property string activeStyle: "accent"
   property bool dividerVisible: false
   property bool compact: false
-  signal clicked()
+  signal clicked
 
   width: parent ? parent.width : implicitWidth
   implicitWidth: 1
@@ -28,11 +28,9 @@ Item {
   Rectangle {
     anchors.fill: parent
     radius: Theme.radiusSm
-    color: root.accentActive
-      ? Theme.toggleOn
-      : (root.subtleActive ? Theme.field : (touchArea.pressed ? Theme.fieldAlt : "transparent"))
+    color: root.accentActive ? Theme.toggleOn : (root.subtleActive ? Theme.field : (touchArea.pressed ? Theme.fieldAlt : "transparent"))
     border.width: root.accentActive || root.subtleActive ? Theme.stroke : 0
-    border.color: root.accentActive ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.08)
+    border.color: root.accentActive ? Theme.borderStrong : Theme.borderSubtle
   }
 
   Row {
@@ -54,11 +52,7 @@ Item {
     }
 
     Column {
-      width: Math.max(
-        0,
-        parent.width - trailingSlot.width
-        - (root.iconName !== "" ? Theme.iconGlyphMd + Theme.gapLg + Theme.nudge : Theme.gapLg - Theme.nudge)
-      )
+      width: Math.max(0, parent.width - trailingSlot.width - (root.iconName !== "" ? Theme.iconGlyphMd + Theme.gapLg + Theme.nudge : Theme.gapLg - Theme.nudge))
       anchors.verticalCenter: parent.verticalCenter
       spacing: root.compact ? 0 : Theme.stroke
 
@@ -105,9 +99,7 @@ Item {
         anchors.right: parent.right
         name: root.trailingIconName
         visible: name !== ""
-        strokeColor: root.accentActive
-          ? Theme.textOnAccent
-          : (root.indicatorActive ? Theme.accent : Theme.text)
+        strokeColor: root.accentActive ? Theme.textOnAccent : (root.indicatorActive ? Theme.accent : Theme.text)
       }
     }
   }

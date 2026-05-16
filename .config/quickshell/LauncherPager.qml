@@ -169,28 +169,50 @@ Item {
     anchors.rightMargin: root.arrowGutter
     clip: true
 
+    property int anchorPage: root.page
     property int dragStartPage: 0
-    property real dragStartX: 0
+    property bool recenterAfterAnimation: false
+    property int recenterTargetPage: 0
+    readonly property int renderedPageCount: Math.min(root.pageCount, 3)
+    readonly property int windowStartPage: Math.max(0, Math.min(clampPage(anchorPage) - 1, Math.max(0, root.pageCount - renderedPageCount)))
 
     function clampPage(targetPage) {
       return Math.max(0, Math.min(targetPage, Math.max(0, root.pageCount - 1)));
     }
 
+    function pageInWindow(targetPage) {
+      const clampedPage = clampPage(targetPage);
+      return clampedPage >= windowStartPage && clampedPage < windowStartPage + renderedPageCount;
+    }
+
+    function pageSlot(targetPage) {
+      return clampPage(targetPage) - windowStartPage;
+    }
+
     function targetStripX(targetPage) {
-      return -clampPage(targetPage) * width;
+      return -pageSlot(targetPage) * width;
     }
 
     function syncStripToPage(targetPage, immediate) {
-      const targetX = targetStripX(targetPage);
+      const clampedPage = clampPage(targetPage);
+      recenterAfterAnimation = false;
       stripSnapAnimation.stop();
-      if (immediate) {
-        pageStrip.x = targetX;
+
+      if (immediate || !pageInWindow(clampedPage)) {
+        anchorPage = clampedPage;
+        pageStrip.x = targetStripX(clampedPage);
         return;
       }
 
-      if (pageStrip.x === targetX)
+      const targetX = targetStripX(clampedPage);
+      if (pageStrip.x === targetX) {
+        anchorPage = clampedPage;
+        pageStrip.x = targetStripX(clampedPage);
         return;
+      }
 
+      recenterAfterAnimation = true;
+      recenterTargetPage = clampedPage;
       stripSnapAnimation.from = pageStrip.x;
       stripSnapAnimation.to = targetX;
       stripSnapAnimation.start();
@@ -202,6 +224,13 @@ Item {
       property: "x"
       duration: Theme.motionBase
       easing.type: Easing.OutCubic
+      onStopped: {
+        if (!pageFrame.recenterAfterAnimation)
+          return;
+        pageFrame.recenterAfterAnimation = false;
+        pageFrame.anchorPage = pageFrame.recenterTargetPage;
+        pageStrip.x = pageFrame.targetStripX(pageFrame.recenterTargetPage);
+      }
     }
 
     onWidthChanged: syncStripToPage(root.page, true)
@@ -219,21 +248,24 @@ Item {
       onTranslationChanged: {
         if (!active)
           return;
-        const minX = Math.min(0, pageFrame.width - pageStrip.width);
-        const nextX = pageFrame.dragStartX + translation.x;
-        pageStrip.x = Math.max(minX, Math.min(0, nextX));
+        const startX = pageFrame.targetStripX(pageFrame.dragStartPage);
+        const minX = pageFrame.targetStripX(pageFrame.windowStartPage + pageFrame.renderedPageCount - 1);
+        const maxX = pageFrame.targetStripX(pageFrame.windowStartPage);
+        pageStrip.x = Math.max(minX, Math.min(maxX, startX + translation.x));
       }
 
       onActiveChanged: {
         if (active) {
+          pageFrame.recenterAfterAnimation = false;
           stripSnapAnimation.stop();
+          pageFrame.anchorPage = root.page;
           pageFrame.dragStartPage = root.page;
-          pageFrame.dragStartX = pageStrip.x;
+          pageStrip.x = pageFrame.targetStripX(root.page);
           root.interactionStarted();
           return;
         }
 
-        const delta = pageStrip.x - pageFrame.dragStartX;
+        const delta = pageStrip.x - pageFrame.targetStripX(pageFrame.dragStartPage);
         const threshold = Math.max(Theme.controlMd * 2 + Theme.gapLg + Theme.gapXs, pageFrame.width * 0.22);
         let targetPage = pageFrame.dragStartPage;
         if (Math.abs(delta) >= threshold)
@@ -248,20 +280,21 @@ Item {
     Item {
       id: pageStrip
 
-      width: Math.max(pageFrame.width, root.pageCount * pageFrame.width)
+      width: Math.max(pageFrame.width, pageFrame.renderedPageCount * pageFrame.width)
       height: pageFrame.height
-      x: 0
+      x: pageFrame.targetStripX(root.page)
       Component.onCompleted: pageFrame.syncStripToPage(root.page, true)
 
       Repeater {
-        model: root.pageCount
+        model: pageFrame.renderedPageCount
 
         delegate: Item {
           id: pageItem
 
           required property int index
-          property int pageBase: index * root.pageSize
-          property int pageItemCount: root.pageItemCount(index)
+          readonly property int pageNumber: pageFrame.windowStartPage + index
+          readonly property int pageBase: pageNumber * root.pageSize
+          readonly property int pageItemCount: root.pageItemCount(pageNumber)
           x: index * pageFrame.width
           width: pageFrame.width
           height: pageFrame.height

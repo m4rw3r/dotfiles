@@ -450,13 +450,20 @@ Item {
           }
         }
 
-        MultiEffect {
+        Loader {
           anchors.fill: launcherBackdropSource
-          source: launcherBackdropSource
-          autoPaddingEnabled: false
-          blurEnabled: true
-          blur: 1.0
-          blurMax: 64
+          active: launcherWindow.visible
+
+          sourceComponent: Component {
+            MultiEffect {
+              anchors.fill: parent
+              source: launcherBackdropSource
+              autoPaddingEnabled: false
+              blurEnabled: true
+              blur: 1.0
+              blurMax: 64
+            }
+          }
         }
 
         Rectangle {

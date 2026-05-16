@@ -404,8 +404,14 @@ ShellRoot {
   }
   // qmllint enable uncreatable-type
 
-  WidgetGalleryWindow {
-    galleryOpen: root.galleryOpen
-    onCloseRequested: root.closeGallery()
+  Loader {
+    active: root.galleryOpen
+
+    sourceComponent: Component {
+      WidgetGalleryWindow {
+        galleryOpen: root.galleryOpen
+        onCloseRequested: root.closeGallery()
+      }
+    }
   }
 }

@@ -15,7 +15,7 @@ Item {
   readonly property int tileHeight: Theme.controlMd * 2 + Theme.gapLg + Theme.gapXs
   readonly property int tileSpacing: Theme.gapSm
   readonly property int gridHeight: rows * tileHeight + Math.max(0, rows - 1) * tileSpacing
-  readonly property int pageIndicatorHeight: pageCount > 1 ? Theme.gapLg : 0
+  readonly property int pageIndicatorHeight: Theme.gapXs + Theme.gapMd
   readonly property int arrowGutter: Theme.controlMd + Theme.gapLg + Theme.gapXs
   readonly property real tileWidth: Math.floor((pageFrame.width - (columns - 1) * tileSpacing) / columns)
   readonly property int pageSize: columns * rows
@@ -269,6 +269,8 @@ Item {
           Grid {
             columns: root.columns
             rows: root.rows
+            width: root.columns * root.tileWidth + Math.max(0, root.columns - 1) * root.tileSpacing
+            height: root.gridHeight
             rowSpacing: root.tileSpacing
             columnSpacing: root.tileSpacing
             anchors.centerIn: parent

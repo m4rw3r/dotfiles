@@ -7,222 +7,222 @@ import "ui/controls" as Controls
 import "ui/primitives"
 
 FocusScope {
-  id: root
+    id: root
 
-  property var notificationCenter: null
-  property bool suspended: false
-
-  implicitWidth: toastColumn.implicitWidth
-  implicitHeight: toastColumn.implicitHeight
-
-  component ToastCard: UiSurface {
-    id: card
-
-    required property int toastUid
-    required property var notificationCenter
+    property var notificationCenter: null
     property bool suspended: false
-    readonly property int centerRevision: notificationCenter ? notificationCenter.revision : 0
-    readonly property var entry: {
-      const revision = centerRevision;
-      return notificationCenter ? notificationCenter.entryForUid(toastUid) : null;
-    }
-    readonly property bool critical: !!(entry && entry.urgency === NotificationUrgency.Critical)
-    readonly property string primaryActionLabel: notificationCenter ? notificationCenter.primaryActionLabel(entry) : ""
-    readonly property bool focusable: notificationCenter ? notificationCenter.entryHasFocusTarget(entry) : false
-    readonly property int timeoutMs: notificationCenter ? notificationCenter.toastTimeoutMs(entry) : 0
-    readonly property int remainingMs: notificationCenter ? notificationCenter.toastRemainingMs(entry) : 0
-    readonly property bool autoDismiss: timeoutMs > 0
-    readonly property bool actionable: focusable || primaryActionLabel !== ""
 
-    function dismissIfExpired() {
-      if (!suspended && notificationCenter && autoDismiss && !!entry && remainingMs <= 0)
-        notificationCenter.dismissToast(toastUid);
-    }
+    implicitWidth: toastColumn.implicitWidth
+    implicitHeight: toastColumn.implicitHeight
 
-    function syncSuspension() {
-      if (!notificationCenter || !autoDismiss || !entry)
-        return;
-      if (suspended)
-        notificationCenter.pauseToast(toastUid);
-      else
-        notificationCenter.resumeToast(toastUid);
-    }
+    component ToastCard: UiSurface {
+        id: card
 
-    visible: !!entry
-    width: parent ? parent.width : implicitWidth
-    implicitHeight: toastContent.implicitHeight + Theme.insetLg
-    tone: "panelOverlay"
-    outlined: false
-    radius: Theme.radiusLg
-    border.width: Theme.stroke
-    border.color: critical ? Theme.accentStrong : Theme.borderStrong
-    opacity: entry ? 1 : 0
+        required property int toastUid
+        required property var notificationCenter
+        property bool suspended: false
+        readonly property int centerRevision: notificationCenter ? notificationCenter.revision : 0
+        readonly property var entry: {
+            const revision = centerRevision;
+            return notificationCenter ? notificationCenter.entryForUid(toastUid) : null;
+        }
+        readonly property bool critical: !!(entry && entry.urgency === NotificationUrgency.Critical)
+        readonly property string primaryActionLabel: notificationCenter ? notificationCenter.primaryActionLabel(entry) : ""
+        readonly property bool focusable: notificationCenter ? notificationCenter.entryHasFocusTarget(entry) : false
+        readonly property int timeoutMs: notificationCenter ? notificationCenter.toastTimeoutMs(entry) : 0
+        readonly property int remainingMs: notificationCenter ? notificationCenter.toastRemainingMs(entry) : 0
+        readonly property bool autoDismiss: timeoutMs > 0
+        readonly property bool actionable: focusable || primaryActionLabel !== ""
 
-    Behavior on opacity {
-      NumberAnimation {
-        duration: Theme.motionFast
-        easing.type: Easing.OutCubic
-      }
-    }
+        function dismissIfExpired() {
+            if (!suspended && notificationCenter && autoDismiss && !!entry && remainingMs <= 0)
+                notificationCenter.expireToast(toastUid);
+        }
 
-    MouseArea {
-      anchors.fill: parent
-      anchors.rightMargin: dismissButton.width
-      enabled: card.actionable
-      onClicked: {
-        if (card.notificationCenter)
-          card.notificationCenter.activateEntry(card.toastUid);
-      }
-    }
+        function syncSuspension() {
+            if (!notificationCenter || !autoDismiss || !entry)
+                return;
+            if (suspended)
+                notificationCenter.pauseToast(toastUid);
+            else
+                notificationCenter.resumeToast(toastUid);
+        }
 
-    transform: Translate {
-      y: card.opacity < 1 ? -Theme.gapSm : 0
-    }
+        visible: !!entry
+        width: parent ? parent.width : implicitWidth
+        implicitHeight: toastContent.implicitHeight + Theme.insetLg
+        tone: "panelOverlay"
+        outlined: false
+        radius: Theme.radiusLg
+        border.width: Theme.stroke
+        border.color: critical ? Theme.accentStrong : Theme.borderStrong
+        opacity: entry ? 1 : 0
 
-    Column {
-      id: toastContent
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Theme.motionFast
+                easing.type: Easing.OutCubic
+            }
+        }
 
-      width: parent.width - Theme.insetLg
-      anchors.left: parent.left
-      anchors.leftMargin: Theme.insetSm
-      anchors.top: parent.top
-      anchors.topMargin: Theme.insetSm
-      spacing: Theme.gapSm
-
-      Row {
-        width: parent.width
-        spacing: Theme.gapSm
-
-        Item {
-          width: Theme.controlMd
-          height: Theme.controlMd
-
-          UiSurface {
+        MouseArea {
             anchors.fill: parent
-            tone: card.critical ? "accent" : "field"
-            radius: width / 2
-            outlined: false
-          }
+            anchors.rightMargin: dismissButton.width
+            enabled: card.actionable
+            onClicked: {
+                if (card.notificationCenter)
+                    card.notificationCenter.activateEntry(card.toastUid);
+            }
+        }
 
-          UiIcon {
-            visible: !toastIcon.visible
-            anchors.centerIn: parent
-            width: Theme.iconGlyphMd
-            height: Theme.iconGlyphMd
-            name: card.critical ? "bell-ring" : "bell"
-            strokeColor: card.critical ? Theme.textOnAccent : Theme.text
-          }
-
-          ResolvedIconImage {
-            id: toastIcon
-
-            visible: source !== ""
-            anchors.centerIn: parent
-            implicitSize: Theme.iconGlyphMd
-            asynchronous: true
-            mipmap: true
-            icon: card.entry ? String(card.entry.appIcon || "") : ""
-            desktopEntry: card.entry ? String(card.entry.desktopEntry || "") : ""
-            appName: card.entry ? String(card.entry.appName || "") : ""
-          }
+        transform: Translate {
+            y: card.opacity < 1 ? -Theme.gapSm : 0
         }
 
         Column {
-          width: Math.max(0, parent.width - Theme.controlMd - dismissButton.implicitWidth - Theme.gapLg)
-          spacing: Theme.nudge
+            id: toastContent
 
-          Row {
-            width: parent.width
+            width: parent.width - Theme.insetLg
+            anchors.left: parent.left
+            anchors.leftMargin: Theme.insetSm
+            anchors.top: parent.top
+            anchors.topMargin: Theme.insetSm
+            spacing: Theme.gapSm
 
-            UiText {
-              width: Math.max(0, parent.width - toastAge.implicitWidth - Theme.gapXs)
-              text: card.notificationCenter ? card.notificationCenter.appLabel(card.entry) : "Notification"
-              size: "xs"
-              tone: "muted"
-              font.weight: Font.DemiBold
-              elide: Text.ElideRight
+            Row {
+                width: parent.width
+                spacing: Theme.gapSm
+
+                Item {
+                    width: Theme.controlMd
+                    height: Theme.controlMd
+
+                    UiSurface {
+                        anchors.fill: parent
+                        tone: card.critical ? "accent" : "field"
+                        radius: width / 2
+                        outlined: false
+                    }
+
+                    UiIcon {
+                        visible: !toastIcon.visible
+                        anchors.centerIn: parent
+                        width: Theme.iconGlyphMd
+                        height: Theme.iconGlyphMd
+                        name: card.critical ? "bell-ring" : "bell"
+                        strokeColor: card.critical ? Theme.textOnAccent : Theme.text
+                    }
+
+                    ResolvedIconImage {
+                        id: toastIcon
+
+                        visible: source !== ""
+                        anchors.centerIn: parent
+                        implicitSize: Theme.iconGlyphMd
+                        asynchronous: true
+                        mipmap: true
+                        icon: card.entry ? String(card.entry.appIcon || "") : ""
+                        desktopEntry: card.entry ? String(card.entry.desktopEntry || "") : ""
+                        appName: card.entry ? String(card.entry.appName || "") : ""
+                    }
+                }
+
+                Column {
+                    width: Math.max(0, parent.width - Theme.controlMd - dismissButton.implicitWidth - Theme.gapLg)
+                    spacing: Theme.nudge
+
+                    Row {
+                        width: parent.width
+
+                        UiText {
+                            width: Math.max(0, parent.width - toastAge.implicitWidth - Theme.gapXs)
+                            text: card.notificationCenter ? card.notificationCenter.appLabel(card.entry) : "Notification"
+                            size: "xs"
+                            tone: "muted"
+                            font.weight: Font.DemiBold
+                            elide: Text.ElideRight
+                        }
+
+                        UiText {
+                            id: toastAge
+
+                            text: card.notificationCenter ? card.notificationCenter.ageLabel(card.entry) : ""
+                            size: "xs"
+                            tone: "subtle"
+                        }
+                    }
+
+                    UiText {
+                        width: parent.width
+                        text: card.notificationCenter ? card.notificationCenter.summaryLabel(card.entry) : ""
+                        size: "sm"
+                        font.weight: Font.DemiBold
+                        wrapMode: Text.WordWrap
+                        maximumLineCount: 2
+                        elide: Text.ElideRight
+                        textFormat: Text.PlainText
+                    }
+
+                    UiText {
+                        visible: text !== ""
+                        width: parent.width
+                        text: card.notificationCenter ? card.notificationCenter.bodyLabel(card.entry) : ""
+                        size: "xs"
+                        tone: "subtle"
+                        wrapMode: Text.WordWrap
+                        maximumLineCount: 3
+                        elide: Text.ElideRight
+                        textFormat: Text.PlainText
+                    }
+                }
+
+                Controls.IconButton {
+                    id: dismissButton
+
+                    variant: "minimal"
+                    iconName: "x"
+                    onClicked: {
+                        if (card.notificationCenter)
+                            card.notificationCenter.closeLive(card.toastUid);
+                    }
+                }
             }
-
-            UiText {
-              id: toastAge
-
-              text: card.notificationCenter ? card.notificationCenter.ageLabel(card.entry) : ""
-              size: "xs"
-              tone: "subtle"
-            }
-          }
-
-          UiText {
-            width: parent.width
-            text: card.notificationCenter ? card.notificationCenter.summaryLabel(card.entry) : ""
-            size: "sm"
-            font.weight: Font.DemiBold
-            wrapMode: Text.WordWrap
-            maximumLineCount: 2
-            elide: Text.ElideRight
-            textFormat: Text.PlainText
-          }
-
-          UiText {
-            visible: text !== ""
-            width: parent.width
-            text: card.notificationCenter ? card.notificationCenter.bodyLabel(card.entry) : ""
-            size: "xs"
-            tone: "subtle"
-            wrapMode: Text.WordWrap
-            maximumLineCount: 3
-            elide: Text.ElideRight
-            textFormat: Text.PlainText
-          }
         }
 
-        Controls.IconButton {
-          id: dismissButton
-
-          variant: "minimal"
-          iconName: "x"
-          onClicked: {
-            if (card.notificationCenter)
-              card.notificationCenter.closeLive(card.toastUid);
-          }
+        Timer {
+            interval: Math.max(1, card.remainingMs)
+            running: !card.suspended && card.autoDismiss && !!card.entry && card.remainingMs > 0
+            repeat: false
+            onTriggered: {
+                if (card.notificationCenter)
+                    card.notificationCenter.expireToast(card.toastUid);
+            }
         }
-      }
+
+        Component.onCompleted: {
+            Qt.callLater(card.syncSuspension);
+            Qt.callLater(card.dismissIfExpired);
+        }
+        onEntryChanged: Qt.callLater(card.dismissIfExpired)
+        onSuspendedChanged: Qt.callLater(card.syncSuspension)
     }
 
-    Timer {
-      interval: Math.max(1, card.remainingMs)
-      running: !card.suspended && card.autoDismiss && !!card.entry && card.remainingMs > 0
-      repeat: false
-      onTriggered: {
-        if (card.notificationCenter)
-          card.notificationCenter.dismissToast(card.toastUid);
-      }
+    Column {
+        id: toastColumn
+
+        width: Theme.popoverWidthSm + Theme.controlMd + Theme.gapLg
+        spacing: Theme.gapSm
+
+        Repeater {
+            model: root.notificationCenter ? root.notificationCenter.toastUids : []
+
+            delegate: ToastCard {
+                required property var modelData
+
+                toastUid: Number(modelData)
+                notificationCenter: root.notificationCenter
+                suspended: root.suspended
+            }
+        }
     }
-
-    Component.onCompleted: {
-      Qt.callLater(card.syncSuspension);
-      dismissIfExpired();
-    }
-    onEntryChanged: dismissIfExpired()
-    onSuspendedChanged: Qt.callLater(card.syncSuspension)
-  }
-
-  Column {
-    id: toastColumn
-
-    width: Theme.popoverWidthSm + Theme.controlMd + Theme.gapLg
-    spacing: Theme.gapSm
-
-    Repeater {
-      model: root.notificationCenter ? root.notificationCenter.toastUids : []
-
-      delegate: ToastCard {
-        required property var modelData
-
-        toastUid: Number(modelData)
-        notificationCenter: root.notificationCenter
-        suspended: root.suspended
-      }
-    }
-  }
 }

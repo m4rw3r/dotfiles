@@ -6,634 +6,760 @@ import Quickshell.Io
 import Quickshell.Services.Notifications
 
 Item {
-  id: root
+    id: root
 
-  property var entries: []
-  property var toastUids: []
-  property int revision: 0
-  property int nextUid: 1
-  property int pendingFocusUid: -1
-  property int pendingFocusWindowId: 0
-  property int queuedFocusUid: -1
-  property int queuedFocusWindowId: 0
-  property bool focusLookupBusy: false
-  property int maxToasts: 3
-  readonly property var groupedEntries: buildGroups(entries)
-  readonly property int unreadCount: countUnread(entries)
-  readonly property int criticalUnreadCount: countCriticalUnread(entries)
-  readonly property bool hasUnread: unreadCount > 0
-  readonly property bool hasCriticalUnread: criticalUnreadCount > 0
-  readonly property var latestEntry: entries.length > 0 ? entries[0] : null
-  readonly property var latestUnreadEntry: firstUnread(entries)
-  readonly property var footerEntry: hasUnread ? latestUnreadEntry : latestEntry
-  readonly property int trackedCount: entries.length
-  readonly property real defaultToastTimeoutMs: 6500
-  readonly property url notificationSoundSource: "file:///usr/share/sounds/freedesktop/stereo/message.oga"
+    property var entries: []
+    property var toastUids: []
+    property int revision: 0
+    property int nextUid: 1
+    property int pendingFocusUid: -1
+    property int pendingFocusWindowId: 0
+    property int queuedFocusUid: -1
+    property int queuedFocusWindowId: 0
+    property bool focusLookupBusy: false
+    property int maxToasts: 3
+    property int maxHistoryEntries: 80
+    readonly property var groupedEntries: buildGroups(entries)
+    readonly property int unreadCount: countUnread(entries)
+    readonly property int criticalUnreadCount: countCriticalUnread(entries)
+    readonly property bool hasUnread: unreadCount > 0
+    readonly property bool hasCriticalUnread: criticalUnreadCount > 0
+    readonly property var latestEntry: entries.length > 0 ? entries[0] : null
+    readonly property var latestUnreadEntry: firstUnread(entries)
+    readonly property var footerEntry: hasUnread ? latestUnreadEntry : latestEntry
+    readonly property int trackedCount: entries.length
+    readonly property real defaultToastTimeoutMs: 6500
+    readonly property url notificationSoundSource: "file:///usr/share/sounds/freedesktop/stereo/message.oga"
 
-  function cleanText(text) {
-    return String(text || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-  }
-
-  function integerHint(hints, name) {
-    if (!hints || name === "")
-      return 0;
-
-    const value = Number(hints[name]);
-    if (!Number.isInteger(value) || value <= 0)
-      return 0;
-    return value;
-  }
-
-  function windowListContainsId(text, windowId) {
-    if (windowId <= 0)
-      return false;
-
-    try {
-      const windows = JSON.parse(String(text || "[]"));
-      for (let index = 0; index < windows.length; index += 1) {
-        const window = windows[index];
-        if (Number(window && window.id) === windowId)
-          return true;
-      }
-    } catch (error) {
-      return false;
+    function cleanText(text) {
+        return String(text || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
     }
 
-    return false;
-  }
+    function integerHint(hints, name) {
+        if (!hints || name === "")
+            return 0;
 
-  function appLabel(entry) {
-    if (!entry)
-      return "Notifications";
-    if (entry.appName !== "")
-      return entry.appName;
-    if (entry.desktopEntry !== "")
-      return entry.desktopEntry;
-    return "Notification";
-  }
+        const value = Number(hints[name]);
+        if (!Number.isInteger(value) || value <= 0)
+            return 0;
+        return value;
+    }
 
-  function summaryLabel(entry) {
-    if (!entry)
-      return "No notifications";
-    if (entry.summary !== "")
-      return entry.summary;
-    if (entry.body !== "")
-      return entry.body;
-    return appLabel(entry);
-  }
+    function windowListContainsId(text, windowId) {
+        if (windowId <= 0)
+            return false;
 
-  function bodyLabel(entry) {
-    if (!entry)
-      return "";
-    if (entry.body === "" || entry.body === entry.summary)
-      return "";
-    return entry.body;
-  }
+        try {
+            const windows = JSON.parse(String(text || "[]"));
+            for (let index = 0; index < windows.length; index += 1) {
+                const window = windows[index];
+                if (Number(window && window.id) === windowId)
+                    return true;
+            }
+        } catch (error) {
+            return false;
+        }
 
-  function ageLabel(entry) {
-    if (!entry || !entry.receivedAt)
-      return "";
+        return false;
+    }
 
-    const elapsedSeconds = Math.max(1, Math.floor((Date.now() - entry.receivedAt) / 1000));
-    if (elapsedSeconds < 60)
-      return `${elapsedSeconds}s`;
+    function appLabel(entry) {
+        if (!entry)
+            return "Notifications";
+        if (entry.appName !== "")
+            return entry.appName;
+        if (entry.desktopEntry !== "")
+            return entry.desktopEntry;
+        return "Notification";
+    }
 
-    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
-    if (elapsedMinutes < 60)
-      return `${elapsedMinutes}m`;
+    function summaryLabel(entry) {
+        if (!entry)
+            return "No notifications";
+        if (entry.summary !== "")
+            return entry.summary;
+        if (entry.body !== "")
+            return entry.body;
+        return appLabel(entry);
+    }
 
-    const elapsedHours = Math.floor(elapsedMinutes / 60);
-    if (elapsedHours < 24)
-      return `${elapsedHours}h`;
+    function bodyLabel(entry) {
+        if (!entry)
+            return "";
+        if (entry.body === "" || entry.body === entry.summary)
+            return "";
+        return entry.body;
+    }
 
-    return `${Math.floor(elapsedHours / 24)}d`;
-  }
+    function ageLabel(entry) {
+        if (!entry || !entry.receivedAt)
+            return "";
 
-  function unreadCountLabel() {
-    if (unreadCount <= 0)
-      return "";
-    if (unreadCount === 1)
-      return "1 unread";
-    return `${unreadCount} unread`;
-  }
+        const elapsedSeconds = Math.max(1, Math.floor((Date.now() - entry.receivedAt) / 1000));
+        if (elapsedSeconds < 60)
+            return `${elapsedSeconds}s`;
 
-  function trackedCountLabel() {
-    if (trackedCount <= 0)
-      return "";
-    if (trackedCount === 1)
-      return "1 item";
-    return `${trackedCount} items`;
-  }
+        const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+        if (elapsedMinutes < 60)
+            return `${elapsedMinutes}m`;
 
-  function sourceKey(entry) {
-    if (!entry)
-      return "notifications";
+        const elapsedHours = Math.floor(elapsedMinutes / 60);
+        if (elapsedHours < 24)
+            return `${elapsedHours}h`;
 
-    const desktopEntry = cleanText(entry.desktopEntry);
-    if (desktopEntry !== "")
-      return `desktop:${desktopEntry}`;
+        return `${Math.floor(elapsedHours / 24)}d`;
+    }
 
-    const appName = cleanText(entry.appName);
-    if (appName !== "")
-      return `app:${appName}`;
+    function unreadCountLabel() {
+        if (unreadCount <= 0)
+            return "";
+        if (unreadCount === 1)
+            return "1 unread";
+        return `${unreadCount} unread`;
+    }
 
-    return `fallback:${cleanText(entry.appIcon)}:${cleanText(entry.summary)}`;
-  }
+    function trackedCountLabel() {
+        if (trackedCount <= 0)
+            return "";
+        if (trackedCount === 1)
+            return "1 item";
+        return `${trackedCount} items`;
+    }
 
-  function buildGroups(list) {
-    const groups = [];
-    const indexByKey = {};
+    function sourceKey(entry) {
+        if (!entry)
+            return "notifications";
 
-    for (let index = 0; index < list.length; index += 1) {
-      const entry = list[index];
-      const key = sourceKey(entry);
-      let groupIndex = indexByKey[key];
+        const desktopEntry = cleanText(entry.desktopEntry);
+        if (desktopEntry !== "")
+            return `desktop:${desktopEntry}`;
 
-      if (groupIndex === undefined) {
-        groupIndex = groups.length;
-        indexByKey[key] = groupIndex;
-        groups.push({
-          key: key,
-          latestEntry: entry,
-          entries: [],
-          entryCount: 0,
-          unreadCount: 0,
-          criticalUnreadCount: 0,
-          liveCount: 0,
-          appName: appLabel(entry),
-          appIcon: entry ? String(entry.appIcon || "") : ""
+        const appName = cleanText(entry.appName);
+        if (appName !== "")
+            return `app:${appName}`;
+
+        return `fallback:${cleanText(entry.appIcon)}:${cleanText(entry.summary)}`;
+    }
+
+    function buildGroups(list) {
+        const groups = [];
+        const indexByKey = {};
+
+        for (let index = 0; index < list.length; index += 1) {
+            const entry = list[index];
+            const key = sourceKey(entry);
+            let groupIndex = indexByKey[key];
+
+            if (groupIndex === undefined) {
+                groupIndex = groups.length;
+                indexByKey[key] = groupIndex;
+                groups.push({
+                    key: key,
+                    latestEntry: entry,
+                    entries: [],
+                    entryCount: 0,
+                    unreadCount: 0,
+                    criticalUnreadCount: 0,
+                    liveCount: 0,
+                    appName: appLabel(entry),
+                    appIcon: entry ? String(entry.appIcon || "") : ""
+                });
+            }
+
+            const group = groups[groupIndex];
+            group.entries.push(entry);
+            group.entryCount += 1;
+            if (entry.unread)
+                group.unreadCount += 1;
+            if (entry.unread && entry.urgency === NotificationUrgency.Critical)
+                group.criticalUnreadCount += 1;
+            if (entry.live)
+                group.liveCount += 1;
+        }
+
+        return groups;
+    }
+
+    function primaryAction(entry) {
+        if (!entry || !entry.notification || !entry.live)
+            return null;
+        if (!entry.notification.actions || entry.notification.actions.length <= 0)
+            return null;
+        return entry.notification.actions[0];
+    }
+
+    function primaryActionLabel(entry) {
+        const action = primaryAction(entry);
+        if (!action)
+            return "";
+
+        const text = cleanText(action.text);
+        if (text === "")
+            return "Open";
+        return text.length > 14 ? "Open" : text;
+    }
+
+    function toastTimeoutMs(entry) {
+        if (!entry || entry.urgency === NotificationUrgency.Critical)
+            return 0;
+
+        const timeoutMs = Math.round(Number(entry.expireTimeout || 0));
+        if (timeoutMs > 0)
+            return Math.max(3500, Math.min(12000, timeoutMs));
+        return defaultToastTimeoutMs;
+    }
+
+    function toastRemainingMs(entry) {
+        if (!entry)
+            return 0;
+        if (Number(entry.toastPausedRemainingMs || 0) > 0)
+            return Number(entry.toastPausedRemainingMs);
+        if (!entry.toastExpiresAt)
+            return 0;
+        return Math.max(0, entry.toastExpiresAt - Date.now());
+    }
+
+    function entryForUid(uid) {
+        for (let index = 0; index < entries.length; index += 1) {
+            if (entries[index].uid === uid)
+                return entries[index];
+        }
+
+        return null;
+    }
+
+    function entryHasFocusTarget(entryOrUid) {
+        const entry = typeof entryOrUid === "number" ? entryForUid(entryOrUid) : entryOrUid;
+        return !!entry && Number(entry.niriWindowId || 0) > 0;
+    }
+
+    function setEntries(nextEntries) {
+        entries = nextEntries;
+        revision += 1;
+        Qt.callLater(root.scheduleNotificationExpiry);
+    }
+
+    function setToastUids(nextToastUids) {
+        toastUids = nextToastUids;
+        revision += 1;
+    }
+
+    function releaseLiveNotification(entry, reason) {
+        if (!entry || !entry.notification || !entry.live)
+            return;
+
+        const notification = entry.notification;
+        entry.notification = null;
+        entry.live = false;
+
+        if (reason === "dismiss")
+            notification.dismiss();
+        else if (reason === "expire")
+            notification.expire();
+    }
+
+    function releaseLiveNotifications(list, reason) {
+        for (let index = 0; index < list.length; index += 1) {
+            releaseLiveNotification(list[index], reason);
+        }
+    }
+
+    function pruneHistory() {
+        const visibleToastUids = {};
+        const keptUids = {};
+        const nextEntries = [];
+        const prunedEntries = [];
+        let persistentCount = 0;
+
+        for (let index = 0; index < toastUids.length; index += 1) {
+            visibleToastUids[toastUids[index]] = true;
+        }
+
+        for (let index = 0; index < entries.length; index += 1) {
+            const entry = entries[index];
+            const visibleToast = !!visibleToastUids[entry.uid];
+            const keepTransientLive = entry.transient && entry.live;
+            const keepPersistent = !entry.transient && persistentCount < maxHistoryEntries;
+
+            if (visibleToast || keepTransientLive || keepPersistent) {
+                nextEntries.push(entry);
+                keptUids[entry.uid] = true;
+                if (!entry.transient && !visibleToast)
+                    persistentCount += 1;
+            } else {
+                prunedEntries.push(entry);
+            }
+        }
+
+        if (prunedEntries.length === 0)
+            return;
+
+        releaseLiveNotifications(prunedEntries, "expire");
+        setEntries(nextEntries);
+
+        const nextToastUids = toastUids.filter(uid => !!keptUids[uid]);
+        if (nextToastUids.length !== toastUids.length)
+            setToastUids(nextToastUids);
+    }
+
+    function startEntryFocusLookup(uid, windowId) {
+        pendingFocusUid = uid;
+        pendingFocusWindowId = windowId;
+        focusLookupBusy = true;
+        notificationWindowLookupProcess.exec(["niri", "msg", "-j", "windows"]);
+    }
+
+    function requestEntryFocus(uid, windowId) {
+        if (uid < 0 || windowId <= 0)
+            return;
+
+        if (focusLookupBusy) {
+            queuedFocusUid = uid;
+            queuedFocusWindowId = windowId;
+            return;
+        }
+
+        startEntryFocusLookup(uid, windowId);
+    }
+
+    function pauseToast(uid) {
+        const entry = entryForUid(uid);
+        if (!entry || Number(entry.toastExpiresAt || 0) <= 0 || Number(entry.toastPausedRemainingMs || 0) > 0)
+            return;
+
+        const nextEntries = entries.slice();
+        for (let index = 0; index < nextEntries.length; index += 1) {
+            if (nextEntries[index].uid !== uid)
+                continue;
+            nextEntries[index] = Object.assign({}, nextEntries[index], {
+                toastPausedRemainingMs: Math.max(1, toastRemainingMs(entry)),
+                toastExpiresAt: 0
+            });
+            setEntries(nextEntries);
+            return;
+        }
+    }
+
+    function resumeToast(uid) {
+        const entry = entryForUid(uid);
+        const remainingMs = Number(entry && entry.toastPausedRemainingMs || 0);
+        if (!entry || remainingMs <= 0)
+            return;
+
+        const nextEntries = entries.slice();
+        for (let index = 0; index < nextEntries.length; index += 1) {
+            if (nextEntries[index].uid !== uid)
+                continue;
+            nextEntries[index] = Object.assign({}, nextEntries[index], {
+                toastPausedRemainingMs: 0,
+                toastExpiresAt: Date.now() + remainingMs
+            });
+            setEntries(nextEntries);
+            return;
+        }
+    }
+
+    function countUnread(list) {
+        let count = 0;
+
+        for (let index = 0; index < list.length; index += 1) {
+            if (list[index].unread)
+                count += 1;
+        }
+
+        return count;
+    }
+
+    function countCriticalUnread(list) {
+        let count = 0;
+
+        for (let index = 0; index < list.length; index += 1) {
+            const entry = list[index];
+            if (entry.unread && entry.urgency === NotificationUrgency.Critical)
+                count += 1;
+        }
+
+        return count;
+    }
+
+    function firstUnread(list) {
+        for (let index = 0; index < list.length; index += 1) {
+            if (list[index].unread)
+                return list[index];
+        }
+
+        return null;
+    }
+
+    function snapshot(notification, uid) {
+        const receivedAt = Date.now();
+        const expireTimeout = Number(notification.expireTimeout || 0);
+        const timeoutMs = notification.urgency === NotificationUrgency.Critical ? 0 : (expireTimeout > 0 ? Math.max(3500, Math.min(12000, Math.round(expireTimeout))) : defaultToastTimeoutMs);
+
+        return {
+            uid: uid,
+            id: notification.id,
+            notification: notification,
+            live: true,
+            unread: !notification.lastGeneration,
+            transient: notification.transient,
+            resident: notification.resident,
+            urgency: notification.urgency,
+            appName: cleanText(notification.appName),
+            desktopEntry: cleanText(notification.desktopEntry),
+            appIcon: String(notification.appIcon || ""),
+            summary: cleanText(notification.summary),
+            body: cleanText(notification.body),
+            image: String(notification.image || ""),
+            niriWindowId: integerHint(notification.hints, "x-niri-window-id"),
+            receivedAt: receivedAt,
+            expireTimeout: expireTimeout,
+            toastExpiresAt: timeoutMs > 0 ? receivedAt + timeoutMs : 0,
+            toastPausedRemainingMs: 0,
+            lastGeneration: notification.lastGeneration
+        };
+    }
+
+    function trackNotification(notification) {
+        if (!notification)
+            return;
+
+        notification.tracked = true;
+
+        const uid = nextUid;
+        nextUid += 1;
+
+        const entry = snapshot(notification, uid);
+        const replacedEntries = [];
+        const replacedUids = [];
+        const nextEntries = [];
+
+        for (let index = 0; index < entries.length; index += 1) {
+            const existing = entries[index];
+            if (existing.id !== notification.id) {
+                nextEntries.push(existing);
+                continue;
+            }
+
+            replacedEntries.push(existing);
+            replacedUids.push(existing.uid);
+        }
+
+        releaseLiveNotifications(replacedEntries, "expire");
+        nextEntries.unshift(entry);
+        setEntries(nextEntries);
+        if (replacedUids.length > 0)
+            setToastUids(toastUids.filter(existingUid => replacedUids.indexOf(existingUid) < 0));
+
+        if (!notification.lastGeneration)
+            queueToast(uid);
+
+        notification.closed.connect(function () {
+            root.markClosed(uid);
         });
-      }
 
-      const group = groups[groupIndex];
-      group.entries.push(entry);
-      group.entryCount += 1;
-      if (entry.unread)
-        group.unreadCount += 1;
-      if (entry.unread && entry.urgency === NotificationUrgency.Critical)
-        group.criticalUnreadCount += 1;
-      if (entry.live)
-        group.liveCount += 1;
+        pruneHistory();
     }
 
-    return groups;
-  }
+    function queueToast(uid) {
+        const nextToastUids = toastUids.filter(existingUid => existingUid !== uid);
+        nextToastUids.unshift(uid);
+        if (nextToastUids.length > maxToasts)
+            nextToastUids.length = maxToasts;
+        setToastUids(nextToastUids);
 
-  function primaryAction(entry) {
-    if (!entry || !entry.notification || !entry.live)
-      return null;
-    if (!entry.notification.actions || entry.notification.actions.length <= 0)
-      return null;
-    return entry.notification.actions[0];
-  }
-
-  function primaryActionLabel(entry) {
-    const action = primaryAction(entry);
-    if (!action)
-      return "";
-
-    const text = cleanText(action.text);
-    if (text === "")
-      return "Open";
-    return text.length > 14 ? "Open" : text;
-  }
-
-  function toastTimeoutMs(entry) {
-    if (!entry || entry.urgency === NotificationUrgency.Critical)
-      return 0;
-
-    const timeoutMs = Math.round(Number(entry.expireTimeout || 0));
-    if (timeoutMs > 0)
-      return Math.max(3500, Math.min(12000, timeoutMs));
-    return defaultToastTimeoutMs;
-  }
-
-  function toastRemainingMs(entry) {
-    if (!entry)
-      return 0;
-    if (Number(entry.toastPausedRemainingMs || 0) > 0)
-      return Number(entry.toastPausedRemainingMs);
-    if (!entry.toastExpiresAt)
-      return 0;
-    return Math.max(0, entry.toastExpiresAt - Date.now());
-  }
-
-  function entryForUid(uid) {
-    for (let index = 0; index < entries.length; index += 1) {
-      if (entries[index].uid === uid)
-        return entries[index];
+        playToastSound();
     }
 
-    return null;
-  }
+    function scheduleNotificationExpiry() {
+        const now = Date.now();
+        let nextExpiresAt = 0;
 
-  function entryHasFocusTarget(entryOrUid) {
-    const entry = typeof entryOrUid === "number" ? entryForUid(entryOrUid) : entryOrUid;
-    return !!entry && Number(entry.niriWindowId || 0) > 0;
-  }
+        for (let index = 0; index < entries.length; index += 1) {
+            const entry = entries[index];
+            const expiresAt = Number(entry && entry.toastExpiresAt || 0);
+            if (!entry || !entry.live || entry.urgency === NotificationUrgency.Critical || expiresAt <= 0)
+                continue;
+            if (expiresAt <= now) {
+                nextExpiresAt = now + 1;
+                break;
+            }
+            if (nextExpiresAt <= 0 || expiresAt < nextExpiresAt)
+                nextExpiresAt = expiresAt;
+        }
 
-  function setEntries(nextEntries) {
-    entries = nextEntries;
-    revision += 1;
-  }
+        if (nextExpiresAt <= 0) {
+            notificationExpiryTimer.stop();
+            return;
+        }
 
-  function setToastUids(nextToastUids) {
-    toastUids = nextToastUids;
-    revision += 1;
-  }
-
-  function startEntryFocusLookup(uid, windowId) {
-    pendingFocusUid = uid;
-    pendingFocusWindowId = windowId;
-    focusLookupBusy = true;
-    notificationWindowLookupProcess.exec(["niri", "msg", "-j", "windows"]);
-  }
-
-  function requestEntryFocus(uid, windowId) {
-    if (uid < 0 || windowId <= 0)
-      return;
-
-    if (focusLookupBusy) {
-      queuedFocusUid = uid;
-      queuedFocusWindowId = windowId;
-      return;
+        notificationExpiryTimer.interval = Math.max(1, nextExpiresAt - now);
+        notificationExpiryTimer.restart();
     }
 
-    startEntryFocusLookup(uid, windowId);
-  }
+    function expireDueNotifications() {
+        const now = Date.now();
+        const dueUids = [];
 
-  function pauseToast(uid) {
-    const entry = entryForUid(uid);
-    if (!entry || Number(entry.toastExpiresAt || 0) <= 0 || Number(entry.toastPausedRemainingMs || 0) > 0)
-      return;
+        for (let index = 0; index < entries.length; index += 1) {
+            const entry = entries[index];
+            const expiresAt = Number(entry && entry.toastExpiresAt || 0);
+            if (entry && entry.live && entry.urgency !== NotificationUrgency.Critical && expiresAt > 0 && expiresAt <= now)
+                dueUids.push(entry.uid);
+        }
 
-    const nextEntries = entries.slice();
-    for (let index = 0; index < nextEntries.length; index += 1) {
-      if (nextEntries[index].uid !== uid)
-        continue;
-      nextEntries[index] = Object.assign({}, nextEntries[index], {
-        toastPausedRemainingMs: Math.max(1, toastRemainingMs(entry)),
-        toastExpiresAt: 0
-      });
-      setEntries(nextEntries);
-      return;
-    }
-  }
+        for (let index = 0; index < dueUids.length; index += 1) {
+            expireToast(dueUids[index]);
+        }
 
-  function resumeToast(uid) {
-    const entry = entryForUid(uid);
-    const remainingMs = Number(entry && entry.toastPausedRemainingMs || 0);
-    if (!entry || remainingMs <= 0)
-      return;
-
-    const nextEntries = entries.slice();
-    for (let index = 0; index < nextEntries.length; index += 1) {
-      if (nextEntries[index].uid !== uid)
-        continue;
-      nextEntries[index] = Object.assign({}, nextEntries[index], {
-        toastPausedRemainingMs: 0,
-        toastExpiresAt: Date.now() + remainingMs
-      });
-      setEntries(nextEntries);
-      return;
-    }
-  }
-
-  function countUnread(list) {
-    let count = 0;
-
-    for (let index = 0; index < list.length; index += 1) {
-      if (list[index].unread)
-        count += 1;
+        scheduleNotificationExpiry();
     }
 
-    return count;
-  }
-
-  function countCriticalUnread(list) {
-    let count = 0;
-
-    for (let index = 0; index < list.length; index += 1) {
-      const entry = list[index];
-      if (entry.unread && entry.urgency === NotificationUrgency.Critical)
-        count += 1;
+    function playToastSound() {
+        if (notificationSoundPlayer.mediaStatus === MediaPlayer.InvalidMedia)
+            return;
+        if (notificationSoundPlayer.playbackState === MediaPlayer.PlayingState)
+            notificationSoundPlayer.stop();
+        notificationSoundPlayer.position = 0;
+        notificationSoundPlayer.play();
     }
 
-    return count;
-  }
-
-  function firstUnread(list) {
-    for (let index = 0; index < list.length; index += 1) {
-      if (list[index].unread)
-        return list[index];
+    function dismissToast(uid) {
+        const nextToastUids = toastUids.filter(existingUid => existingUid !== uid);
+        if (nextToastUids.length !== toastUids.length)
+            setToastUids(nextToastUids);
     }
 
-    return null;
-  }
+    function expireToast(uid) {
+        const entry = entryForUid(uid);
+        if (entry && entry.urgency === NotificationUrgency.Critical)
+            return;
 
-  function snapshot(notification, uid) {
-    const receivedAt = Date.now();
-    const expireTimeout = Number(notification.expireTimeout || 0);
-    const timeoutMs = notification.urgency === NotificationUrgency.Critical ? 0 : (expireTimeout > 0 ? Math.max(3500, Math.min(12000, Math.round(expireTimeout))) : defaultToastTimeoutMs);
+        dismissToast(uid);
+        if (!entry) {
+            pruneHistory();
+            return;
+        }
 
-    return {
-      uid: uid,
-      id: notification.id,
-      notification: notification,
-      live: true,
-      unread: !notification.lastGeneration,
-      transient: notification.transient,
-      resident: notification.resident,
-      urgency: notification.urgency,
-      appName: cleanText(notification.appName),
-      desktopEntry: cleanText(notification.desktopEntry),
-      appIcon: String(notification.appIcon || ""),
-      summary: cleanText(notification.summary),
-      body: cleanText(notification.body),
-      image: String(notification.image || ""),
-      niriWindowId: integerHint(notification.hints, "x-niri-window-id"),
-      receivedAt: receivedAt,
-      expireTimeout: expireTimeout,
-      toastExpiresAt: timeoutMs > 0 ? receivedAt + timeoutMs : 0,
-      toastPausedRemainingMs: 0,
-      lastGeneration: notification.lastGeneration
-    };
-  }
-
-  function trackNotification(notification) {
-    if (!notification)
-      return;
-
-    notification.tracked = true;
-
-    const uid = nextUid;
-    nextUid += 1;
-
-    const entry = snapshot(notification, uid);
-    const replacedUids = [];
-    const nextEntries = entries.filter(existing => {
-      if (existing.id !== notification.id)
-        return true;
-      replacedUids.push(existing.uid);
-      return false;
-    });
-    nextEntries.unshift(entry);
-    setEntries(nextEntries);
-    if (replacedUids.length > 0)
-      setToastUids(toastUids.filter(existingUid => replacedUids.indexOf(existingUid) < 0));
-
-    if (!notification.lastGeneration)
-      queueToast(uid);
-
-    notification.closed.connect(function () {
-      root.markClosed(uid);
-    });
-  }
-
-  function queueToast(uid) {
-    const nextToastUids = toastUids.filter(existingUid => existingUid !== uid);
-    nextToastUids.unshift(uid);
-    if (nextToastUids.length > maxToasts)
-      nextToastUids.length = maxToasts;
-    setToastUids(nextToastUids);
-    playToastSound();
-  }
-
-  function playToastSound() {
-    if (notificationSoundPlayer.mediaStatus === MediaPlayer.InvalidMedia)
-      return;
-    if (notificationSoundPlayer.playbackState === MediaPlayer.PlayingState)
-      notificationSoundPlayer.stop();
-    notificationSoundPlayer.position = 0;
-    notificationSoundPlayer.play();
-  }
-
-  function dismissToast(uid) {
-    const nextToastUids = toastUids.filter(existingUid => existingUid !== uid);
-    if (nextToastUids.length !== toastUids.length)
-      setToastUids(nextToastUids);
-  }
-
-  function markClosed(uid) {
-    dismissToast(uid);
-
-    const nextEntries = entries.slice();
-    let updated = false;
-
-    for (let index = 0; index < nextEntries.length; index += 1) {
-      if (nextEntries[index].uid !== uid)
-        continue;
-      nextEntries[index] = Object.assign({}, nextEntries[index], {
-        notification: null,
-        live: false
-      });
-      updated = true;
-      break;
+        releaseLiveNotification(entry, "expire");
+        markClosed(uid);
     }
 
-    if (updated)
-      setEntries(nextEntries);
-  }
+    function markClosed(uid) {
+        dismissToast(uid);
 
-  function markRead(entryOrUid) {
-    const uid = typeof entryOrUid === "number" ? entryOrUid : (entryOrUid ? entryOrUid.uid : -1);
-    if (uid < 0)
-      return;
+        const nextEntries = entries.slice();
+        let updated = false;
 
-    const nextEntries = entries.slice();
-    let updated = false;
+        for (let index = 0; index < nextEntries.length; index += 1) {
+            if (nextEntries[index].uid !== uid)
+                continue;
+            nextEntries[index] = Object.assign({}, nextEntries[index], {
+                notification: null,
+                live: false
+            });
+            updated = true;
+            break;
+        }
 
-    for (let index = 0; index < nextEntries.length; index += 1) {
-      if (nextEntries[index].uid !== uid || !nextEntries[index].unread)
-        continue;
-      nextEntries[index] = Object.assign({}, nextEntries[index], {
-        unread: false
-      });
-      updated = true;
-      break;
+        if (updated)
+            setEntries(nextEntries);
+
+        pruneHistory();
     }
 
-    if (updated)
-      setEntries(nextEntries);
-  }
+    function markRead(entryOrUid) {
+        const uid = typeof entryOrUid === "number" ? entryOrUid : (entryOrUid ? entryOrUid.uid : -1);
+        if (uid < 0)
+            return;
 
-  function markAllRead() {
-    if (!hasUnread)
-      return;
+        const nextEntries = entries.slice();
+        let updated = false;
 
-    const nextEntries = [];
-    for (let index = 0; index < entries.length; index += 1) {
-      const entry = entries[index];
-      nextEntries.push(entry.unread ? Object.assign({}, entry, {
-        unread: false
-      }) : entry);
+        for (let index = 0; index < nextEntries.length; index += 1) {
+            if (nextEntries[index].uid !== uid || !nextEntries[index].unread)
+                continue;
+            nextEntries[index] = Object.assign({}, nextEntries[index], {
+                unread: false
+            });
+            updated = true;
+            break;
+        }
+
+        if (updated)
+            setEntries(nextEntries);
     }
 
-    setEntries(nextEntries);
-  }
+    function markAllRead() {
+        if (!hasUnread)
+            return;
 
-  function invokePrimaryAction(entryOrUid) {
-    const entry = typeof entryOrUid === "number" ? entryForUid(entryOrUid) : entryOrUid;
-    const action = primaryAction(entry);
-    if (!action)
-      return;
+        const nextEntries = [];
+        for (let index = 0; index < entries.length; index += 1) {
+            const entry = entries[index];
+            nextEntries.push(entry.unread ? Object.assign({}, entry, {
+                unread: false
+            }) : entry);
+        }
 
-    markRead(entry.uid);
-    dismissToast(entry.uid);
-    action.invoke();
-  }
-
-  function activateEntry(entryOrUid) {
-    const entry = typeof entryOrUid === "number" ? entryForUid(entryOrUid) : entryOrUid;
-    if (!entry)
-      return;
-
-    if (entryHasFocusTarget(entry)) {
-      requestEntryFocus(entry.uid, Number(entry.niriWindowId || 0));
-      return;
+        setEntries(nextEntries);
     }
 
-    invokePrimaryAction(entry);
-  }
+    function invokePrimaryAction(entryOrUid) {
+        const entry = typeof entryOrUid === "number" ? entryForUid(entryOrUid) : entryOrUid;
+        const action = primaryAction(entry);
+        if (!action)
+            return;
 
-  function closeLive(entryOrUid) {
-    const entry = typeof entryOrUid === "number" ? entryForUid(entryOrUid) : entryOrUid;
-    if (!entry)
-      return;
-
-    dismissToast(entry.uid);
-    if (entry.notification && entry.live)
-      entry.notification.dismiss();
-  }
-
-  function forgetEntry(entryOrUid) {
-    const uid = typeof entryOrUid === "number" ? entryOrUid : (entryOrUid ? entryOrUid.uid : -1);
-    if (uid < 0)
-      return;
-
-    const entry = entryForUid(uid);
-    dismissToast(uid);
-    setEntries(entries.filter(existing => existing.uid !== uid));
-    if (entry && entry.notification && entry.live)
-      entry.notification.dismiss();
-  }
-
-  function forgetGroup(groupOrKey) {
-    const groupKey = typeof groupOrKey === "string" ? groupOrKey : (groupOrKey && groupOrKey.key ? String(groupOrKey.key) : "");
-    if (groupKey === "")
-      return;
-
-    const liveNotifications = [];
-    const removedUids = [];
-    const nextEntries = [];
-
-    for (let index = 0; index < entries.length; index += 1) {
-      const entry = entries[index];
-      if (sourceKey(entry) !== groupKey) {
-        nextEntries.push(entry);
-        continue;
-      }
-
-      removedUids.push(entry.uid);
-      if (entry.notification && entry.live)
-        liveNotifications.push(entry.notification);
+        markRead(entry.uid);
+        dismissToast(entry.uid);
+        action.invoke();
     }
 
-    if (removedUids.length === 0)
-      return;
+    function activateEntry(entryOrUid) {
+        const entry = typeof entryOrUid === "number" ? entryForUid(entryOrUid) : entryOrUid;
+        if (!entry)
+            return;
 
-    setEntries(nextEntries);
-    setToastUids(toastUids.filter(existingUid => removedUids.indexOf(existingUid) < 0));
+        if (entryHasFocusTarget(entry)) {
+            requestEntryFocus(entry.uid, Number(entry.niriWindowId || 0));
+            return;
+        }
 
-    for (let index = 0; index < liveNotifications.length; index += 1) {
-      liveNotifications[index].dismiss();
-    }
-  }
-
-  function clearEntries() {
-    const liveNotifications = [];
-
-    for (let index = 0; index < entries.length; index += 1) {
-      const entry = entries[index];
-      if (entry.notification && entry.live)
-        liveNotifications.push(entry.notification);
+        invokePrimaryAction(entry);
     }
 
-    setEntries([]);
-    setToastUids([]);
+    function closeLive(entryOrUid) {
+        const entry = typeof entryOrUid === "number" ? entryForUid(entryOrUid) : entryOrUid;
+        if (!entry)
+            return;
 
-    for (let index = 0; index < liveNotifications.length; index += 1) {
-      liveNotifications[index].dismiss();
+        dismissToast(entry.uid);
+        releaseLiveNotification(entry, "dismiss");
+        markClosed(entry.uid);
     }
-  }
 
-  NotificationServer {
-    id: notificationServer
+    function forgetEntry(entryOrUid) {
+        const uid = typeof entryOrUid === "number" ? entryOrUid : (entryOrUid ? entryOrUid.uid : -1);
+        if (uid < 0)
+            return;
 
-    persistenceSupported: true
-    actionsSupported: true
-    imageSupported: true
-    keepOnReload: true
-
-    onNotification: function (notification) {
-      root.trackNotification(notification);
+        const entry = entryForUid(uid);
+        dismissToast(uid);
+        setEntries(entries.filter(existing => existing.uid !== uid));
+        releaseLiveNotification(entry, "dismiss");
     }
-  }
 
-  StdioCollector {
-    id: notificationWindowLookupStdout
+    function forgetGroup(groupOrKey) {
+        const groupKey = typeof groupOrKey === "string" ? groupOrKey : (groupOrKey && groupOrKey.key ? String(groupOrKey.key) : "");
+        if (groupKey === "")
+            return;
 
-    waitForEnd: true
-  }
+        const removedEntries = [];
+        const removedUids = [];
+        const nextEntries = [];
 
-  Process {
-    id: notificationWindowLookupProcess
+        for (let index = 0; index < entries.length; index += 1) {
+            const entry = entries[index];
+            if (sourceKey(entry) !== groupKey) {
+                nextEntries.push(entry);
+                continue;
+            }
 
-    stdout: notificationWindowLookupStdout
+            removedUids.push(entry.uid);
+            removedEntries.push(entry);
+        }
 
-    Component.onCompleted: exited.connect(function (exitCode) {
-      const focusUid = root.pendingFocusUid;
-      const focusWindowId = root.pendingFocusWindowId;
-      const focusEntry = root.entryForUid(focusUid);
+        if (removedUids.length === 0)
+            return;
 
-      root.pendingFocusUid = -1;
-      root.pendingFocusWindowId = 0;
-      root.focusLookupBusy = false;
+        setEntries(nextEntries);
+        setToastUids(toastUids.filter(existingUid => removedUids.indexOf(existingUid) < 0));
+        releaseLiveNotifications(removedEntries, "dismiss");
+    }
 
-      const canFocus = exitCode === 0 && !!focusEntry && Number(focusEntry.niriWindowId || 0) === focusWindowId && root.windowListContainsId(notificationWindowLookupStdout.text, focusWindowId);
+    function clearEntries() {
+        const removedEntries = entries.slice();
 
-      if (canFocus) {
-        root.markRead(focusUid);
-        root.dismissToast(focusUid);
-        notificationFocusProcess.exec(["niri", "msg", "action", "focus-window", "--id", `${focusWindowId}`]);
-      } else if (root.primaryAction(focusEntry)) {
-        root.invokePrimaryAction(focusEntry);
-      }
+        setEntries([]);
+        setToastUids([]);
+        releaseLiveNotifications(removedEntries, "dismiss");
+    }
 
-      if (root.queuedFocusUid >= 0 && root.queuedFocusWindowId > 0) {
-        const nextUid = root.queuedFocusUid;
-        const nextWindowId = root.queuedFocusWindowId;
-        root.queuedFocusUid = -1;
-        root.queuedFocusWindowId = 0;
-        root.startEntryFocusLookup(nextUid, nextWindowId);
-      }
-    })
-  }
+    NotificationServer {
+        id: notificationServer
 
-  Process {
-    id: notificationFocusProcess
-  }
+        persistenceSupported: true
+        actionsSupported: true
+        imageSupported: true
+        keepOnReload: true
 
-  AudioOutput {
-    id: notificationSoundOutput
+        onNotification: function (notification) {
+            root.trackNotification(notification);
+        }
+    }
 
-    volume: 0.7
-  }
+    Timer {
+        id: notificationExpiryTimer
 
-  MediaPlayer {
-    id: notificationSoundPlayer
+        repeat: false
+        onTriggered: root.expireDueNotifications()
+    }
 
-    source: root.notificationSoundSource
-    audioOutput: notificationSoundOutput
-  }
+    StdioCollector {
+        id: notificationWindowLookupStdout
+
+        waitForEnd: true
+    }
+
+    Process {
+        id: notificationWindowLookupProcess
+
+        stdout: notificationWindowLookupStdout
+
+        Component.onCompleted: exited.connect(function (exitCode) {
+            const focusUid = root.pendingFocusUid;
+            const focusWindowId = root.pendingFocusWindowId;
+            const focusEntry = root.entryForUid(focusUid);
+
+            root.pendingFocusUid = -1;
+            root.pendingFocusWindowId = 0;
+            root.focusLookupBusy = false;
+
+            const canFocus = exitCode === 0 && !!focusEntry && Number(focusEntry.niriWindowId || 0) === focusWindowId && root.windowListContainsId(notificationWindowLookupStdout.text, focusWindowId);
+
+            if (canFocus) {
+                root.markRead(focusUid);
+                root.dismissToast(focusUid);
+                notificationFocusProcess.exec(["niri", "msg", "action", "focus-window", "--id", `${focusWindowId}`]);
+            } else if (root.primaryAction(focusEntry)) {
+                root.invokePrimaryAction(focusEntry);
+            }
+
+            if (root.queuedFocusUid >= 0 && root.queuedFocusWindowId > 0) {
+                const nextUid = root.queuedFocusUid;
+                const nextWindowId = root.queuedFocusWindowId;
+                root.queuedFocusUid = -1;
+                root.queuedFocusWindowId = 0;
+                root.startEntryFocusLookup(nextUid, nextWindowId);
+            }
+        })
+    }
+
+    Process {
+        id: notificationFocusProcess
+    }
+
+    AudioOutput {
+        id: notificationSoundOutput
+
+        volume: 0.7
+    }
+
+    MediaPlayer {
+        id: notificationSoundPlayer
+
+        source: root.notificationSoundSource
+        audioOutput: notificationSoundOutput
+    }
 }

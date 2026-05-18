@@ -28,6 +28,15 @@ ShellRoot {
       trayState.collapseToPeekOrHidden();
   }
 
+  function dismissControlCenterBackdrop() {
+    if (controlCenter.popupDismissInProgress)
+      return;
+    if (controlCenter.overlayDismissActive)
+      controlCenter.dismissOverlaySection();
+    else
+      closeControlCenter();
+  }
+
   function openGallery() {
     if (activeOverlay === "controlCenter" && !trayState.userPinned)
       trayState.collapseToPeekOrHidden();
@@ -310,6 +319,8 @@ ShellRoot {
 
   // qmllint disable uncreatable-type
   PanelWindow {
+    id: controlCenterBackdropWindow
+
     visible: root.shadeOpen
     anchors {
       left: true
@@ -320,6 +331,10 @@ ShellRoot {
     exclusionMode: ExclusionMode.Ignore
     aboveWindows: true
     color: "transparent"
+    mask: Region {
+      width: controlCenterBackdropWindow.width
+      height: controlCenterBackdropWindow.height
+    }
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
@@ -328,7 +343,7 @@ ShellRoot {
 
       MouseArea {
         anchors.fill: parent
-        onClicked: root.closeControlCenter()
+        onClicked: root.dismissControlCenterBackdrop()
       }
     }
   }
@@ -348,6 +363,10 @@ ShellRoot {
     exclusionMode: ExclusionMode.Ignore
     aboveWindows: true
     color: "transparent"
+    mask: Region {
+      width: controlCenterWindow.width
+      height: controlCenterWindow.height
+    }
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
@@ -358,14 +377,7 @@ ShellRoot {
 
     MouseArea {
       anchors.fill: parent
-      onClicked: {
-        if (controlCenter.popupDismissInProgress)
-          return;
-        if (controlCenter.overlayDismissActive)
-          controlCenter.dismissOverlaySection();
-        else
-          root.closeControlCenter();
-      }
+      onClicked: root.dismissControlCenterBackdrop()
     }
 
     TrayRail {

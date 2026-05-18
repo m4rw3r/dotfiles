@@ -6,7 +6,7 @@ import Quickshell
 PopupWindow {
   id: root
 
-  default property alias content: popupContent.data
+  default property alias content: contentHost.data
 
   property bool open: false
   property string section: ""
@@ -18,14 +18,24 @@ PopupWindow {
   property real anchorRectHeight: anchorItem ? anchorItem.height : 1
   property int popupWidth: popupContent.implicitWidth
   property int popupHeight: popupContent.implicitHeight
+  property int popupX: 0
+  property int popupY: 0
 
   signal dismissed(string section)
 
-  visible: open && parentWindow !== null && anchorItem !== null
   grabFocus: true
   color: "transparent"
-  implicitWidth: popupWidth
-  implicitHeight: popupHeight
+  implicitWidth: parentWindow ? parentWindow.width : popupWidth
+  implicitHeight: parentWindow ? parentWindow.height : popupHeight
+
+  function syncVisible() {
+    visible = open && parentWindow !== null && anchorItem !== null;
+  }
+
+  Component.onCompleted: syncVisible()
+  onOpenChanged: syncVisible()
+  onParentWindowChanged: syncVisible()
+  onAnchorItemChanged: syncVisible()
 
   onVisibleChanged: {
     if (visible) {
@@ -44,22 +54,47 @@ PopupWindow {
       return;
 
     const position = root.anchorItem.mapToItem(root.parentWindow.contentItem, root.anchorOffsetX, root.anchorOffsetY);
-    anchor.rect.x = Math.round(position.x);
-    anchor.rect.y = Math.round(position.y);
-    anchor.rect.width = Math.max(1, Math.round(root.anchorRectWidth));
-    anchor.rect.height = Math.max(1, Math.round(root.anchorRectHeight));
+    root.popupX = Math.round(position.x);
+    root.popupY = Math.round(position.y);
+    anchor.rect.x = 0;
+    anchor.rect.y = 0;
+    anchor.rect.width = 1;
+    anchor.rect.height = 1;
   }
   // qmllint enable missing-type unresolved-type
 
   Item {
-    id: popupContent
+    anchors.fill: parent
 
-    width: root.implicitWidth
-    height: root.implicitHeight
-    implicitWidth: childrenRect.x + childrenRect.width
-    implicitHeight: childrenRect.y + childrenRect.height
-    focus: true
+    MouseArea {
+      anchors.fill: parent
+      onClicked: root.dismissed(root.section)
+    }
 
-    Keys.onEscapePressed: root.dismissed(root.section)
+    Item {
+      id: popupContent
+
+      x: root.popupX
+      y: root.popupY
+      width: root.popupWidth
+      height: root.popupHeight
+      implicitWidth: contentHost.implicitWidth
+      implicitHeight: contentHost.implicitHeight
+      focus: true
+
+      MouseArea {
+        anchors.fill: parent
+      }
+
+      Item {
+        id: contentHost
+
+        anchors.fill: parent
+        implicitWidth: childrenRect.x + childrenRect.width
+        implicitHeight: childrenRect.y + childrenRect.height
+      }
+
+      Keys.onEscapePressed: root.dismissed(root.section)
+    }
   }
 }

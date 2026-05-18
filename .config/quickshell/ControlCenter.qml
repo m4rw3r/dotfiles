@@ -1297,6 +1297,11 @@ FocusScope {
       radius: panel.radius
       visible: root.overlayDismissActive
       z: 3
+
+      MouseArea {
+        anchors.fill: parent
+        onPressed: root.dismissOverlaySection()
+      }
     }
   }
 
@@ -1317,7 +1322,7 @@ FocusScope {
       id: powerPopover
 
       controller: root
-      width: powerPopup.implicitWidth
+      width: powerPopup.popupWidth
     }
   }
 
@@ -1338,7 +1343,7 @@ FocusScope {
       id: outputsPopover
 
       controller: root
-      width: outputsPopup.implicitWidth
+      width: outputsPopup.popupWidth
     }
   }
 
@@ -1360,7 +1365,7 @@ FocusScope {
 
       controller: root
       wifiService: wifiService
-      width: wifiPopup.implicitWidth
+      width: wifiPopup.popupWidth
     }
   }
 
@@ -1382,7 +1387,7 @@ FocusScope {
 
       controller: root
       bluetoothService: bluetoothService
-      width: bluetoothPopup.implicitWidth
+      width: bluetoothPopup.popupWidth
     }
   }
 
@@ -1393,7 +1398,7 @@ FocusScope {
     section: "profile"
     parentWindow: root.popupParentWindow
     anchorItem: profileTile
-    anchorOffsetY: Math.round((profileTile.height - profilePopup.implicitHeight) / 2)
+    anchorOffsetY: Math.round((profileTile.height - profilePopup.popupHeight) / 2)
     popupWidth: profilePopover.implicitWidth
     popupHeight: profilePopover.implicitHeight
     onDismissed: function (section) {
@@ -1403,7 +1408,7 @@ FocusScope {
     Controls.PopoverSurface {
       id: profilePopover
 
-      width: profilePopup.implicitWidth
+      width: profilePopup.popupWidth
 
       Repeater {
         model: root.profileOptions
@@ -1434,7 +1439,7 @@ FocusScope {
     section: "lighting"
     parentWindow: root.popupParentWindow
     anchorItem: lightingTile
-    anchorOffsetY: Math.round((lightingTile.height - lightingPopup.implicitHeight) / 2)
+    anchorOffsetY: Math.round((lightingTile.height - lightingPopup.popupHeight) / 2)
     popupWidth: lightingTile.width
     popupHeight: lightingPopover.implicitHeight
     onDismissed: function (section) {
@@ -1444,7 +1449,7 @@ FocusScope {
     Controls.PopoverSurface {
       id: lightingPopover
 
-      width: lightingPopup.implicitWidth
+      width: lightingPopup.popupWidth
 
       visible: lightingService.commandAvailable
 
@@ -1491,7 +1496,7 @@ FocusScope {
       id: notificationMenuPanel
 
       controller: root
-      width: notificationsPopup.implicitWidth
+      width: notificationsPopup.popupWidth
     }
   }
 }

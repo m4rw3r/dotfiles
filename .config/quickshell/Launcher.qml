@@ -223,6 +223,10 @@ Item {
       exclusionMode: ExclusionMode.Ignore
       aboveWindows: true
       color: "transparent"
+      mask: Region {
+        width: launcherWindow.width
+        height: launcherWindow.height
+      }
       WlrLayershell.layer: WlrLayer.Overlay
       WlrLayershell.keyboardFocus: launcherWindow.isActiveWindow ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 

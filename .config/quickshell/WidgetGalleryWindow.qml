@@ -17,6 +17,10 @@ PanelWindow {
   exclusionMode: ExclusionMode.Ignore
   aboveWindows: true
   color: "transparent"
+  mask: Region {
+    width: root.width
+    height: root.height
+  }
   WlrLayershell.layer: WlrLayer.Overlay
   WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 

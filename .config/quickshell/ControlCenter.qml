@@ -24,6 +24,7 @@ FocusScope {
   property string expandedSection: ""
   property string pendingPowerAction: ""
   property string wifiPasswordTarget: ""
+  property var wifiPasswordNetwork: null
   property string wifiPassword: ""
   property bool powerProfileBusy: false
   property bool onScreenKeyboardBusy: false
@@ -191,12 +192,13 @@ FocusScope {
     expandedSection = section;
     if (expandedSection !== "wifi") {
       wifiPasswordTarget = "";
+      wifiPasswordNetwork = null;
       wifiPassword = "";
     }
     if (expandedSection !== "power")
       pendingPowerAction = "";
     if (expandedSection === "wifi")
-      wifiService.refresh();
+      wifiService.showMenu();
     if (expandedSection !== "bluetooth")
       bluetoothService.stopDiscovery();
   }
@@ -394,8 +396,6 @@ FocusScope {
   function wifiHeroHint() {
     if (!wifiService.ready)
       return initialLoadDeadlineElapsed ? "Loading Wi-Fi..." : "";
-    if (wifiService.lastError !== "")
-      return "Unavailable";
     if (!wifiService.hardwareEnabled)
       return "Wi-Fi hardware is blocked.";
     if (!wifiService.enabled)
@@ -404,6 +404,8 @@ FocusScope {
       return `${wifiService.connectedSignal}% signal`;
     if (wifiService.networks.length > 0)
       return `${wifiService.networks.length} networks available`;
+    if (wifiService.lastError !== "")
+      return "Unavailable";
     return "No networks available";
   }
 
@@ -649,24 +651,27 @@ FocusScope {
     if (!network)
       return;
 
-    wifiService.lastError = "";
+    wifiService.clearLastError();
 
-    if (!network.secure || network.known) {
+    if (!network.passwordRequired) {
       wifiPasswordTarget = "";
+      wifiPasswordNetwork = null;
       wifiPassword = "";
-      wifiService.connectNetwork(network.ssid, "");
+      wifiService.connectNetwork(network, "");
       return;
     }
 
-    openSection("wifi");
+    if (expandedSection !== "wifi")
+      openSection("wifi");
     wifiPasswordTarget = network.ssid;
+    wifiPasswordNetwork = network;
     wifiPassword = "";
   }
 
   function submitWifiPassword() {
     if (wifiPasswordTarget === "" || wifiPassword === "")
       return;
-    wifiService.connectNetwork(wifiPasswordTarget, wifiPassword);
+    wifiService.connectNetwork(wifiPasswordNetwork || wifiPasswordTarget, wifiPassword);
   }
 
   function runSessionAction(action) {
@@ -733,6 +738,7 @@ FocusScope {
       notificationReturnSection = "";
       pendingPowerAction = "";
       wifiPasswordTarget = "";
+      wifiPasswordNetwork = null;
       wifiPassword = "";
       onScreenKeyboardMessage = "";
       onScreenKeyboardFailed = false;
@@ -808,6 +814,7 @@ FocusScope {
 
     onConnectedSsidChanged: {
       root.wifiPasswordTarget = "";
+      root.wifiPasswordNetwork = null;
       root.wifiPassword = "";
     }
   }

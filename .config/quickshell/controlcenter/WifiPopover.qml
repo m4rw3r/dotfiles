@@ -19,7 +19,7 @@ Patterns.HeroSheetPopover {
   subtitle: controller ? controller.wifiHeroHint() : ""
   hasStatus: wifiService ? wifiService.ready : false
   statusActive: wifiService ? wifiService.ready && wifiService.enabled && wifiService.hardwareEnabled : false
-  statusBusy: wifiService ? wifiService.busy : false
+  statusBusy: wifiService ? wifiService.busy || wifiService.scanning : false
   statusToggleEnabled: wifiService ? wifiService.ready && !wifiService.busy && wifiService.hardwareEnabled : false
   onStatusClicked: controller.toggleWifiEnabled()
 
@@ -215,6 +215,7 @@ Patterns.HeroSheetPopover {
             text: "Cancel"
             onClicked: {
               popover.controller.wifiPasswordTarget = "";
+              popover.controller.wifiPasswordNetwork = null;
               popover.controller.wifiPassword = "";
             }
           }
@@ -223,7 +224,7 @@ Patterns.HeroSheetPopover {
     }
 
     UiText {
-      visible: popover.wifiService && popover.wifiService.ready && popover.wifiService.enabled && popover.wifiService.networks.length === 0 && !popover.wifiService.busy
+      visible: popover.wifiService && popover.wifiService.ready && popover.wifiService.enabled && popover.wifiService.networks.length === 0 && !popover.wifiService.busy && !popover.wifiService.scanning
       text: "No networks available."
       size: "xs"
       tone: "subtle"
@@ -246,7 +247,7 @@ Patterns.HeroSheetPopover {
 
       Controls.PopoverMenuAction {
         width: parent.width
-        title: popover.wifiService && popover.wifiService.busy ? "Refreshing" : "Rescan"
+        title: popover.wifiService && (popover.wifiService.busy || popover.wifiService.scanning) ? "Refreshing" : "Rescan"
         enabled: popover.wifiService && popover.wifiService.ready && popover.wifiService.enabled && !popover.wifiService.busy
         onClicked: popover.wifiService.scan()
       }

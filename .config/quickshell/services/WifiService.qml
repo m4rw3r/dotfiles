@@ -1,340 +1,549 @@
 pragma ComponentBehavior: Bound
 
+import QtQml
 import QtQuick
-import Quickshell.Io
+import Quickshell.Networking
 
 Item {
   id: root
 
   property bool ready: false
-  property bool enabled: false
-  property bool hardwareEnabled: true
-  property bool busy: false
+  readonly property bool enabled: Networking.wifiEnabled
+  readonly property bool hardwareEnabled: Networking.wifiHardwareEnabled
+  readonly property bool scanning: !!(currentWifiDevice && currentWifiDevice.scannerEnabled)
+  readonly property bool busy: operationBusy || networkStateChanging
   property string connectedSsid: ""
   property int connectedSignal: 0
-  property var savedNetworks: ({})
   property var networks: []
   property string lastError: ""
+  property string lastErrorContext: ""
+  property string lastErrorTargetSsid: ""
   property string pendingSsid: ""
 
-  function splitEscaped(line) {
-    const fields = [];
-    let current = "";
-    let escaping = false;
+  property var currentWifiDevice: null
+  property bool networkStateChanging: false
+  property bool operationBusy: false
+  property bool pendingPasswordSubmitted: false
 
-    for (let i = 0; i < line.length; i += 1) {
-      const character = line[i];
+  readonly property string noAdapterError: "No Wi-Fi adapter found."
 
-      if (escaping) {
-        current += character;
-        escaping = false;
-        continue;
-      }
+  Component.onCompleted: refresh()
 
-      if (character === "\\") {
-        escaping = true;
-        continue;
-      }
+  function clearLastError() {
+    lastError = "";
+    lastErrorContext = "";
+    lastErrorTargetSsid = "";
+  }
 
-      if (character === ":") {
-        fields.push(current);
-        current = "";
-        continue;
-      }
+  function setLastError(message, context, targetSsid) {
+    lastError = message;
+    lastErrorContext = context || "";
+    lastErrorTargetSsid = targetSsid || "";
+  }
 
-      current += character;
+  function networkObjects(device) {
+    if (!device || !device.networks || !device.networks.values)
+      return [];
+    return device.networks.values;
+  }
+
+  function wifiDevice() {
+    const devices = Networking.devices && Networking.devices.values ? Networking.devices.values : [];
+    for (let index = 0; index < devices.length; index += 1) {
+      const device = devices[index];
+      if (device && device.type === DeviceType.Wifi)
+        return device;
     }
-
-    fields.push(current);
-    return fields;
+    return null;
   }
 
-  function refresh() {
-    busy = true;
-    lastError = "";
-    refreshProcess.exec([
-      "sh",
-      "-lc",
-      "saved_file=$(mktemp) || exit 1; connections_file=$(mktemp) || exit 1; wifi_file=$(mktemp) || exit 1; trap 'rm -f \"$saved_file\" \"$connections_file\" \"$wifi_file\"' EXIT; status_failed=0; saved_failed=0; wifi_failed=0; status_output=$(nmcli -t -f WIFI,WIFI-HW general status) || status_failed=1; if ! nmcli -t --escape yes -f UUID,TYPE connection show >\"$connections_file\"; then saved_failed=1; else while IFS=: read -r uuid type; do [ \"$type\" = \"802-11-wireless\" ] || continue; if ! nmcli -t --escape yes -g 802-11-wireless.ssid connection show uuid \"$uuid\" >>\"$saved_file\"; then saved_failed=1; break; fi; done <\"$connections_file\"; fi; if ! nmcli -t --escape yes -f IN-USE,BSSID,SSID,SIGNAL,SECURITY device wifi list --rescan no >\"$wifi_file\"; then wifi_failed=1; fi; printf '%s\n@@SAVED@@\n' \"$status_output\"; if [ \"$saved_failed\" -eq 0 ]; then cat \"$saved_file\"; fi; printf '\n@@WIFI@@\n'; if [ \"$wifi_failed\" -eq 0 ]; then cat \"$wifi_file\"; fi; printf '\n@@ERRORS@@\n'; if [ \"$status_failed\" -ne 0 ]; then printf 'status\n'; fi; if [ \"$saved_failed\" -ne 0 ]; then printf 'saved\n'; fi; if [ \"$wifi_failed\" -ne 0 ]; then printf 'wifi\n'; fi"
-    ]);
+  function signalPercent(network) {
+    return Math.max(0, Math.min(100, Math.round(Number(network.signalStrength || 0) * 100)));
   }
 
-  function scan() {
-    busy = true;
-    lastError = "";
-    scanProcess.exec(["nmcli", "device", "wifi", "rescan"]);
+  function isOpenLikeSecurity(security) {
+    return security === WifiSecurityType.Open || security === WifiSecurityType.Owe;
   }
 
-  function setEnabledState(nextState) {
-    busy = true;
-    lastError = "";
-    toggleProcess.exec(["nmcli", "radio", "wifi", nextState ? "on" : "off"]);
+  function isPskSecurity(security) {
+    return security === WifiSecurityType.WpaPsk || security === WifiSecurityType.Wpa2Psk || security === WifiSecurityType.Sae;
   }
 
-  function connectNetwork(ssid, password) {
-    if (ssid === "") return;
-
-    const command = ["nmcli", "device", "wifi", "connect", ssid];
-    if (password !== "") command.push("password", password);
-
-    busy = true;
-    lastError = "";
-    pendingSsid = ssid;
-    connectProcess.exec(command);
+  function securityLabel(network) {
+    if (!network || network.security === WifiSecurityType.Open)
+      return "";
+    return WifiSecurityType.toString(network.security);
   }
 
-  function resetStatus() {
-    enabled = false;
-    hardwareEnabled = true;
+  function secureFor(network) {
+    return !!network && !isOpenLikeSecurity(network.security);
   }
 
-  function resetSaved() {
-    savedNetworks = ({})
+  function passwordRequiredFor(network) {
+    return !!network && !network.known && isPskSecurity(network.security);
   }
 
-  function resetWifiList() {
-    connectedSsid = "";
-    connectedSignal = 0;
-    networks = [];
+  function unsupportedPasswordSecurityFor(network) {
+    return !!network && !network.known && !isOpenLikeSecurity(network.security) && !isPskSecurity(network.security);
   }
 
-  function resetRefreshState() {
-    resetStatus();
-    resetSaved();
-    resetWifiList();
+  function networkName(network) {
+    return String(network && network.name !== undefined ? network.name : "");
   }
 
-  function parseRefresh(text) {
-    const blocks = String(text || "").split("\n@@SAVED@@\n");
-    const statusBlock = blocks.length > 0 ? blocks[0] : "";
-    const remainder = blocks.length > 1 ? blocks[1] : "";
-    const savedBlocks = remainder.split("\n@@WIFI@@\n");
-    const savedBlock = savedBlocks.length > 0 ? savedBlocks[0] : "";
-    const wifiAndErrors = savedBlocks.length > 1 ? savedBlocks[1] : "";
-    const wifiBlocks = wifiAndErrors.split("\n@@ERRORS@@\n");
-    const wifiBlock = wifiBlocks.length > 0 ? wifiBlocks[0] : "";
-    const errorBlock = wifiBlocks.length > 1 ? wifiBlocks[1] : "";
-    const refreshErrors = parseRefreshErrors(errorBlock);
-
-    if (refreshErrors.statusFailed) resetStatus();
-    else parseStatus(statusBlock);
-
-    const nextSavedNetworks = refreshErrors.savedFailed ? ({}) : parseSaved(savedBlock);
-    savedNetworks = nextSavedNetworks;
-
-    if (refreshErrors.wifiFailed) resetWifiList();
-    else parseWifiList(wifiBlock, nextSavedNetworks);
-
-    return refreshErrors;
-  }
-
-  function parseRefreshErrors(text) {
-    const result = {
-      statusFailed: false,
-      savedFailed: false,
-      wifiFailed: false
-    };
-
-    const lines = String(text || "").split("\n");
-    for (let i = 0; i < lines.length; i += 1) {
-      const line = lines[i].trim();
-      if (line === "status") result.statusFailed = true;
-      else if (line === "saved") result.savedFailed = true;
-      else if (line === "wifi") result.wifiFailed = true;
+  function targetSsid(target) {
+    if (typeof target === "string")
+      return target;
+    try {
+      if (target && target.ssid !== undefined)
+        return String(target.ssid || "");
+      if (target && target.name !== undefined)
+        return String(target.name || "");
+    } catch (error) {
+      return "";
     }
-
-    return result;
-  }
-
-  function hasRefreshPayload(text) {
-    const payload = String(text || "");
-    return payload.indexOf("\n@@SAVED@@\n") >= 0
-      && payload.indexOf("\n@@WIFI@@\n") >= 0
-      && payload.indexOf("\n@@ERRORS@@\n") >= 0;
-  }
-
-  function refreshErrorText(refreshErrors, stderrText) {
-    if (stderrText !== "") return stderrText;
-    if (!refreshErrors) return "";
-    if (refreshErrors.statusFailed && refreshErrors.savedFailed && refreshErrors.wifiFailed) return "Unable to refresh Wi-Fi state.";
-    if (refreshErrors.statusFailed && refreshErrors.wifiFailed) return "Unable to refresh Wi-Fi status and networks.";
-    if (refreshErrors.statusFailed && refreshErrors.savedFailed) return "Unable to refresh Wi-Fi status and saved networks.";
-    if (refreshErrors.savedFailed && refreshErrors.wifiFailed) return "Unable to refresh saved networks and Wi-Fi networks.";
-    if (refreshErrors.statusFailed) return "Unable to refresh Wi-Fi status.";
-    if (refreshErrors.savedFailed) return "Unable to refresh saved Wi-Fi networks.";
-    if (refreshErrors.wifiFailed) return "Unable to refresh Wi-Fi networks.";
     return "";
   }
 
-  function parseStatus(text) {
-    const line = String(text || "").trim();
-    if (line === "") return;
-
-    const parts = line.split(":");
-    enabled = parts[0] === "enabled";
-    hardwareEnabled = parts.length < 2 ? true : parts[1] === "enabled";
-  }
-
-  function parseSaved(text) {
-    const lines = String(text || "").split("\n");
-    const known = {};
-
-    for (let i = 0; i < lines.length; i += 1) {
-      const line = lines[i];
-      if (line === "") continue;
-
-      const fields = splitEscaped(line);
-      const ssid = fields.length > 0 ? fields[0] : "";
-      if (ssid === "") continue;
-      known[ssid] = true;
+  function networkFromTarget(target, password) {
+    if (target && typeof target !== "string") {
+      try {
+        if (target.sourceNetwork)
+          return target.sourceNetwork;
+        if (target.name !== undefined && target.connect)
+          return target;
+      } catch (error) {
+        return networkForSsid(targetSsid(target), password);
+      }
     }
 
-    return known;
+    return networkForSsid(targetSsid(target), password);
   }
 
-  function parseWifiList(text, knownNetworks) {
-    const lines = String(text || "").split("\n");
+  function betterConnectionTarget(candidate, current, password) {
+    if (!current)
+      return true;
+    if (candidate.connected !== current.connected)
+      return candidate.connected;
+    if (candidate.known !== current.known)
+      return candidate.known;
+    if (password !== "" && isPskSecurity(candidate.security) !== isPskSecurity(current.security))
+      return isPskSecurity(candidate.security);
+    return signalPercent(candidate) > signalPercent(current);
+  }
+
+  function networkForSsid(ssid, password) {
+    if (ssid === "")
+      return null;
+
+    const device = currentWifiDevice || wifiDevice();
+    const candidates = networkObjects(device);
+    let match = null;
+    for (let index = 0; index < candidates.length; index += 1) {
+      const network = candidates[index];
+      if (!network || networkName(network) !== ssid)
+        continue;
+      if (betterConnectionTarget(network, match, password))
+        match = network;
+    }
+    return match;
+  }
+
+  function networkList(device) {
+    const sourceNetworks = networkObjects(device);
     const deduped = {};
-    const known = knownNetworks || {};
-    let activeSsid = "";
-    let activeSignal = 0;
 
-    for (let i = 0; i < lines.length; i += 1) {
-      const line = lines[i];
-      if (line === "") continue;
+    for (let index = 0; index < sourceNetworks.length; index += 1) {
+      const sourceNetwork = sourceNetworks[index];
+      const ssid = networkName(sourceNetwork);
+      if (ssid === "")
+        continue;
 
-      const parts = splitEscaped(line);
-      if (parts.length < 5) continue;
-
-      const active = parts[0] === "*";
-      const bssid = parts[1];
-      const ssid = parts[2];
-      const signal = parseInt(parts[3]) || 0;
-      const security = parts[4];
-
-      if (ssid === "") continue;
-
-      const network = {
-        active,
-        bssid,
+      const row = {
+        active: !!sourceNetwork.connected,
+        bssid: "",
         ssid,
-        signal,
-        security,
-        secure: security !== "",
-        known: known[ssid] === true
+        signal: signalPercent(sourceNetwork),
+        security: securityLabel(sourceNetwork),
+        secure: secureFor(sourceNetwork),
+        known: !!sourceNetwork.known,
+        sourceNetwork,
+        securityType: sourceNetwork.security,
+        passwordRequired: passwordRequiredFor(sourceNetwork),
+        passwordConnectSupported: isPskSecurity(sourceNetwork.security),
+        unsupportedSecurity: unsupportedPasswordSecurityFor(sourceNetwork)
       };
 
-      if (active) {
-        activeSsid = ssid;
-        activeSignal = signal;
-      }
-
-      const networkKey = bssid !== "" ? bssid : `${ssid}\u0000${security}`;
-      const existing = deduped[networkKey];
-      if (!existing || existing.signal < network.signal || (network.active && !existing.active)) {
-        deduped[networkKey] = network;
-      }
+      const key = `${ssid}\u0000${sourceNetwork.security}`;
+      const existing = deduped[key];
+      if (!existing || row.signal > existing.signal || (row.active && !existing.active) || (row.known && !existing.known))
+        deduped[key] = row;
     }
 
     const nextNetworks = Object.values(deduped);
     nextNetworks.sort((left, right) => {
-      if (left.active !== right.active) return left.active ? -1 : 1;
-      if (left.known !== right.known) return left.known ? -1 : 1;
-      if (left.signal !== right.signal) return right.signal - left.signal;
+      if (left.active !== right.active)
+        return left.active ? -1 : 1;
+      if (left.known !== right.known)
+        return left.known ? -1 : 1;
+      if (left.signal !== right.signal)
+        return right.signal - left.signal;
       const byName = left.ssid.localeCompare(right.ssid);
-      if (byName !== 0) return byName;
+      if (byName !== 0)
+        return byName;
       return String(left.bssid || "").localeCompare(String(right.bssid || ""));
     });
+
+    return nextNetworks;
+  }
+
+  function clearRecoveredError(activeSsid, availableNetworkCount, changing) {
+    if (lastError === "" || pendingSsid !== "" || changing)
+      return;
+
+    if (lastErrorContext === "connect" || lastErrorContext === "password" || lastErrorContext === "unsupported") {
+      if (activeSsid !== "" && (lastErrorTargetSsid === "" || activeSsid === lastErrorTargetSsid))
+        clearLastError();
+      return;
+    }
+
+    if (lastErrorContext !== "adapter" && enabled && hardwareEnabled && currentWifiDevice && (activeSsid !== "" || availableNetworkCount > 0))
+      clearLastError();
+  }
+
+  function refresh() {
+    const device = wifiDevice();
+    currentWifiDevice = device;
+    ready = true;
+
+    if (!device) {
+      connectedSsid = "";
+      connectedSignal = 0;
+      networks = [];
+      networkStateChanging = false;
+      setLastError(noAdapterError, "adapter", "");
+      return;
+    }
+
+    if (lastErrorContext === "adapter")
+      clearLastError();
+
+    if (!enabled || !hardwareEnabled) {
+      connectedSsid = "";
+      connectedSignal = 0;
+      networks = [];
+      networkStateChanging = false;
+      return;
+    }
+
+    const nextNetworks = networkList(device);
+    const sourceNetworks = networkObjects(device);
+    let activeSsid = "";
+    let activeSignal = 0;
+    let changing = false;
+    let pendingChanging = false;
+
+    for (let index = 0; index < nextNetworks.length; index += 1) {
+      const row = nextNetworks[index];
+      if (row.active && (activeSsid === "" || row.signal > activeSignal)) {
+        activeSsid = row.ssid;
+        activeSignal = row.signal;
+      }
+    }
+
+    for (let index = 0; index < sourceNetworks.length; index += 1) {
+      const network = sourceNetworks[index];
+      if (network && network.stateChanging) {
+        changing = true;
+        if (networkName(network) === pendingSsid)
+          pendingChanging = true;
+      }
+    }
 
     connectedSsid = activeSsid;
     connectedSignal = activeSignal;
     networks = nextNetworks;
+    networkStateChanging = changing;
+    clearRecoveredError(activeSsid, nextNetworks.length, changing);
+
+    if (pendingSsid !== "" && connectedSsid === pendingSsid) {
+      pendingSsid = "";
+      pendingPasswordSubmitted = false;
+      operationBusy = false;
+      clearLastError();
+    } else if (pendingSsid !== "" && !operationBusy && !pendingChanging) {
+      pendingSsid = "";
+      pendingPasswordSubmitted = false;
+    }
   }
 
-  StdioCollector {
-    id: refreshStdout
-    waitForEnd: true
+  function showMenu() {
+    refresh();
+    if (enabled && hardwareEnabled && currentWifiDevice)
+      scan();
   }
 
-  StdioCollector {
-    id: refreshStderr
-    waitForEnd: true
+  function scan() {
+    const device = currentWifiDevice || wifiDevice();
+
+    if (!device) {
+      refresh();
+      setLastError(noAdapterError, "adapter", "");
+      return;
+    }
+
+    if (!enabled || !hardwareEnabled) {
+      refresh();
+      return;
+    }
+
+    clearLastError();
+    try {
+      device.scannerEnabled = true;
+      scanTimer.restart();
+      refresh();
+    } catch (error) {
+      setLastError(`Unable to scan Wi-Fi networks: ${error}`, "scan", "");
+    }
   }
 
-  Process {
-    id: refreshProcess
-
-    stdout: refreshStdout
-    stderr: refreshStderr
-
-    Component.onCompleted: exited.connect(function(exitCode) {
-      root.busy = false;
-      root.ready = true;
-      const stderrText = String(refreshStderr.text || "").trim();
-      const stdoutText = refreshStdout.text;
-
-      if (exitCode === 0 && root.hasRefreshPayload(stdoutText)) {
-        const refreshErrors = root.parseRefresh(stdoutText);
-        root.lastError = root.refreshErrorText(refreshErrors, stderrText);
-        return;
-      }
-
-      root.resetRefreshState();
-      root.lastError = stderrText !== "" ? stderrText : "Unable to refresh Wi-Fi state.";
-    })
+  function setEnabledState(nextState) {
+    operationBusy = true;
+    operationTimer.restart();
+    clearLastError();
+    try {
+      Networking.wifiEnabled = nextState;
+      if (!nextState && currentWifiDevice)
+        currentWifiDevice.scannerEnabled = false;
+    } catch (error) {
+      operationBusy = false;
+      setLastError(`Unable to ${nextState ? "enable" : "disable"} Wi-Fi: ${error}`, "toggle", "");
+    }
+    refresh();
   }
 
-  StdioCollector {
-    id: toggleStderr
-    waitForEnd: true
-  }
+  function connectNetwork(target, password) {
+    const submittedPassword = String(password || "");
+    const ssid = targetSsid(target);
+    if (ssid === "")
+      return;
 
-  StdioCollector {
-    id: scanStderr
-    waitForEnd: true
-  }
+    const network = networkFromTarget(target, submittedPassword);
+    if (!network) {
+      pendingSsid = "";
+      pendingPasswordSubmitted = false;
+      operationBusy = false;
+      setLastError(`${ssid} is no longer available.`, "connect", ssid);
+      return;
+    }
 
-  StdioCollector {
-    id: connectStderr
-    waitForEnd: true
-  }
+    const security = network.security;
+    let connectAction = null;
 
-  Process {
-    id: toggleProcess
-    stderr: toggleStderr
+    if (network.known || isOpenLikeSecurity(security)) {
+      connectAction = function () {
+        network.connect();
+      };
+    } else if (isPskSecurity(security) && submittedPassword !== "") {
+      connectAction = function () {
+        network.connectWithPsk(submittedPassword);
+      };
+    } else if (isPskSecurity(security)) {
+      pendingSsid = "";
+      pendingPasswordSubmitted = false;
+      operationBusy = false;
+      setLastError(`Password required for ${ssid}.`, "password", ssid);
+      return;
+    } else {
+      pendingSsid = "";
+      pendingPasswordSubmitted = false;
+      operationBusy = false;
+      setLastError(`Connection for ${WifiSecurityType.toString(security)} networks is not supported yet.`, "unsupported", ssid);
+      return;
+    }
 
-    Component.onCompleted: exited.connect(function(exitCode) {
-      root.lastError = exitCode === 0 ? "" : String(toggleStderr.text || "").trim();
+    pendingSsid = networkName(network);
+    pendingPasswordSubmitted = submittedPassword !== "";
+    operationBusy = true;
+    operationTimer.restart();
+    clearLastError();
+
+    try {
+      connectAction();
+    } catch (error) {
+      pendingSsid = "";
+      pendingPasswordSubmitted = false;
+      operationBusy = false;
+      setLastError(`Unable to connect to ${ssid}: ${error}`, "connect", ssid);
+    }
+    Qt.callLater(function () {
       root.refresh();
-    })
+    });
   }
 
-  Process {
-    id: scanProcess
-    stderr: scanStderr
+  function connectionFailureText(reason) {
+    if (reason === ConnectionFailReason.NoSecrets)
+      return "";
+    if (reason === ConnectionFailReason.WifiAuthTimeout)
+      return "Wi-Fi authentication timed out.";
+    if (reason === ConnectionFailReason.WifiNetworkLost)
+      return "Wi-Fi network lost.";
+    if (reason === ConnectionFailReason.WifiClientDisconnected)
+      return "Wi-Fi client disconnected.";
+    if (reason === ConnectionFailReason.WifiClientFailed)
+      return "Wi-Fi client failed.";
 
-    Component.onCompleted: exited.connect(function(exitCode) {
-      root.lastError = exitCode === 0 ? "" : String(scanStderr.text || "").trim();
-      rescanDelay.restart();
-    })
+    const reasonLabel = ConnectionFailReason.toString(reason);
+    if (reasonLabel && reasonLabel !== "Unknown")
+      return `Connection failed: ${reasonLabel}.`;
+    return "Unable to connect.";
   }
 
-  Process {
-    id: connectProcess
-    stderr: connectStderr
+  function handleConnectionFailed(network, reason) {
+    const ssid = networkName(network);
+    const targetName = ssid !== "" ? ssid : pendingSsid;
+    const passwordSubmitted = pendingPasswordSubmitted;
 
-    Component.onCompleted: exited.connect(function(exitCode) {
-      root.lastError = exitCode === 0 ? "" : String(connectStderr.text || "").trim();
-      if (exitCode !== 0) root.busy = false;
-      root.pendingSsid = "";
-      rescanDelay.restart();
-    })
+    if (pendingSsid === "" || pendingSsid === targetName) {
+      pendingSsid = "";
+      pendingPasswordSubmitted = false;
+    }
+    operationBusy = false;
+    refresh();
+
+    if (reason === ConnectionFailReason.NoSecrets)
+      setLastError(passwordSubmitted ? `Incorrect or missing password for ${targetName}.` : `Password required for ${targetName}.`, "connect", targetName);
+    else
+      setLastError(`${targetName}: ${connectionFailureText(reason)}`, "connect", targetName);
+  }
+
+  Connections {
+    target: Networking
+
+    function onWifiEnabledChanged() {
+      root.refresh();
+    }
+
+    function onWifiHardwareEnabledChanged() {
+      root.refresh();
+    }
+  }
+
+  Connections {
+    target: Networking.devices
+    ignoreUnknownSignals: true
+
+    function onValuesChanged() {
+      Qt.callLater(root.refresh);
+    }
+
+    function onObjectInsertedPost() {
+      Qt.callLater(root.refresh);
+    }
+
+    function onObjectRemovedPost() {
+      Qt.callLater(root.refresh);
+    }
+  }
+
+  Connections {
+    target: root.currentWifiDevice
+    ignoreUnknownSignals: true
+
+    function onScannerEnabledChanged() {
+      root.refresh();
+    }
+
+    function onConnectedChanged() {
+      root.refresh();
+    }
+
+    function onStateChanged() {
+      root.refresh();
+    }
+  }
+
+  Connections {
+    target: root.currentWifiDevice && root.currentWifiDevice.networks ? root.currentWifiDevice.networks : null
+    ignoreUnknownSignals: true
+
+    function onValuesChanged() {
+      Qt.callLater(root.refresh);
+    }
+
+    function onObjectInsertedPost() {
+      Qt.callLater(root.refresh);
+    }
+
+    function onObjectRemovedPost() {
+      Qt.callLater(root.refresh);
+    }
+  }
+
+  Instantiator {
+    model: root.currentWifiDevice && root.currentWifiDevice.networks ? root.currentWifiDevice.networks : null
+
+    delegate: Item {
+      required property var modelData
+
+      readonly property var network: modelData
+      readonly property var service: root
+
+      visible: false
+
+      Connections {
+        target: network
+        ignoreUnknownSignals: true
+
+        function onConnectionFailed(reason) {
+          service.handleConnectionFailed(network, reason);
+        }
+
+        function onConnectedChanged() {
+          Qt.callLater(service.refresh);
+        }
+
+        function onKnownChanged() {
+          Qt.callLater(service.refresh);
+        }
+
+        function onStateChanged() {
+          Qt.callLater(service.refresh);
+        }
+
+        function onStateChangingChanged() {
+          Qt.callLater(service.refresh);
+        }
+
+        function onSignalStrengthChanged() {
+          Qt.callLater(service.refresh);
+        }
+
+        function onSecurityChanged() {
+          Qt.callLater(service.refresh);
+        }
+      }
+    }
   }
 
   Timer {
-    id: rescanDelay
-    interval: 700
+    id: scanTimer
+    interval: 7000
     repeat: false
-    onTriggered: root.refresh()
+    onTriggered: {
+      if (root.currentWifiDevice)
+        root.currentWifiDevice.scannerEnabled = false;
+      root.refresh();
+    }
+  }
+
+  Timer {
+    id: operationTimer
+    interval: 1200
+    repeat: false
+    onTriggered: {
+      root.operationBusy = false;
+      root.refresh();
+    }
   }
 }

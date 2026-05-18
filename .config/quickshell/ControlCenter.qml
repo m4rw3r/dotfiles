@@ -49,7 +49,6 @@ FocusScope {
   property string bluetoothAdapterKey: "defaultAdapter"
   property bool initialLoadDeadlineElapsed: false
   property int initialLoadDeadlineMs: 50
-  readonly property Item blurItem: panel
   readonly property bool sessionActionBusy: !!sessionActions && sessionActions.busyAction !== ""
   readonly property bool notificationsOpen: expandedSection === "notifications"
   readonly property int notificationCount: notificationCenter ? notificationCenter.trackedCount : 0
@@ -936,7 +935,7 @@ FocusScope {
 
     width: root.implicitWidth
     implicitHeight: content.implicitHeight + Theme.insetMd * 2
-    tone: "panelOverlayBlur"
+    tone: "panelOverlay"
     outlined: false
     radius: Theme.radiusLg
 

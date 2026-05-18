@@ -13,30 +13,15 @@ Rectangle {
   border.color: Theme.border
 
   color: {
-    if (tone === "panelOverlay")
-      return Theme.panelOverlay;
-    if (tone === "panelOverlayBlur")
-      return Theme.panelOverlayBlur;
-    if (tone === "raised")
-      return Theme.panelRaised;
-    if (tone === "submenu")
-      return Theme.submenu;
-    if (tone === "submenuBlur")
-      return Theme.submenuBlur;
-    if (tone === "chip")
-      return Theme.chip;
-    if (tone === "field")
-      return pressed ? Theme.fieldPressed : Theme.field;
-    if (tone === "fieldBlur")
-      return pressed ? Theme.fieldPressed : Theme.fieldBlur;
-    if (tone === "fieldAlt")
-      return pressed ? Theme.fieldPressed : Theme.fieldAlt;
-    if (tone === "toggleOff")
-      return pressed ? Theme.fieldPressed : Theme.toggleOff;
-    if (tone === "toggleOn")
-      return pressed ? Theme.toggleOnStrong : Theme.toggleOn;
-    if (tone === "accent")
-      return pressed ? Theme.accentStrong : Theme.accent;
+    if (tone === "panelOverlay") return Theme.panelOverlay;
+    if (tone === "raised") return Theme.panelRaised;
+    if (tone === "submenu") return Theme.submenu;
+    if (tone === "chip") return Theme.chip;
+    if (tone === "field") return pressed ? Theme.fieldPressed : Theme.field;
+    if (tone === "fieldAlt") return pressed ? Theme.fieldPressed : Theme.fieldAlt;
+    if (tone === "toggleOff") return pressed ? Theme.fieldPressed : Theme.toggleOff;
+    if (tone === "toggleOn") return pressed ? Theme.toggleOnStrong : Theme.toggleOn;
+    if (tone === "accent") return pressed ? Theme.accentStrong : Theme.accent;
     return Theme.panel;
   }
 }

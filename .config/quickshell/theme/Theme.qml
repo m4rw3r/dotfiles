@@ -64,12 +64,18 @@ Singleton {
     reloadableId: "theme-state"
 
     property string selectedTheme: "graphite"
+    property bool dynamicAccentEnabled: false
+    property string dynamicAccentSource: ""
   }
 
   readonly property var themeNames: Object.keys(palettes)
   readonly property string defaultTheme: palettes.graphite !== undefined ? "graphite" : (themeNames.length > 0 ? themeNames[0] : "")
   readonly property string current: normalizeThemeName(persisted.selectedTheme)
   readonly property var palette: palettes[current] !== undefined ? palettes[current] : palettes.graphite
+  readonly property bool dynamicAccentEnabled: persisted.dynamicAccentEnabled
+  readonly property string dynamicAccentSource: persisted.dynamicAccentSource
+  readonly property var dynamicAccentCandidate: chooseDynamicAccentCandidate()
+  readonly property bool dynamicAccentActive: dynamicAccentCandidate !== null && dynamicAccentCandidate !== undefined
 
   readonly property color scrim: palette.scrim
   readonly property color panel: palette.panel
@@ -86,14 +92,17 @@ Singleton {
   readonly property color textSubtle: palette.textSubtle
   readonly property color iconSecondary: palette.iconSecondary
   readonly property color textOnAccent: palette.textOnAccent
-  readonly property color accent: palette.accent
-  readonly property color accentStrong: palette.accentStrong
-  readonly property color toggleOn: palette.toggleOn
-  readonly property color toggleOnStrong: palette.toggleOnStrong
+  readonly property color accent: dynamicAccentActive ? dynamicAccentCandidate : palette.accent
+  readonly property color accentStrong: dynamicAccentActive ? accentVariant(accent) : palette.accentStrong
+  readonly property color toggleOn: dynamicAccentActive ? accent : palette.toggleOn
+  readonly property color toggleOnStrong: dynamicAccentActive ? accentStrong : palette.toggleOnStrong
   readonly property color toggleOff: palette.toggleOff
   readonly property color sliderTrack: palette.sliderTrack
-  readonly property color sliderFill: palette.sliderFill
+  readonly property color sliderFill: dynamicAccentActive ? accentStrong : palette.sliderFill
   readonly property color chip: palette.chip
+  readonly property color panelOverlayBlur: withAlpha(panelOverlay, current === "dawn" ? 0.92 : 0.86)
+  readonly property color submenuBlur: withAlpha(submenu, current === "dawn" ? 0.94 : 0.88)
+  readonly property color fieldBlur: withAlpha(field, current === "dawn" ? 0.93 : 0.86)
 
   readonly property color borderSubtle: Qt.rgba(1, 1, 1, 0.08)
   readonly property color borderNormal: Qt.rgba(1, 1, 1, 0.1)
@@ -151,7 +160,75 @@ Singleton {
 
   readonly property color selection: accent
 
+  ColorQuantizer {
+    id: accentQuantizer
+
+    source: root.dynamicAccentEnabled ? root.dynamicAccentSourceUrl() : ""
+    depth: 3
+    rescaleSize: 64
+  }
+
   Component.onCompleted: sanitizePersistedTheme()
+
+  function withAlpha(color, alpha) {
+    return Qt.rgba(color.r, color.g, color.b, alpha);
+  }
+
+  function mixColors(color, target, amount) {
+    return Qt.rgba(color.r + (target.r - color.r) * amount, color.g + (target.g - color.g) * amount, color.b + (target.b - color.b) * amount, color.a);
+  }
+
+  function colorBrightness(color) {
+    return color.r * 0.299 + color.g * 0.587 + color.b * 0.114;
+  }
+
+  function colorSaturation(color) {
+    const maxChannel = Math.max(color.r, color.g, color.b);
+    const minChannel = Math.min(color.r, color.g, color.b);
+    return maxChannel <= 0 ? 0 : (maxChannel - minChannel) / maxChannel;
+  }
+
+  function accentVariant(color) {
+    const brightness = colorBrightness(color);
+    const target = brightness > 0.56 ? Qt.rgba(0, 0, 0, 1) : Qt.rgba(1, 1, 1, 1);
+    return mixColors(color, target, brightness > 0.56 ? 0.12 : 0.22);
+  }
+
+  function usableAccentColor(color) {
+    if (!color)
+      return false;
+
+    const brightness = colorBrightness(color);
+    return colorSaturation(color) >= 0.18 && brightness >= 0.22 && brightness <= 0.72;
+  }
+
+  function chooseDynamicAccentCandidate() {
+    if (!persisted.dynamicAccentEnabled || persisted.dynamicAccentSource === "")
+      return null;
+
+    const colors = accentQuantizer.colors;
+    if (!colors || colors.length === 0)
+      return null;
+
+    for (let index = 0; index < colors.length; index += 1) {
+      const color = colors[index];
+      if (usableAccentColor(color))
+        return color;
+    }
+
+    return null;
+  }
+
+  function dynamicAccentSourceUrl() {
+    const source = String(persisted.dynamicAccentSource || "").trim();
+    if (source === "")
+      return "";
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(source))
+      return source;
+    if (source[0] === "/")
+      return `file://${source}`;
+    return source;
+  }
 
   function normalizeThemeName(name) {
     const normalizedName = String(name || "");
@@ -184,5 +261,20 @@ Singleton {
     const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % names.length;
     persisted.selectedTheme = names[nextIndex];
     return persisted.selectedTheme;
+  }
+
+  function setDynamicAccentEnabled(enabled) {
+    const value = String(enabled).toLowerCase();
+    persisted.dynamicAccentEnabled = enabled === true || value === "true" || value === "1" || value === "yes" || value === "on";
+    return persisted.dynamicAccentEnabled;
+  }
+
+  function setDynamicAccentSource(path) {
+    persisted.dynamicAccentSource = String(path || "").trim();
+    return persisted.dynamicAccentSource;
+  }
+
+  function clearDynamicAccentSource() {
+    return setDynamicAccentSource("");
   }
 }

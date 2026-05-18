@@ -356,7 +356,7 @@ FocusScope {
     width: implicitWidth
     implicitWidth: root.expanded ? 104 : 60
     implicitHeight: railColumn.implicitHeight + Theme.insetSm * 2
-    tone: "panelOverlay"
+    tone: "panelOverlayBlur"
     outlined: false
     radius: Theme.radiusLg
     border.width: Theme.stroke

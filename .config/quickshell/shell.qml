@@ -16,6 +16,13 @@ ShellRoot {
   readonly property bool shadeOpen: activeOverlay === "controlCenter"
   readonly property bool galleryOpen: activeOverlay === "gallery"
 
+  component RoundedBlurRegion: Region {
+    topLeftRadius: Theme.radiusLg
+    topRightRadius: Theme.radiusLg
+    bottomLeftRadius: Theme.radiusLg
+    bottomRightRadius: Theme.radiusLg
+  }
+
   function openControlCenter() {
     activeOverlay = "controlCenter";
     launcher.closeLauncher();
@@ -162,6 +169,18 @@ ShellRoot {
 
     function toggle() {
       return Theme.toggleTheme();
+    }
+
+    function setAccentSource(path: string): void {
+      Theme.setDynamicAccentSource(String(path));
+    }
+
+    function clearAccentSource(): void {
+      Theme.clearDynamicAccentSource();
+    }
+
+    function setDynamicAccent(enabled: bool): void {
+      Theme.setDynamicAccentEnabled(enabled);
     }
   }
 
@@ -367,6 +386,13 @@ ShellRoot {
       width: controlCenterWindow.width
       height: controlCenterWindow.height
     }
+    // qmllint disable unresolved-type unqualified
+    BackgroundEffect.blurRegion: Region {
+      RoundedBlurRegion {
+        item: controlCenter.blurItem
+      }
+    }
+    // qmllint enable unresolved-type unqualified
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 

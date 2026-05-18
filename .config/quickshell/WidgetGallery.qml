@@ -20,7 +20,7 @@ FocusScope {
   property real mediaLevel: 0.68
   property real brightnessLevel: 82
   property real keyboardLevel: 2
-  readonly property var surfaceTones: ["panel", "panelOverlay", "raised", "submenu", "field", "fieldAlt", "toggleOff", "toggleOn", "accent", "chip"]
+  readonly property var surfaceTones: ["panel", "panelOverlay", "panelOverlayBlur", "raised", "submenu", "submenuBlur", "field", "fieldBlur", "fieldAlt", "toggleOff", "toggleOn", "accent", "chip"]
 
   implicitWidth: 1040
   implicitHeight: 780
@@ -227,6 +227,81 @@ FocusScope {
                     size: "xs"
                     tone: "muted"
                   }
+                }
+              }
+            }
+
+            UiSurface {
+              width: parent.width
+              implicitHeight: dynamicAccentRow.implicitHeight + Theme.insetSm * 2
+              tone: "field"
+              radius: Theme.radiusMd
+              outlined: false
+
+              border.width: Theme.stroke
+              border.color: Theme.borderSubtle
+
+              Row {
+                id: dynamicAccentRow
+
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: Theme.insetSm
+                anchors.rightMargin: Theme.insetSm
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Theme.gapSm
+
+                Rectangle {
+                  id: dynamicAccentSwatch
+
+                  anchors.verticalCenter: parent.verticalCenter
+                  width: Theme.controlSm
+                  height: Theme.controlSm
+                  radius: Theme.radiusSm
+                  color: Theme.accent
+                  border.width: Theme.stroke
+                  border.color: Theme.borderStrong
+                }
+
+                Column {
+                  width: Math.max(0, parent.width - dynamicAccentSwatch.width - dynamicAccentToggle.implicitWidth - dynamicAccentClear.implicitWidth - parent.spacing * 3)
+                  anchors.verticalCenter: parent.verticalCenter
+                  spacing: Theme.stroke
+
+                  UiText {
+                    text: Theme.dynamicAccentActive ? "Dynamic accent active" : (Theme.dynamicAccentEnabled ? "Dynamic accent waiting" : "Dynamic accent disabled")
+                    size: "sm"
+                    font.weight: Font.DemiBold
+                  }
+
+                  UiText {
+                    width: parent.width
+                    text: Theme.dynamicAccentSource === "" ? "Set a source with: qs ipc call theme setAccentSource /path/to/image" : Theme.dynamicAccentSource
+                    size: "xs"
+                    tone: "muted"
+                    elide: Text.ElideMiddle
+                  }
+                }
+
+                Controls.Button {
+                  id: dynamicAccentToggle
+
+                  anchors.verticalCenter: parent.verticalCenter
+                  text: Theme.dynamicAccentEnabled ? "Disable" : "Enable"
+                  compact: true
+                  active: Theme.dynamicAccentEnabled
+                  enabled: Theme.dynamicAccentEnabled || Theme.dynamicAccentSource !== ""
+                  onClicked: Theme.setDynamicAccentEnabled(!Theme.dynamicAccentEnabled)
+                }
+
+                Controls.Button {
+                  id: dynamicAccentClear
+
+                  anchors.verticalCenter: parent.verticalCenter
+                  text: "Clear"
+                  compact: true
+                  enabled: Theme.dynamicAccentSource !== ""
+                  onClicked: Theme.clearDynamicAccentSource()
                 }
               }
             }

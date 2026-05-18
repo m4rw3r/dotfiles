@@ -22,7 +22,7 @@ Patterns.HeroSheetPopover {
   hasStatus: !!bluetoothService.adapter
   statusActive: !!(bluetoothService.adapter && bluetoothService.enabled && !bluetoothService.blocked)
   statusBusy: bluetoothService.busy
-  statusToggleEnabled: !!bluetoothService.adapter && !bluetoothService.hardBlocked
+  statusToggleEnabled: !!bluetoothService.adapter && !bluetoothService.busy && (!bluetoothService.blocked || bluetoothService.unblockAvailable)
   onStatusClicked: controller.toggleBluetoothEnabled()
 
   Column {
@@ -247,7 +247,7 @@ Patterns.HeroSheetPopover {
       Controls.PopoverMenuAction {
         width: parent.width
         title: popover.controller.bluetoothPrimaryActionText()
-        enabled: !!popover.bluetoothService.adapter && !popover.bluetoothService.busy && !popover.bluetoothService.hardBlocked
+        enabled: !!popover.bluetoothService.adapter && !popover.bluetoothService.busy && (!popover.bluetoothService.blocked || popover.bluetoothService.unblockAvailable)
         onClicked: popover.controller.toggleBluetoothEnabled()
       }
 

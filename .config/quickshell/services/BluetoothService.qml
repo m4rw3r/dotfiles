@@ -10,26 +10,26 @@ Item {
   property string adapterKey: "defaultAdapter"
   property var adapter: null
   readonly property var devices: adapter && adapter.devices ? adapter.devices.values : []
-  readonly property bool blocked: !!adapter
-    && (adapter.state === BluetoothAdapterState.Blocked || softBlocked || hardBlocked)
+  readonly property bool blocked: !!adapter && adapter.state === BluetoothAdapterState.Blocked
   readonly property bool enabled: !!(adapter && adapter.enabled)
   readonly property bool discovering: !!(adapter && adapter.discovering)
   readonly property int connectedCount: countDevices(true)
   readonly property int availableCount: countDevices(false)
+  readonly property bool unblockAvailable: blocked && blockStateKnown && !hardBlocked
 
   property bool busy: false
-  property bool enableAfterUnblock: false
-  property bool rfkillKnown: false
-  property bool rfkillRefreshing: false
-  property bool rfkillRefreshQueued: false
-  property bool softBlocked: false
+  property bool blockStateKnown: false
+  property bool blockStateRefreshing: false
+  property bool blockStateRefreshQueued: false
   property bool hardBlocked: false
-  property bool lastErrorFromRefresh: false
+  property int unblockVerificationAttempts: 0
   property string lastError: ""
+
+  readonly property int unblockVerificationMaxAttempts: 12
 
   Component.onCompleted: {
     adapter = currentAdapter();
-    refreshRfkillState();
+    refreshBlockState();
   }
 
   function currentAdapter() {
@@ -48,41 +48,79 @@ Item {
     return count;
   }
 
-  function rfkillCommand(prefix) {
-    const scriptPrefix = prefix || "";
-    const script = `${scriptPrefix}for d in /sys/class/rfkill/rfkill*; do [ -r "$d/type" ] || continue; type=$(cat "$d/type"); [ "$type" = "bluetooth" ] || continue; name=$(cat "$d/name" 2>/dev/null || printf ''); soft=$(cat "$d/soft" 2>/dev/null || printf '0'); hard=$(cat "$d/hard" 2>/dev/null || printf '0'); printf '%s\t%s\t%s\n' "$name" "$soft" "$hard"; done`;
-    return ["sh", "-lc", script];
-  }
-
-  function parseRfkillState(text) {
-    let nextSoftBlocked = false;
+  function parseBlockState(text) {
+    let nextKnown = false;
     let nextHardBlocked = false;
 
-    const lines = String(text || "").split("\n");
-    for (let i = 0; i < lines.length; i += 1) {
-      const line = lines[i].trim();
-      if (line === "") continue;
+    try {
+      const payload = JSON.parse(String(text || "{}"));
+      const devices = payload && payload.rfkilldevices ? payload.rfkilldevices : [];
 
-      const fields = line.split("\t");
-      if (fields.length < 3) continue;
+      for (let i = 0; i < devices.length; i += 1) {
+        const device = devices[i];
+        if (!device || device.type !== "bluetooth") continue;
 
-      if (fields[1] === "1") nextSoftBlocked = true;
-      if (fields[2] === "1") nextHardBlocked = true;
-    }
-
-    softBlocked = nextSoftBlocked;
-    hardBlocked = nextHardBlocked;
-    rfkillKnown = true;
-  }
-
-  function refreshRfkillState() {
-    if (rfkillRefreshing) {
-      rfkillRefreshQueued = true;
+        nextKnown = true;
+        if (device.hard === "blocked" || device.hard === true || device.hard === 1 || device.hard === "1")
+          nextHardBlocked = true;
+      }
+    } catch (error) {
+      blockStateKnown = false;
+      hardBlocked = false;
+      if (lastError === "") lastError = `Unable to parse Bluetooth block state: ${error}`;
       return;
     }
 
-    rfkillRefreshing = true;
-    rfkillStateProcess.exec(rfkillCommand(""));
+    blockStateKnown = nextKnown;
+    hardBlocked = nextHardBlocked;
+  }
+
+  function refreshBlockState() {
+    if (!blocked) {
+      blockStateRefreshQueued = false;
+      blockStateKnown = !!adapter;
+      hardBlocked = false;
+      return;
+    }
+
+    if (blockStateRefreshing) {
+      blockStateRefreshQueued = true;
+      return;
+    }
+
+    blockStateRefreshing = true;
+    blockStateProcess.exec(["rfkill", "--json", "--output", "TYPE,SOFT,HARD,DEVICE", "list", "bluetooth"]);
+  }
+
+  function beginUnblockVerification() {
+    unblockVerificationAttempts = 0;
+    verifyUnblock();
+  }
+
+  function verifyUnblock() {
+    if (!adapter) {
+      busy = false;
+      lastError = "No Bluetooth adapter found.";
+      return;
+    }
+
+    refreshBlockState();
+
+    if (blocked) {
+      unblockVerificationAttempts += 1;
+      if (unblockVerificationAttempts < unblockVerificationMaxAttempts) {
+        unblockVerificationTimer.restart();
+        return;
+      }
+
+      busy = false;
+      if (!hardBlocked) lastError = "Bluetooth is still blocked after the unblock attempt.";
+      return;
+    }
+
+    if (!adapter.enabled) adapter.enabled = true;
+    busy = false;
+    lastError = "";
   }
 
   function stopDiscovery() {
@@ -97,26 +135,26 @@ Item {
   function toggleEnabled() {
     if (!adapter || busy) return;
 
-    lastErrorFromRefresh = false;
     lastError = "";
 
-    if (hardBlocked) {
-      lastErrorFromRefresh = false;
-      lastError = "Bluetooth is hard blocked by hardware or firmware airplane mode.";
-      refreshRfkillState();
-      return;
-    }
-
     if (blocked) {
+      if (!blockStateKnown) {
+        refreshBlockState();
+        return;
+      }
+      if (hardBlocked) {
+        lastError = "Bluetooth is blocked by hardware or firmware airplane mode.";
+        return;
+      }
+
       busy = true;
-      enableAfterUnblock = true;
-      unblockProcess.exec(rfkillCommand("rfkill unblock bluetooth && "));
+      unblockProcess.exec(["rfkill", "unblock", "bluetooth"]);
       return;
     }
 
-    adapter.enabled = !adapter.enabled;
-    if (!adapter.enabled) stopDiscovery();
-    refreshRfkillState();
+    const nextEnabled = !adapter.enabled;
+    adapter.enabled = nextEnabled;
+    if (!nextEnabled) stopDiscovery();
   }
 
   Connections {
@@ -125,7 +163,7 @@ Item {
 
     function onDefaultAdapterChanged() {
       root.adapter = root.currentAdapter();
-      root.refreshRfkillState();
+      root.refreshBlockState();
     }
   }
 
@@ -134,62 +172,47 @@ Item {
     ignoreUnknownSignals: true
 
     function onStateChanged() {
-      root.refreshRfkillState();
-    }
-
-    function onEnabledChanged() {
-      root.refreshRfkillState();
+      root.refreshBlockState();
     }
   }
 
   StdioCollector {
-    id: rfkillStateStdout
+    id: blockStateStdout
     waitForEnd: true
   }
 
   StdioCollector {
-    id: rfkillStateStderr
+    id: blockStateStderr
     waitForEnd: true
   }
 
   Process {
-    id: rfkillStateProcess
+    id: blockStateProcess
 
-    stdout: rfkillStateStdout
-    stderr: rfkillStateStderr
+    stdout: blockStateStdout
+    stderr: blockStateStderr
 
     Component.onCompleted: exited.connect(function(exitCode) {
-      root.rfkillRefreshing = false;
+      root.blockStateRefreshing = false;
 
-      const stderrText = String(rfkillStateStderr.text || "").trim();
-      const stdoutText = rfkillStateStdout.text;
-
-      if (exitCode === 0) {
-        root.parseRfkillState(stdoutText);
-        if (root.lastErrorFromRefresh) {
-          root.lastError = "";
-          root.lastErrorFromRefresh = false;
-        }
-      } else {
-        root.rfkillKnown = false;
-        root.softBlocked = false;
+      if (!root.blocked) {
+        root.blockStateKnown = !!root.adapter;
         root.hardBlocked = false;
-        if (root.lastError === "") {
-          root.lastErrorFromRefresh = true;
+      } else if (exitCode === 0) {
+        root.parseBlockState(blockStateStdout.text);
+      } else {
+        const stderrText = String(blockStateStderr.text || "").trim();
+        root.blockStateKnown = false;
+        root.hardBlocked = false;
+        if (root.lastError === "")
           root.lastError = stderrText !== "" ? stderrText : "Unable to inspect Bluetooth block state.";
-        }
       }
 
-      if (root.rfkillRefreshQueued) {
-        root.rfkillRefreshQueued = false;
-        root.refreshRfkillState();
+      if (root.blockStateRefreshQueued) {
+        root.blockStateRefreshQueued = false;
+        root.refreshBlockState();
       }
     })
-  }
-
-  StdioCollector {
-    id: unblockStdout
-    waitForEnd: true
   }
 
   StdioCollector {
@@ -200,41 +223,27 @@ Item {
   Process {
     id: unblockProcess
 
-    stdout: unblockStdout
     stderr: unblockStderr
 
     Component.onCompleted: exited.connect(function(exitCode) {
-      root.busy = false;
-      root.enableAfterUnblock = false;
-
       const stderrText = String(unblockStderr.text || "").trim();
-      const stdoutText = unblockStdout.text;
 
       if (exitCode === 0) {
-        root.parseRfkillState(stdoutText);
-
-        if (root.hardBlocked) {
-          root.lastErrorFromRefresh = false;
-          root.lastError = "Bluetooth is hard blocked by hardware or firmware airplane mode.";
-          return;
-        }
-
-        if (root.softBlocked) {
-          root.lastErrorFromRefresh = false;
-          root.lastError = "Bluetooth is still soft blocked after the unblock attempt.";
-          return;
-        }
-
-        root.lastErrorFromRefresh = false;
         root.lastError = "";
-        if (root.adapter) root.adapter.enabled = true;
-        root.refreshRfkillState();
+        root.beginUnblockVerification();
         return;
       }
 
-      root.lastErrorFromRefresh = false;
+      root.busy = false;
       root.lastError = stderrText !== "" ? stderrText : "Unable to unblock Bluetooth.";
-      root.refreshRfkillState();
     })
+  }
+
+  Timer {
+    id: unblockVerificationTimer
+    interval: 250
+    repeat: false
+
+    onTriggered: root.verifyUnblock()
   }
 }

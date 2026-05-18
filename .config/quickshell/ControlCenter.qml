@@ -195,8 +195,6 @@ FocusScope {
       pendingPowerAction = "";
     if (expandedSection === "wifi")
       wifiService.refresh();
-    if (expandedSection === "bluetooth")
-      bluetoothService.refreshRfkillState();
     if (expandedSection !== "bluetooth")
       bluetoothService.stopDiscovery();
   }
@@ -438,12 +436,12 @@ FocusScope {
   function bluetoothTileSubtitle() {
     if (!bluetoothService.adapter)
       return "Unavailable";
-    if (bluetoothService.busy && bluetoothService.enableAfterUnblock)
+    if (bluetoothService.busy)
       return "Unblocking...";
     if (bluetoothService.hardBlocked)
       return "Hardware Blocked";
     if (bluetoothService.blocked)
-      return "Blocked";
+      return bluetoothService.blockStateKnown ? "Blocked" : "Checking Block";
     if (!bluetoothService.enabled)
       return "Off";
     return bluetoothService.discovering ? "Scanning" : "Ready";
@@ -514,22 +512,22 @@ FocusScope {
   function bluetoothBlockedMessage() {
     if (!bluetoothService.blocked)
       return "";
-    if (bluetoothService.busy && bluetoothService.enableAfterUnblock)
+    if (bluetoothService.busy)
       return "Unblocking Bluetooth...";
     if (bluetoothService.hardBlocked)
       return "Bluetooth is blocked by hardware or firmware airplane mode.";
-    if (bluetoothService.softBlocked)
-      return "Bluetooth is blocked by rfkill. Turn On will unblock it.";
-    if (!bluetoothService.rfkillKnown)
-      return "Bluetooth is blocked. Turn On will try to unblock it.";
-    return "Bluetooth is blocked.";
+    if (!bluetoothService.blockStateKnown)
+      return "Checking Bluetooth block state...";
+    return "Bluetooth is blocked by rfkill. Unblock will try to clear it.";
   }
 
   function bluetoothPrimaryActionText() {
-    if (bluetoothService.busy && bluetoothService.enableAfterUnblock)
+    if (bluetoothService.busy)
       return "Unblocking...";
     if (bluetoothService.hardBlocked)
       return "Blocked";
+    if (bluetoothService.blocked)
+      return bluetoothService.blockStateKnown ? "Unblock" : "Checking...";
     return bluetoothService.enabled ? "Turn Off" : "Turn On";
   }
 
@@ -639,7 +637,6 @@ FocusScope {
     brightnessService.refresh();
     lightingService.refresh();
     wifiService.refresh();
-    bluetoothService.refreshRfkillState();
     pendingAudioVolume = audioVolumeValue();
     pendingScreenBrightness = brightnessService.screenPercent;
   }

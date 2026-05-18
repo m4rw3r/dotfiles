@@ -160,11 +160,19 @@ FocusScope {
     syncPendingAudioVolume();
   }
   onNotificationsOpenChanged: {
-    if (notificationsOpen && unreadNotificationCount > 0)
-      notificationReadTimer.restart();
-    else
-      notificationReadTimer.stop();
+    if (notificationsOpen) {
+      syncExpandedNotificationGroups();
+      if (unreadNotificationCount > 0)
+        notificationReadTimer.restart();
+      else
+        notificationReadTimer.stop();
+      return;
+    }
+
+    notificationReadTimer.stop();
   }
+  onNotificationCountChanged: syncExpandedNotificationGroups()
+  onNotificationCenterChanged: syncExpandedNotificationGroups()
 
   function clamp(value, minValue, maxValue) {
     return Math.max(minValue, Math.min(maxValue, value));
@@ -224,6 +232,39 @@ FocusScope {
 
     notificationReturnSection = expandedSection === "notifications" ? "" : expandedSection;
     setExpandedSection("notifications");
+  }
+
+  function syncExpandedNotificationGroups() {
+    const currentState = expandedNotificationGroups || {};
+    const currentKeys = Object.keys(currentState);
+    if (currentKeys.length === 0)
+      return;
+
+    const groups = notificationCenter ? notificationCenter.groupedEntries : [];
+    if (!groups || groups.length === 0) {
+      expandedNotificationGroups = ({});
+      return;
+    }
+
+    const validKeys = {};
+    for (let index = 0; index < groups.length; index += 1) {
+      const group = groups[index];
+      if (group && group.key !== undefined)
+        validKeys[group.key] = true;
+    }
+
+    const nextState = {};
+    let changed = false;
+    for (let index = 0; index < currentKeys.length; index += 1) {
+      const key = currentKeys[index];
+      if (validKeys[key])
+        nextState[key] = currentState[key];
+      else
+        changed = true;
+    }
+
+    if (changed)
+      expandedNotificationGroups = nextState;
   }
 
   function isNotificationGroupExpanded(groupKey) {
@@ -735,6 +776,15 @@ FocusScope {
     onTriggered: {
       if (root.notificationsOpen && root.notificationCenter)
         root.notificationCenter.markAllRead();
+    }
+  }
+
+  Connections {
+    target: root.notificationCenter
+    ignoreUnknownSignals: true
+
+    function onRevisionChanged() {
+      root.syncExpandedNotificationGroups();
     }
   }
 

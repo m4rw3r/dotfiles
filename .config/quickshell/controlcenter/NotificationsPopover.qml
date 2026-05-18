@@ -446,7 +446,7 @@ Patterns.HeroSheetPopover {
         spacing: 0
 
         Repeater {
-          model: groupSection.expandable && groupSection.group ? groupSection.group.entries : []
+          model: groupSection.expanded && groupSection.group ? groupSection.group.entries : []
 
           delegate: NotificationInboxCard {
             required property int index
@@ -454,7 +454,7 @@ Patterns.HeroSheetPopover {
             entry: modelData
             showSourceBadge: false
             frameHorizontalPadding: 0
-            dividerVisible: index < groupSection.group.entries.length - 1
+            dividerVisible: groupSection.group ? index < groupSection.group.entries.length - 1 : false
           }
         }
       }
@@ -532,7 +532,7 @@ Patterns.HeroSheetPopover {
           }
 
           Repeater {
-            model: popover.notificationCenter ? popover.notificationCenter.groupedEntries : []
+            model: popover.visible && popover.notificationCenter ? popover.notificationCenter.groupedEntries : []
 
             delegate: Item {
               required property var modelData

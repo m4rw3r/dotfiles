@@ -39,6 +39,8 @@ FocusScope {
   property bool trayVisible: false
   property bool trayExpanded: false
   property bool trayNeedsAttention: false
+  property var popupParentWindow: null
+  property bool popupDismissInProgress: false
   property var notificationCenter: null
   property var expandedNotificationGroups: ({})
   property string notificationReturnSection: ""
@@ -208,6 +210,19 @@ FocusScope {
       setExpandedSection("");
   }
 
+  function closeExpandedSectionIfCurrent(section) {
+    if (expandedSection === section)
+      setExpandedSection("");
+  }
+
+  function popupDismissed(section) {
+    popupDismissInProgress = true;
+    closeExpandedSectionIfCurrent(section);
+    Qt.callLater(function () {
+      popupDismissInProgress = false;
+    });
+  }
+
   function toggleSection(section) {
     setExpandedSection(expandedSection === section ? "" : section);
   }
@@ -282,31 +297,6 @@ FocusScope {
     const nextState = Object.assign({}, expandedNotificationGroups);
     delete nextState[groupKey];
     expandedNotificationGroups = nextState;
-  }
-
-  function popupX(anchorItem, popupWidth, alignRight) {
-    if (!anchorItem || !panel)
-      return 0;
-    const position = anchorItem.mapToItem(panel, 0, 0);
-    const maxX = Math.max(0, panel.width - popupWidth);
-    const rawX = alignRight ? position.x + anchorItem.width - popupWidth : position.x;
-    return clamp(rawX, 0, maxX);
-  }
-
-  function popupY(anchorItem, spacing) {
-    if (!anchorItem || !panel)
-      return 0;
-    const position = anchorItem.mapToItem(panel, 0, 0);
-    return position.y + anchorItem.height + (spacing || 8);
-  }
-
-  function popupOverlayY(anchorItem, popupHeight) {
-    if (!anchorItem || !panel)
-      return 0;
-    const position = anchorItem.mapToItem(panel, 0, 0);
-    const maxY = Math.max(0, panel.height - popupHeight);
-    const rawY = position.y + (anchorItem.height - popupHeight) / 2;
-    return clamp(rawY, 0, maxY);
   }
 
   function dismissOverlaySection() {
@@ -748,6 +738,7 @@ FocusScope {
       onScreenKeyboardFailed = false;
       keyboardRecoveryMessage = "";
       keyboardRecoveryFailed = false;
+      popupDismissInProgress = false;
       bluetoothService.stopDiscovery();
     }
   }
@@ -1307,138 +1298,200 @@ FocusScope {
       visible: root.overlayDismissActive
       z: 3
     }
+  }
 
-    Item {
-      id: tileMenuOverlay
+  Controls.FocusPopup {
+    id: powerPopup
 
-      anchors.fill: parent
-      visible: root.overlayDismissActive
-      z: 4
-
-      MouseArea {
-        anchors.fill: parent
-        enabled: root.overlayDismissActive
-        onClicked: root.dismissOverlaySection()
-      }
-
-      ControlCenterParts.NotificationsPopover {
-        id: notificationMenuPanel
-
-        controller: root
-        width: content.width
-        x: content.x
-        y: content.y + notificationSection.y
-        z: 1
-      }
-
-      ControlCenterParts.OutputsPopover {
-        id: outputsPopover
-
-        controller: root
-        width: content.width
-        x: content.x
-        y: content.y + outputsPopoverSpacer.y
-        z: 1
-      }
-
-      ControlCenterParts.PowerPopover {
-        id: powerPopover
-
-        controller: root
-        width: content.width
-        x: content.x
-        y: content.y + powerPopoverSpacer.y
-        z: 1
-      }
-
-      ControlCenterParts.WifiPopover {
-        id: wifiMenuPanel
-
-        controller: root
-        wifiService: wifiService
-        width: content.width
-        x: content.x
-        y: content.y + quickTileStack.y + quickTileSection.y
-        z: 1
-      }
-
-      ControlCenterParts.BluetoothPopover {
-        id: bluetoothMenuPanel
-
-        controller: root
-        bluetoothService: bluetoothService
-        width: content.width
-        x: content.x
-        y: content.y + quickTileStack.y + quickTileSection.y
-        z: 1
-      }
+    open: root.powerMenuOpen
+    section: "power"
+    parentWindow: root.popupParentWindow
+    anchorItem: powerPopoverSpacer
+    popupWidth: content.width
+    popupHeight: powerPopover.implicitHeight
+    onDismissed: function (section) {
+      root.popupDismissed(section);
     }
 
-    Item {
-      id: popoverLayer
+    ControlCenterParts.PowerPopover {
+      id: powerPopover
 
-      anchors.fill: parent
-      z: 6
+      controller: root
+      width: powerPopup.implicitWidth
+    }
+  }
 
-      MouseArea {
-        anchors.fill: parent
-        enabled: root.selectorPopoverOpen
-        onClicked: root.dismissOverlaySection()
-      }
+  Controls.FocusPopup {
+    id: outputsPopup
 
-      Controls.PopoverSurface {
-        id: profilePopover
-        visible: root.expandedSection === "profile"
-        width: implicitWidth
-        x: root.popupX(profileTile, width, false)
-        y: root.popupOverlayY(profileTile, height)
+    open: root.outputMenuOpen
+    section: "outputs"
+    parentWindow: root.popupParentWindow
+    anchorItem: outputsPopoverSpacer
+    popupWidth: content.width
+    popupHeight: outputsPopover.implicitHeight
+    onDismissed: function (section) {
+      root.popupDismissed(section);
+    }
 
-        Repeater {
-          model: root.profileOptions
+    ControlCenterParts.OutputsPopover {
+      id: outputsPopover
 
-          delegate: Controls.MenuItem {
-            required property var modelData
-            readonly property var option: modelData
+      controller: root
+      width: outputsPopup.implicitWidth
+    }
+  }
 
-            width: parent.width
-            iconName: "gauge"
-            title: option.title
-            trailingIconName: PowerProfiles.profile === option.profile ? "check" : ""
-            active: PowerProfiles.profile === option.profile
-            activeStyle: "indicator"
-            compact: true
-            dividerVisible: option.dividerVisible
-            enabled: option.enabled && !root.powerProfileBusy
-            onClicked: root.selectPowerProfile(option.profile)
-          }
+  Controls.FocusPopup {
+    id: wifiPopup
+
+    open: root.expandedSection === "wifi"
+    section: "wifi"
+    parentWindow: root.popupParentWindow
+    anchorItem: quickTileSection
+    popupWidth: content.width
+    popupHeight: wifiMenuPanel.implicitHeight
+    onDismissed: function (section) {
+      root.popupDismissed(section);
+    }
+
+    ControlCenterParts.WifiPopover {
+      id: wifiMenuPanel
+
+      controller: root
+      wifiService: wifiService
+      width: wifiPopup.implicitWidth
+    }
+  }
+
+  Controls.FocusPopup {
+    id: bluetoothPopup
+
+    open: root.expandedSection === "bluetooth"
+    section: "bluetooth"
+    parentWindow: root.popupParentWindow
+    anchorItem: quickTileSection
+    popupWidth: content.width
+    popupHeight: bluetoothMenuPanel.implicitHeight
+    onDismissed: function (section) {
+      root.popupDismissed(section);
+    }
+
+    ControlCenterParts.BluetoothPopover {
+      id: bluetoothMenuPanel
+
+      controller: root
+      bluetoothService: bluetoothService
+      width: bluetoothPopup.implicitWidth
+    }
+  }
+
+  Controls.FocusPopup {
+    id: profilePopup
+
+    open: root.expandedSection === "profile"
+    section: "profile"
+    parentWindow: root.popupParentWindow
+    anchorItem: profileTile
+    anchorOffsetY: Math.round((profileTile.height - profilePopup.implicitHeight) / 2)
+    popupWidth: profilePopover.implicitWidth
+    popupHeight: profilePopover.implicitHeight
+    onDismissed: function (section) {
+      root.popupDismissed(section);
+    }
+
+    Controls.PopoverSurface {
+      id: profilePopover
+
+      width: profilePopup.implicitWidth
+
+      Repeater {
+        model: root.profileOptions
+
+        delegate: Controls.MenuItem {
+          required property var modelData
+          readonly property var option: modelData
+
+          width: parent.width
+          iconName: "gauge"
+          title: option.title
+          trailingIconName: PowerProfiles.profile === option.profile ? "check" : ""
+          active: PowerProfiles.profile === option.profile
+          activeStyle: "indicator"
+          compact: true
+          dividerVisible: option.dividerVisible
+          enabled: option.enabled && !root.powerProfileBusy
+          onClicked: root.selectPowerProfile(option.profile)
         }
       }
+    }
+  }
 
-      Controls.PopoverSurface {
-        visible: root.expandedSection === "lighting" && lightingService.commandAvailable
-        width: lightingTile.width
-        x: root.popupX(lightingTile, width, false)
-        y: root.popupOverlayY(lightingTile, height)
+  Controls.FocusPopup {
+    id: lightingPopup
 
-        Repeater {
-          model: root.lightingOptions
+    open: root.expandedSection === "lighting" && lightingService.commandAvailable
+    section: "lighting"
+    parentWindow: root.popupParentWindow
+    anchorItem: lightingTile
+    anchorOffsetY: Math.round((lightingTile.height - lightingPopup.implicitHeight) / 2)
+    popupWidth: lightingTile.width
+    popupHeight: lightingPopover.implicitHeight
+    onDismissed: function (section) {
+      root.popupDismissed(section);
+    }
 
-          delegate: Controls.MenuItem {
-            required property var modelData
-            readonly property var option: modelData
+    Controls.PopoverSurface {
+      id: lightingPopover
 
-            width: parent.width
-            iconName: "sun"
-            title: option.title
-            trailingIconName: root.lightingLevelIndex() === option.index ? "check" : ""
-            active: root.lightingLevelIndex() === option.index
-            activeStyle: "indicator"
-            compact: true
-            dividerVisible: option.dividerVisible
-            onClicked: root.setLightingLevel(option.index)
-          }
+      width: lightingPopup.implicitWidth
+
+      visible: lightingService.commandAvailable
+
+      Repeater {
+        model: root.lightingOptions
+
+        delegate: Controls.MenuItem {
+          required property var modelData
+          readonly property var option: modelData
+
+          width: parent.width
+          iconName: "sun"
+          title: option.title
+          trailingIconName: root.lightingLevelIndex() === option.index ? "check" : ""
+          active: root.lightingLevelIndex() === option.index
+          activeStyle: "indicator"
+          compact: true
+          dividerVisible: option.dividerVisible
+          onClicked: root.setLightingLevel(option.index)
         }
       }
+    }
+  }
+
+  Controls.FocusPopup {
+    id: notificationsPopup
+
+    open: root.notificationsOpen
+    section: "notifications"
+    parentWindow: root.popupParentWindow
+    anchorItem: notificationSection
+    popupWidth: content.width
+    popupHeight: notificationMenuPanel.implicitHeight
+    onDismissed: function () {
+      root.popupDismissInProgress = true;
+      if (root.notificationsOpen)
+        root.returnFromNotifications();
+      Qt.callLater(function () {
+        root.popupDismissInProgress = false;
+      });
+    }
+
+    ControlCenterParts.NotificationsPopover {
+      id: notificationMenuPanel
+
+      controller: root
+      width: notificationsPopup.implicitWidth
     }
   }
 }

@@ -359,6 +359,8 @@ ShellRoot {
     MouseArea {
       anchors.fill: parent
       onClicked: {
+        if (controlCenter.popupDismissInProgress)
+          return;
         if (controlCenter.overlayDismissActive)
           controlCenter.dismissOverlaySection();
         else
@@ -388,6 +390,7 @@ ShellRoot {
 
       audioSink: volumeOverlayController.trackedSink
       panelOpen: root.shadeOpen
+      popupParentWindow: controlCenterWindow
       notificationCenter: notifications
       sessionActions: sessionActions
       trayVisible: trayState.mode !== "hidden"

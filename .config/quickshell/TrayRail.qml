@@ -47,6 +47,46 @@ FocusScope {
     introAnimation.restart();
   }
 
+  function systemTrayValues() {
+    const items = [];
+
+    // qmllint disable missing-property
+    const values = SystemTray.items.values;
+    if (values) {
+      for (let i = 0; i < values.length; i += 1) {
+        const item = values[i];
+        if (item)
+          items.push(item);
+      }
+    } else {
+      const count = Number(SystemTray.items.count || 0);
+      for (let i = 0; i < count; i += 1) {
+        const item = SystemTray.items.get(i);
+        if (item)
+          items.push(item);
+      }
+    }
+    // qmllint enable missing-property
+
+    return items;
+  }
+
+  function itemsWithStatus(status) {
+    const revision = root.stateController ? root.stateController.revision : 0;
+    // Keep this binding reactive to status-only changes observed by TrayStateController.
+    void revision;
+
+    const items = root.systemTrayValues();
+    const filtered = [];
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      if (item && item.status === status)
+        filtered.push(item);
+    }
+
+    return filtered;
+  }
+
   Component.onCompleted: triggerIntro()
 
   onModeChanged: {
@@ -358,12 +398,11 @@ FocusScope {
       }
 
       Repeater {
-        model: SystemTray.items
+        model: root.itemsWithStatus(Status.NeedsAttention)
 
         delegate: TrayItemButton {
           required property var modelData
 
-          visible: modelData && modelData.status === Status.NeedsAttention
           item: modelData
           attention: true
           peekButton: !root.expanded
@@ -379,12 +418,11 @@ FocusScope {
       }
 
       Repeater {
-        model: SystemTray.items
+        model: root.expanded ? root.itemsWithStatus(Status.Active) : []
 
         delegate: TrayItemButton {
           required property var modelData
 
-          visible: root.expanded && modelData && modelData.status === Status.Active
           item: modelData
           attention: false
           peekButton: false
@@ -410,12 +448,11 @@ FocusScope {
       }
 
       Repeater {
-        model: SystemTray.items
+        model: root.expanded && root.showPassive ? root.itemsWithStatus(Status.Passive) : []
 
         delegate: TrayItemButton {
           required property var modelData
 
-          visible: root.expanded && root.showPassive && modelData && modelData.status === Status.Passive
           item: modelData
           attention: false
           peekButton: false

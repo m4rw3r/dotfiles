@@ -13,6 +13,7 @@ Item {
   property int activeCount: 0
   property int passiveCount: 0
   property int itemCount: 0
+  property int revision: 0
   readonly property bool hasAttention: attentionCount > 0
   readonly property bool hasItems: itemCount > 0
 
@@ -40,6 +41,7 @@ Item {
     attentionCount = nextAttention;
     activeCount = nextActive;
     passiveCount = nextPassive;
+    revision += 1;
   }
 
   function collapseToPeekOrHidden() {

@@ -38,6 +38,10 @@ local get_configured_client_names = function(prefix)
   return c
 end
 
+local function trigger_filetype_lsp_autocmds()
+  vim.cmd.doautoall("nvim.lsp.enable FileType")
+end
+
 --- Stops the given list, or all, clients, returning the stopped client instances
 --- @param names string[]
 --- @return vim.lsp.Client[]
@@ -81,8 +85,7 @@ local M = {
             vim.lsp.enable(name, true)
           end
         else
-          -- Just trigger FileType autocmd to make LSP load the appropriate clients
-          vim.api.nvim_exec_autocmds("FileType", {})
+          trigger_filetype_lsp_autocmds()
         end
       end,
       {
@@ -202,8 +205,8 @@ function M.config()
   -- TODO: GraphQL LSP
   -- TODO: Java LSP
 
-  -- Manually trigger autocmd here since we have already triggered one if opening a file directly
-  vim.api.nvim_exec_autocmds("FileType", {})
+  -- Manually trigger autocmd here since it may have already fired before this plugin loaded.
+  trigger_filetype_lsp_autocmds()
 end
 
 return M

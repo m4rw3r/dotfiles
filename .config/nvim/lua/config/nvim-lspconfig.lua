@@ -200,7 +200,11 @@ function M.config()
   -- Requires vscode-langservers-extracted, which includes ESLint LSP:
   --
   -- npm install --global vscode-langservers-extracted@4.8.0
-  configLsp("eslint", { workingDirectories = { mode = "auto" }, })
+  configLsp("eslint", {
+    settings = {
+      workingDirectory = { mode = "auto" },
+    },
+  })
 
   -- TODO: GraphQL LSP
   -- TODO: Java LSP

@@ -21,23 +21,27 @@ Item {
     let nextAttention = 0;
     let nextActive = 0;
     let nextPassive = 0;
+    let nextCount = 0;
 
     // qmllint disable missing-property
-    const count = Number(SystemTray.items.count || 0);
-    for (let i = 0; i < count; i += 1) {
-      const item = SystemTray.items.get(i);
-      if (!item)
-        continue;
-      if (item.status === Status.NeedsAttention)
-        nextAttention += 1;
-      else if (item.status === Status.Active)
-        nextActive += 1;
-      else if (item.status === Status.Passive)
-        nextPassive += 1;
+    const values = SystemTray.items.values;
+    if (values) {
+      for (let i = 0; i < values.length; i += 1) {
+        const item = values[i];
+        if (!item)
+          continue;
+        nextCount += 1;
+        if (item.status === Status.NeedsAttention)
+          nextAttention += 1;
+        else if (item.status === Status.Active)
+          nextActive += 1;
+        else if (item.status === Status.Passive)
+          nextPassive += 1;
+      }
     }
     // qmllint enable missing-property
 
-    itemCount = count;
+    itemCount = nextCount;
     attentionCount = nextAttention;
     activeCount = nextActive;
     passiveCount = nextPassive;

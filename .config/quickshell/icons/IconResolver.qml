@@ -18,7 +18,7 @@ Singleton {
     "application-x-executable": { type: "glyph", value: "app-window" },
     "org.gnome.terminal": { type: "glyph", value: "terminal" },
     "org.gnome.terminal.desktop": { type: "glyph", value: "terminal" },
-    // "alacritty": { type: "glyph", value: "terminal" },
+    "alacritty": { type: "source", value: Qt.resolvedUrl("alacritty.svg") },
     "utilities-system-monitor": { type: "glyph", value: "monitor" },
     "btop": { type: "glyph", value: "monitor" },
     "preferences-system-network": { type: "glyph", value: "network" },
@@ -41,7 +41,7 @@ Singleton {
     "dropboxstatus-busy": true,
     "dropboxstatus-busy2": true,
     "dropboxstatus-x": true,
-    // "alacritty": true,
+    "alacritty": true,
     "btop": true
   })
 

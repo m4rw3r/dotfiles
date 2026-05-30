@@ -28,8 +28,22 @@ PopupWindow {
   implicitWidth: parentWindow ? parentWindow.width : popupWidth
   implicitHeight: parentWindow ? parentWindow.height : popupHeight
 
+  function syncPosition() {
+    if (!anchorItem || !parentWindow || !parentWindow.contentItem)
+      return;
+
+    const position = anchorItem.mapToItem(parentWindow.contentItem, anchorOffsetX, anchorOffsetY);
+    popupX = Math.round(position.x);
+    popupY = Math.round(position.y);
+  }
+
   function syncVisible() {
-    visible = open && parentWindow !== null && anchorItem !== null;
+    const shouldShow = open && parentWindow !== null && anchorItem !== null;
+    if (shouldShow)
+      syncPosition();
+    visible = shouldShow;
+    if (shouldShow)
+      Qt.callLater(syncPosition);
   }
 
   Component.onCompleted: syncVisible()
@@ -50,12 +64,7 @@ PopupWindow {
   // qmllint disable missing-type unresolved-type
   anchor.window: root.parentWindow
   anchor.onAnchoring: {
-    if (!root.anchorItem || !root.parentWindow || !root.parentWindow.contentItem)
-      return;
-
-    const position = root.anchorItem.mapToItem(root.parentWindow.contentItem, root.anchorOffsetX, root.anchorOffsetY);
-    root.popupX = Math.round(position.x);
-    root.popupY = Math.round(position.y);
+    root.syncPosition();
     anchor.rect.x = 0;
     anchor.rect.y = 0;
     anchor.rect.width = 1;

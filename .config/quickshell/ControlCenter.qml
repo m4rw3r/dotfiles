@@ -1024,6 +1024,13 @@ FocusScope {
         }
       }
 
+      Item {
+        id: powerPopoverSpacer
+
+        width: parent.width
+        height: root.powerMenuOpen ? powerPopover.implicitHeight : 0
+      }
+
       UiText {
         width: parent.width
         visible: root.onScreenKeyboardMessage !== ""
@@ -1044,13 +1051,6 @@ FocusScope {
 
       Controls.HeroClock {
         width: parent.width
-      }
-
-      Item {
-        id: powerPopoverSpacer
-
-        width: parent.width
-        height: root.powerMenuOpen ? powerPopover.implicitHeight : 0
       }
 
       Row {

@@ -28,7 +28,7 @@ local M = {
       { desc = "Fuzzy search files in project" }
     },
   },
-  cmd = {
+  cmds = {
     "Telescope",
   },
 }

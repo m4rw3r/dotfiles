@@ -38,7 +38,7 @@ This config enables these servers when available:
 
 - `lua_ls`
 - `eslint`
-- `ts_ls`
+- `vtsls`
 - `rust_analyzer`
 - `psalm`
 
@@ -65,14 +65,14 @@ ln -s ~/.local/share/lua-language-server/bin/lua-language-server ~/.local/bin/lu
 
 ### TypeScript
 
-Install per project (local dev dependency), not globally:
+Install the VTS language server:
 
 ```bash
-npm install --save-dev typescript typescript-language-server
+npm install --global @vtsls/language-server
 ```
 
-Do not install TypeScript LSP globally. Ensure Neovim resolves
-`typescript-language-server` from the project-local `node_modules/.bin`.
+Do not install TypeScript globally. Ensure Neovim resolves `tsc`/`tsserver`
+from the project-local `node_modules/.bin`.
 
 ### Rust
 

@@ -54,6 +54,7 @@ vim.filetype.add({
 ---@param indentSettings table<string, LanguageConfigurationIndent>
 function M.registerIndentAutogroup(indentSettings)
   local indentgroup = vim.api.nvim_create_augroup("indent", {})
+  local trimgroup = vim.api.nvim_create_augroup("trim_trailing_whitespace", {})
 
   for filetype, config in pairs(indentSettings) do
     setmetatable(config, { __index = {
@@ -79,10 +80,14 @@ function M.registerIndentAutogroup(indentSettings)
             vim.opt_local.expandtab = true
           end
 
+          vim.api.nvim_clear_autocmds({ group = trimgroup, buffer = 0, event = "BufWritePre" })
+
           if config.trim then
             vim.api.nvim_create_autocmd(
               {"BufWritePre"},
               {
+                group = trimgroup,
+                buffer = 0,
                 callback = stripTrailingWhitespace,
                 desc = "Trim trailing whitespace on save",
               }

@@ -914,7 +914,7 @@ FocusScope {
     target: root.audioState
     ignoreUnknownSignals: true
 
-    function onVolumeChanged() {
+    function onVolumesChanged() {
       root.syncPendingAudioVolume();
     }
 

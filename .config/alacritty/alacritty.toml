@@ -5,7 +5,7 @@ import = ["~/.config/alacritty/current-theme.toml"]
 padding = { x = 4, y = 4 }
 dynamic_padding = true
 [font]
-normal = { family = "PragmataPro Mono Liga" }
+normal = { family = "PragmataPro Liga" }
 size = 12
 # We want to use PragmataPro
 builtin_box_drawing = false

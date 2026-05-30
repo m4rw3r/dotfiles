@@ -385,7 +385,7 @@ window-rule {
 }
 
 layer-rule {
-    match namespace="^swww-daemonbackdrop$"
+    match namespace="^awww-daemonbackdrop$"
     place-within-backdrop true
 }
 

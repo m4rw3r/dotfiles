@@ -89,10 +89,10 @@ You can also install `rust-analyzer` via your system package manager.
 This config runs Psalm as:
 
 ```bash
-x psalm --language-server
+phpenv php ./vendor/bin/psalm --language-server
 ```
 
-Make sure `x` and `psalm` are available in your `PATH`, or change
+Make sure `phpenv` is available in your `PATH` and Psalm is installed in the project, or change
 `lua/config/nvim-lspconfig.lua`.
 
 ## Useful commands

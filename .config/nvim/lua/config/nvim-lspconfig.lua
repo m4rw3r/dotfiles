@@ -158,7 +158,7 @@ function M.config()
   end
 
   configLsp("psalm", {
-    cmd = {"x", "psalm", "--language-server"},
+    cmd = {"phpenv", "php", "./vendor/bin/psalm", "--language-server"},
     flags = { debounce_text_changes = 150 },
   })
 
